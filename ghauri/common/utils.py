@@ -1,0 +1,1396 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+# pylint: disable=R,W,E,C
+
+"""
+
+Author  : Nasir Khan (r0ot h3x49)
+Github  : https://github.com/r0oth3x49
+License : MIT
+
+
+Copyright (c) 2016-2025 Nasir Khan (r0ot h3x49)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the
+Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR
+ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH 
+THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+"""
+
+from ghauri.common.lib import (
+    re,
+    gzip,
+    html,
+    json,
+    chardet,
+    binascii,
+    urlparse,
+    parse_qs,
+    itertools,
+    NO_DEFAULT,
+    SQL_ERRORS,
+    collections,
+    ProxyHandler,
+    quote,
+    quote_plus,
+    unquote,
+    BytesIO,
+    urljoin,
+    SequenceMatcher,
+    addinfourl,
+    DBMS_DICT,
+    HTTPRedirectHandler,
+    BaseHTTPRequestHandler,
+    INJECTABLE_HEADERS_DEFAULT,
+)
+from ghauri.common.payloads import PAYLOADS
+from ghauri.logger.colored_logger import logger
+from ghauri.common.prettytable import PrettyTable, from_db_cursor
+
+
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
+
+# source: https://stackoverflow.com/questions/4685217/parse-raw-http-headers
+class HTTPRequest(BaseHTTPRequestHandler):
+    def __init__(self, request_text):
+        self.__request = request_text
+        request_text = request_text.replace("HTTP/2", "HTTP/1.1")
+        if isinstance(request_text, str):
+            request_text = request_text.encode("utf-8")
+        self.rfile = BytesIO(request_text)
+        self.raw_requestline = self.rfile.readline()
+        self.error_code = self.error_message = None
+        self.is_multipart = False
+        self.parse_request()
+
+    def send_error(self, code, message):
+        self.error_code = code
+        self.error_message = message
+
+    def __body(self):
+        content_type = self.content_type
+        if content_type and "multipart/form-data" in content_type:
+            self.is_multipart = True
+            return self.rfile.read().decode("utf-8").strip()
+        if content_type and content_type in [
+            "application/x-www-form-urlencoded",
+            "application/x-www-form-urlencoded; charset=UTF-8",
+            "application/json",
+            "application/json; charset=UTF-8",
+        ]:
+            return self.rfile.read().decode("utf-8").strip()
+
+    @property
+    def type(self):
+        return self.command
+
+    @property
+    def url(self):
+        url = f"{self.protocol}://{self.host}"
+        if self.path:
+            url = urljoin(url, self.path)
+        return url
+
+    @property
+    def body(self):
+        return self.__body()
+
+    @property
+    def content_type(self):
+        return self.headers.get("Content-Type")
+
+    @property
+    def host(self):
+        return self.headers.get("Host")
+
+    @property
+    def raw_cookies(self):
+        _temp = []
+        for k, v in self.headers.items():
+            if k.lower() in ["cookie"]:
+                _temp.append(f"{k}: {v}")
+        _temp = "\n".join(_temp)
+        return _temp
+
+    @property
+    def method(self):
+        return self.type
+
+    @property
+    def protocol(self):
+        protocol = "https"
+        referer = self.headers.get("Referer")
+        host = self.headers.get("Host")
+        if referer and host and host in referer and "http" in referer:
+            protocol = referer.split("://")[0]
+        return protocol
+
+    @property
+    def raw_full_headers(self):
+        _temp = []
+        for k, v in self.headers.items():
+            if k.lower() in ["content-length"]:
+                continue
+            _temp.append(f"{k}: {v}")
+        _temp = "\n".join(_temp)
+        return _temp
+
+    @property
+    def raw_headers(self):
+        _temp = []
+        for k, v in self.headers.items():
+            if k.lower() in ["content-length", "cookie"]:
+                continue
+            _temp.append(f"{k}: {v}")
+        _temp = "\n".join(_temp)
+        return _temp
+
+
+class SmartRedirectHandler(HTTPRedirectHandler):
+    def http_error_302(self, req, fp, code, msg, headers):
+        infourl = addinfourl(fp, headers, req.get_full_url())
+        infourl.status = code
+        infourl.code = code
+        return infourl
+
+    http_error_301 = http_error_303 = http_error_307 = http_error_302
+
+
+def html_escape(value):
+    """
+    Returns (basic conversion) HTML unescaped value
+
+    >>> htmlUnescape('a&lt;b') == 'a<b'
+    True
+    """
+
+    retVal = value
+
+    if value and isinstance(value, str):
+        replacements = (
+            ("&lt;", "<"),
+            ("&gt;", ">"),
+            ("&quot;", '"'),
+            ("&nbsp;", " "),
+            ("&amp;", "&"),
+            ("&apos;", "'"),
+        )
+        for code, value in replacements:
+            retVal = retVal.replace(code, value)
+
+        try:
+            retVal = re.sub(
+                r"&#x([^ ;]+);", lambda match: chr(int(match.group(1), 16)), retVal
+            )
+        except (ValueError, OverflowError):
+            pass
+
+    return retVal
+
+
+def get_filtered_page_content(page, onlyText=True, split=" "):
+    """
+    Returns filtered page content without script, style and/or comments
+    or all HTML tags
+
+    >>> getFilteredPageContent(u'<html><title>foobar</title><body>test</body></html>') == "foobar test"
+    True
+    """
+
+    retVal = page
+    text_type = str
+
+    # only if the page's charset has been successfully identified
+    if isinstance(page, text_type):
+        retVal = re.sub(
+            r"(?si)<script.+?</script>|<!--.+?-->|<style.+?</style>%s"
+            % (r"|<[^>]+>|\t|\n|\r" if onlyText else ""),
+            split,
+            page,
+        )
+        retVal = re.sub(r"%s{2,}" % split, split, retVal)
+        retVal = html_escape(retVal.strip().strip(split))
+
+    return retVal
+
+
+def value_cleanup(value, strip_value=None):
+    if value and "S3PR4T0R" in value:
+        value = value.strip().split("S3PR4T0R")
+        value = f"{len(value)}"
+    value = re.sub(r"\s+", " ", re.sub(r"^\(+", "", value)).strip()
+    if strip_value:
+        value = re.sub(strip_value, "", value)
+    return value
+
+
+def search_regex(
+    pattern,
+    string,
+    default=NO_DEFAULT,
+    fatal=True,
+    flags=0,
+    group=None,
+    strip_value=r"(?is)(?:\(+)(?:\~+)",
+):
+    """
+    Perform a regex search on the given string, using a single or a list of
+    patterns returning the first matching group.
+    In case of failure return a default value or raise a WARNING or a
+    RegexNotFoundError, depending on fatal, specifying the field name.
+    """
+    string = get_filtered_page_content(string)
+    if isinstance(pattern, str):
+        mobj = re.search(pattern, string, flags)
+    else:
+        for p in pattern:
+            mobj = re.search(p, string, flags)
+            if mobj:
+                break
+
+    if mobj:
+        if group is None:
+            # return the first matching group
+            value = next(g for g in mobj.groups() if g is not None)
+        else:
+            value = mobj.group(group)
+            value = re.sub(r"^\(+", "", value)
+        if not value:
+            value = "<blank_value>"
+        value = value_cleanup(value, strip_value=strip_value)
+        return value
+    elif default is not NO_DEFAULT:
+        return default
+    elif fatal:
+        logger.warning("unable to filter out values..")
+    else:
+        logger.warning("unable to filter out values..")
+
+
+def to_list(columns):
+    return [i.strip() for i in re.sub(" +", "", columns).split(",")]
+
+
+def prettifier(cursor_or_list, field_names="", header=False):
+    fields = []
+    Prettified = collections.namedtuple("Prettified", ["data", "entries"])
+    if field_names:
+        fields = re.sub(" +", "", field_names).split(",")
+    table = PrettyTable(field_names=[""] if not fields else fields)
+    table.align = "l"
+    table.header = header
+    entries = len(cursor_or_list)
+    table.add_rows([cursor_or_list])
+    _temp = Prettified(data=table, entries=entries)
+    return _temp
+
+
+def dbms_full_name(dbms):
+    _temp = ""
+    if dbms:
+        _temp = DBMS_DICT.get(dbms.lower())
+    return _temp
+
+
+def replace_with(string, character, replace_with, right=True):
+    if right:
+        head, _, tail = string.rpartition(character)
+    else:
+        head, _, tail = string.partition(character)
+    return f"{head}{replace_with}{tail}"
+
+
+def get_boolean_ratio(w1, w2):
+    ratio = 0
+    try:
+        ratio = round(SequenceMatcher(None, w1, w2).ratio(), 2)
+    except:
+        w1 = w1 + " " * (len(w2) - len(w1))
+        w2 = w2 + " " * (len(w1) - len(w2))
+        ratio = sum(1 if i == j else 0 for i, j in zip(w1, w2)) / float(len(w1))
+    return ratio
+
+
+def get_page_ratio_difference(response, response_01):
+    _temp = []
+    _diff = []
+    response = re.sub(r"(?is)(?:[\w\(\)\+\-\,\*\>\<]+=\w+)", "", response)
+    response_01 = re.sub(r"(?is)(?:[\w\(\)\+\-\,\*\>\<]+=\w+)", "", response_01)
+    seq = SequenceMatcher(None, response, response_01)
+    for tag, i1, i2, j1, j2 in seq.get_opcodes():
+        if tag == "replace":
+            logger.debug(
+                "{:7}   response[{}:{}] --> response_01[{}:{}] {!r:>8} --> {!r}".format(
+                    tag, i1, i2, j1, j2, response[i1:i2], response_01[j1:j2]
+                )
+            )
+            _temp.append({"true": response[i1:i2], "false": response_01[j1:j2]})
+            _diff.append(response[i1:i2])
+    return ",".join(_diff), _temp
+
+
+def check_boolean_responses(base, attack_true, attack_false, match_string=None):
+    is_vulner = False
+    scb = base.status_code
+    sct = attack_true.status_code
+    scf = attack_false.status_code
+    ctb = base.content_length
+    ctt = attack_true.content_length
+    ctf = attack_false.content_length
+    case = ""
+    difference = ""
+    _cases = []
+    if ctt != ctf and ctb == ctt:
+        # case 1: when True attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
+        is_vulner = True
+        _cases.append("Content Length")
+    elif ctt != ctf and ctb == ctf:
+        # case 2: when False attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
+        is_vulner = True
+        _cases.append("Content Length")
+    # case 3: True injected page is compared with original page (to get something called ratio),
+    # then False injected page is compared to original page (to also get the ratio) and
+    # then those two ratios are compared together.
+    # It compares those two ratios and they should be clearly distinct
+    # based on https://github.com/sqlmapproject/sqlmap/issues/2442
+    w0 = base.text
+    w1 = attack_true.text
+    w2 = attack_false.text
+    ratio_true = get_boolean_ratio(w0, w1)
+    ratio_false = get_boolean_ratio(w0, w2)
+    if ratio_true != ratio_false:
+        _cases.append("Page Ratio")
+        is_vulner = True
+    # if with page comparision we didn't found the target vulnerable then also compare the response status codes
+    if scb == sct and scb != scf:
+        # case 4: when True attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
+        _cases.append("Status Code")
+        is_vulner = True
+    elif scb == scf and scb != sct:
+        # case 5: when False attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
+        is_vulner = True
+        _cases.append("Status Code")
+    if _cases:
+        case = ", ".join(_cases)
+    if is_vulner:
+        logger.debug(f"target is potentially vulnerable with cases: {case}..")
+    if case == "Page Ratio":
+        # logger.debug("checking page difference...")
+        difference, _ = get_page_ratio_difference(w1, w2)
+        difference = difference.split(",")[0]
+        if match_string:
+            logger.debug(f"matching string '{match_string}' in response..")
+            mobj = re.search("(?is)(?:%s)" % match_string, w1)
+            if not mobj:
+                logger.debug(f"string '{match_string}' not found in response.")
+                is_vulner = False
+                case = ""
+            else:
+                logger.debug(f"string '{match_string}' found in response.")
+                difference = match_string
+
+    return is_vulner, case, difference
+
+
+def is_encoded(string):
+    _temp = []
+    delimiter = " "
+    if string and "+" in string:
+        delimiter = "+"
+    if string and "%20" in string:
+        delimiter = "%20"
+    words = unquote(string).split(delimiter)
+    for word in words:
+        seq = ""
+        if isinstance(word, str):
+            word = unquote(word)
+        for char in word:
+            char_decoded = unquote(char)
+            seq += char_decoded
+        _temp.append(seq)
+    decoded_words = " ".join(_temp)
+    ok = not bool(decoded_words == string)
+    if ok:
+        logger.debug("payload is encoded.")
+    else:
+        logger.debug("payload is not encoded")
+    return ok
+
+
+def urldecode(value):
+    is_mssql = bool("%2b" in value.lower())
+    _temp = unquote(value)
+    if is_mssql:
+        _temp = _temp.replace("+", "%2b")
+    return _temp
+
+
+def urlencode(
+    value,
+    safe="/=*()&?%;,+\"'",
+    decode_first=False,
+    injection_type=None,
+    is_multipart=False,
+):
+    _temp = value
+    if decode_first:
+        value = urldecode(value)
+    if (
+        injection_type
+        and injection_type not in ["HEADER", "COOKIE"]
+        and not is_multipart
+    ):
+        _temp = quote(value, safe=safe)
+    return _temp
+
+
+def clean_up_offset_payload(payload, backend="", column=None):
+    if backend == "MySQL":
+        payload = re.sub(r"LIMIT(.*?)0,", "LIMIT\\1{offset},", payload)
+    if backend == "PostgreSQL":
+        payload = re.sub(r"OFFSET(.*?)0", "OFFSET\\1{offset}", payload)
+    if backend == "Microsoft SQL Server":
+        if "DB_NAME" in payload:
+            payload = payload.replace("DB_NAME(0)", "DB_NAME({offset})")
+        if "TOP 0" in payload:
+            payload = re.sub(r"TOP(.*?)0", "TOP\\1{offset}", payload)
+        if "LIMIT=1" in payload:
+            payload = payload.replace("LIMIT=1", "LIMIT={offset}")
+    if backend == "Oracle":
+        payload = payload.replace("LIMIT=1", "LIMIT={offset}")
+    if column:
+        payload = re.sub(f"{column}", "{column_name}", payload)
+    logger.debug(payload)
+    return payload
+
+
+def prepare_query_payload(backend, offset, payload_string, column_name=None):
+    _temp = []
+    if column_name:
+        _payload = payload_string.format(offset=offset, column_name=column_name)
+        if backend == "Microsoft SQL Server" and "id" in column_name:
+            _payload = replace_with(
+                _payload,
+                column_name,
+                f"LTRIM(STR({column_name}))",
+                right=False,
+            )
+        _temp.append(_payload)
+    else:
+        _payload = payload_string.format(offset=offset)
+        _temp.append(_payload)
+    return _temp
+
+
+def to_dbms_encoding(
+    value, backend=None, is_string=False, payload=None, to_str=False, to_char=False
+):
+    if backend == "MySQL":
+        return f"0x{binascii.hexlify(value.encode()).decode()}"
+    if backend == "PostgreSQL":
+        return f"({'||'.join([f'CHR({ord(i)})' for i in value.strip()])})"
+    if backend == "Microsoft SQL Server":
+        _temp = value
+        if not is_string:
+            if payload and "table_catalog=" in payload:
+                if "CHAR" in payload.upper():
+                    _temp = (
+                        f"({'%2b'.join([f'CHAR({ord(i)})' for i in value.strip()])})"
+                    )
+                else:
+                    _temp = f"'{value}'"
+        if is_string:
+            if payload and "table_catalog=" in payload.lower():
+                if "CHAR" in payload.upper():
+                    _temp = (
+                        f"({'%2b'.join([f'CHAR({ord(i)})' for i in value.strip()])})"
+                    )
+                else:
+                    _temp = f"'{value}'"
+        if to_char:
+            _temp = f"({'%2b'.join([f'CHAR({ord(i)})' for i in value.strip()])})"
+        if to_str:
+            _temp = f"'{value}'"
+        return _temp
+    if backend == "Oracle":
+        return f"{'||'.join([f'CHR({ord(i)})' for i in value.strip()])}"
+
+
+def prepare_extraction_payloads(
+    database, backend, payloads, table=None, column=None, dump=False, is_string=False
+):
+    _temp = []
+    if not dump:
+        if not table:
+            _temp = [
+                i.format(
+                    db=to_dbms_encoding(
+                        value=database, backend=backend, is_string=is_string, payload=i
+                    )
+                )
+                for i in payloads
+            ]
+        if table and database:
+            _temp = []
+            to_str = True
+            to_char = False
+            for index, i in enumerate(payloads):
+                db = to_dbms_encoding(
+                    value=database, backend=backend, is_string=is_string, payload=i
+                )
+                tbl = to_dbms_encoding(
+                    value=table, backend=backend, is_string=is_string, payload=i
+                )
+                if backend == "Microsoft SQL Server":
+                    if "table_catalog=" not in i:
+                        tbl = to_dbms_encoding(
+                            value=table,
+                            backend=backend,
+                            is_string=is_string,
+                            to_str=to_str,
+                            to_char=to_char,
+                        )
+                        to_str = not to_str
+                        to_char = not to_char
+                ok = i.format(db=db, tbl=tbl)
+                _temp.append(ok)
+    if dump:
+        if table and not database and not column:  # when just table is given
+            _temp = [
+                i.format(
+                    tbl=table,
+                )
+                for i in payloads
+            ]
+        elif table and database and not column:  # when just table and database is given
+            print((table, database, column))
+            _temp = [
+                i.format(
+                    db=to_dbms_encoding(value=database, backend=backend)
+                    if backend == "MySQL" and "TABLE_ROWS" in i
+                    else database,
+                    tbl=to_dbms_encoding(value=table, backend=backend)
+                    if backend == "MySQL" and "TABLE_ROWS" in i
+                    else table,
+                )
+                for i in payloads
+            ]
+        elif not database and table and column:  # when table and column is given
+            _temp = [i.format(tbl=table, col=column) for i in payloads]
+        elif table and database and column:  # when all table, database, column is given
+            _temp = [i.format(db=database, tbl=table, col=column) for i in payloads]
+    return _temp
+
+
+def prettifier(cursor_or_list, field_names="", header=False):
+    fields = []
+    Prettified = collections.namedtuple("Prettified", ["data", "entries"])
+    if field_names:
+        fields = re.sub(" +", "", field_names).split(",")
+    table = PrettyTable(field_names=[""] if not fields else fields)
+    table.align = "l"
+    table.header = header
+    entries = 0
+    for d in cursor_or_list:
+        if d and isinstance(d, str):
+            d = (d,)
+        table.add_row(d)
+        entries += 1
+    _temp = Prettified(data=table, entries=entries)
+    return _temp
+
+
+def prepare_proxy(proxy):
+    Response = collections.namedtuple("Response", ["for_requests", "for_urllib"])
+    for_urllib = None
+    for_requests = None
+    if proxy:
+        for_requests = {"http": proxy, "https": proxy}
+        for_urllib = ProxyHandler(for_requests)
+    return Response(for_requests=for_requests, for_urllib=for_urllib)
+
+
+def parse_http_error(error, url=None, is_timeout=False):
+    Response = collections.namedtuple(
+        "Response",
+        [
+            "ok",
+            "url",
+            "text",
+            "headers",
+            "status_code",
+            "reason",
+            "error",
+            "content_length",
+        ],
+    )
+    text = ""
+    status_code = 0
+    headers = {}
+    error_msg = ""
+    reason = ""
+    if not is_timeout:
+        if hasattr(error, "response"):
+            text = unescape_html(error.response)
+            status_code = error.response.status_code
+            reason = error.response.reason
+            headers = error.response.headers
+            url = error.response.url
+            error_msg = f"{status_code} ({reason})"
+            content_length = headers.get("Content-Length", len(text))
+        else:
+            status_code = error.code
+            reason = error.reason
+            headers = dict(error.info())
+            text = unescape_html(
+                error, is_compressed=bool("gzip" in headers.get("Content-Encoding", ""))
+            )
+            url = error.geturl()
+            error_msg = f"{status_code} ({reason})"
+            content_length = headers.get("Content-Length", len(text))
+    if is_timeout:
+        status_code = 4001
+        reason = "Read Timeout"
+        headers = {}
+        text = ""
+        url = url
+        error_msg = f"{status_code} ({reason})"
+        content_length = 0
+    return Response(
+        ok=False,
+        url=url,
+        text=text,
+        headers=headers,
+        status_code=status_code,
+        reason=reason,
+        error=error_msg,
+        content_length=content_length,
+    )
+
+
+def parse_http_response(resp):
+    Response = collections.namedtuple(
+        "Response",
+        [
+            "ok",
+            "url",
+            "text",
+            "headers",
+            "status_code",
+            "reason",
+            "error",
+            "content_length",
+        ],
+    )
+    text = ""
+    status_code = 0
+    headers = {}
+    error_msg = ""
+    reason = ""
+    if hasattr(resp, "text"):
+        text = resp.text
+        url = resp.url
+        status_code = resp.status_code
+        reason = resp.reason
+        headers = resp.headers
+        ok = bool(200 == status_code)
+        error_msg = f"{status_code} ({reason})"
+        content_length = headers.get("Content-Length", len(text))
+    else:
+        url = resp.geturl()
+        status_code = resp.status
+        ok = bool(200 == status_code)
+        reason = resp.reason
+        headers = dict(resp.info())
+        text = unescape_html(
+            resp, is_compressed=bool("gzip" in headers.get("Content-Encoding", ""))
+        )
+        error_msg = f"{status_code} ({reason})"
+        content_length = headers.get("Content-Length", len(text))
+    return Response(
+        ok=ok,
+        url=url,
+        text=text,
+        headers=headers,
+        status_code=status_code,
+        reason=reason,
+        error=error_msg,
+        content_length=content_length,
+    )
+
+
+def prepare_attack_request(
+    text,
+    payload,
+    param="",
+    injection_type="",
+    time_based=False,
+    encode=False,
+    is_multipart=False,
+):
+    prepared_payload = ""
+    key = param.get("key")
+    value = param.get("value")
+    is_json = False
+    try:
+        json.loads(text)
+        is_json = True
+    except ValueError:
+        pass
+    if not is_json:
+        text = urlencode(
+            value=text,
+            safe="/=*?&:;,+",
+            decode_first=True,
+            injection_type=injection_type,
+            is_multipart=is_multipart,
+        )
+        key = urlencode(
+            value=key,
+            safe="/=*?&:;,+",
+            decode_first=True,
+            injection_type=injection_type,
+            is_multipart=is_multipart,
+        )
+    if encode and not is_json:
+        payload = urlencode(
+            value=payload,
+            decode_first=True,
+            injection_type=injection_type,
+            is_multipart=is_multipart,
+        )
+    key = re.escape(key)
+    value = re.escape(value)
+    REGEX_GET_POST_COOKIE_INJECTION = r"(?is)(?:(%s)(=)(%s))" % (key, value)
+    REGEX_HEADER_INJECTION = r"(?is)(?:(%s)(:)(\s*%s))" % (key, value)
+    REGEX_JSON_INJECTION = r"(?is)(?:(['\"]%s['\"])(:)(\s*['\"]%s)(['\"]))" % (
+        key,
+        value,
+    )  # (?is)(?:(['\"]%s['\"])(:)(\s*[\['\"]+%s)(['\"\]]))
+    REGEX_MULTIPART_INJECTION = (
+        r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?(.*?))(%s)(\n--))"
+        % (key, value)
+    )
+    replace_value = bool(
+        payload.startswith("if(")
+        or payload.startswith("OR(")
+        or payload.startswith("XOR")
+        or payload.startswith("(SELEC")
+        or payload.startswith("AND(")
+    )
+    if key == "#1*" and injection_type == "GET":
+        pk = value
+    else:
+        if injection_type in ["GET", "POST", "COOKIE"]:
+            if injection_type == "POST" and is_json:
+                _ = re.search(REGEX_JSON_INJECTION, text)
+                if _ and "*" in _.group(3).strip():
+                    prepared_payload = re.sub(
+                        REGEX_JSON_INJECTION,
+                        '\\1\\2"%s\\4' % (payload.replace('"', '\\"')),
+                        text,
+                    )
+                else:
+                    prepared_payload = re.sub(
+                        REGEX_JSON_INJECTION,
+                        "\\1\\2\\3%s\\4" % (payload.replace('"', '\\"')),
+                        text,
+                    )
+                if replace_value:
+                    prepared_payload = re.sub(
+                        REGEX_JSON_INJECTION,
+                        '\\1\\2"%s"' % (payload.replace('"', '\\"')),
+                        text,
+                    )
+            else:
+                _ = re.search(REGEX_GET_POST_COOKIE_INJECTION, text)
+                if _ and "*" in _.group(3).strip():
+                    prepared_payload = re.sub(
+                        REGEX_GET_POST_COOKIE_INJECTION, "\\1\\2%s" % (payload), text
+                    )
+                else:
+                    prepared_payload = re.sub(
+                        REGEX_GET_POST_COOKIE_INJECTION, "\\1\\2\\3%s" % (payload), text
+                    )
+                if replace_value:
+                    prepared_payload = re.sub(
+                        REGEX_GET_POST_COOKIE_INJECTION, "\\1\\2%s" % (payload), text
+                    )
+        if injection_type in ["HEADER"]:
+            _ = re.search(REGEX_HEADER_INJECTION, text)
+            if _ and "*" in _.group(3).strip():
+                prepared_payload = re.sub(
+                    REGEX_HEADER_INJECTION, "\\1\\2\\3%s" % (payload), text
+                )
+                prepared_payload = replace_with(
+                    prepared_payload, character="*", replace_with="", right=False
+                )
+            else:
+                prepared_payload = re.sub(
+                    REGEX_HEADER_INJECTION, "\\1\\2\\3%s" % (payload), text
+                )
+            if replace_value:
+                prepared_payload = re.sub(
+                    REGEX_GET_POST_COOKIE_INJECTION, "\\1\\2%s" % (payload), text
+                )
+    if is_multipart:
+        if replace_value:
+            prepared_payload = re.sub(
+                REGEX_MULTIPART_INJECTION, "\\1\\2%s\\4" % (payload), text
+            )
+        else:
+            _ = re.search(REGEX_MULTIPART_INJECTION, text)
+            if _ and "*" in _.group(3).strip():
+                prepared_payload = re.sub(
+                    REGEX_MULTIPART_INJECTION, "\\1\\2\\3%s\\4" % (payload), text
+                )
+                prepared_payload = replace_with(
+                    prepared_payload, character="*", replace_with="", right=False
+                )
+            else:
+                prepared_payload = re.sub(
+                    REGEX_MULTIPART_INJECTION, "\\1\\2\\3%s\\4" % (payload), text
+                )
+    return prepared_payload
+
+
+def unescape_html(resp, show=False, is_compressed=False):
+    response = ""
+    if hasattr(resp, "read"):
+        response = resp.read()
+        if is_compressed:
+            response = gzip.decompress(response)
+    if hasattr(resp, "content"):
+        response = resp.content
+    encoding = chardet.detect(response)["encoding"]
+    if not encoding:
+        encoding = "utf-8"
+    if show:
+        logger.debug(f"declared web page charset '{encoding}'")
+    if response and not isinstance(response, str):
+        response = response.decode(encoding, errors="ignore")
+    data = ""
+    if response:
+        data = html.unescape(response)
+    return data
+
+
+def check_booleanbased_tests(tests):
+    is_vulner = False
+    if tests:
+        results = [i.get("response_type") for i in tests]
+        is_vulner = bool(False in results and True in results)
+    return is_vulner
+
+
+def headers_dict_to_str(headers):
+    _temp = "\n".join([f"{k}: {v}" for k, v in headers.items()])
+    return _temp
+
+
+def extract_multipart_formdata(data):
+    _temp = []
+    REGEX_MULTIPART = r"(?is)((Content-Disposition[^\n]+?name\s*=\s*[\"']?(?P<name>(.*?))[\"']?)(?:;\s*filename=[\"']?(?P<filename>(.*?))[\"']?)?(?:\nContent-Type:\s*(?P<contenttype>(.*?))\n)?(?:\s*)?(?P<value>[\w\.\@_\-\*\+\[\]\=\>\;\:\'\"\?\/\<\.\,\!\@\#\$\%\^\&\*\(\)\_\+\`\~\{\}\|\\ ]*)?(\s)+--)"  # r"(?is)((Content-Disposition[^\n]+?name\s*=\s*[\"']?(?P<name>(.*?))[\"']?)(?:;\s*filename=[\"']?(?P<filename>(.*?))[\"']?)?(?:\nContent-Type:\s*(?P<contenttype>(.*?))\n)?(?:\s*)?(?P<value>[\w\.\@_\-\*\+\[\]]*)?(\s)+--)"
+    for entry in re.finditer(REGEX_MULTIPART, data):
+        _out = {}
+        if entry:
+            _gdict = entry.groupdict()
+            key = _gdict.get("name")
+            value = _gdict.get("value")
+            _out.update({"key": key})
+            if "contenttype" in _gdict.keys():
+                filename = _gdict.get("filename")
+                filename = "" if not filename else filename
+                content_type = _gdict.get("contenttype")
+                content_type = "" if not content_type else content_type
+                if content_type:
+                    # value = {
+                    #     "filename": filename,
+                    #     "content_type": content_type,
+                    # }
+                    value = ""
+            _out.update({"value": value})
+        if _out:
+            _temp.append(_out)
+    return _temp
+
+
+def fetch_payloads_by_suffix_prefix(payloads, prefix=None, suffix=None):
+    _temp = []
+    if not prefix and not suffix:
+        _temp = payloads
+    Payload = collections.namedtuple("Payload", ["prefix", "suffix", "string", "raw"])
+    if prefix and not suffix:
+        for entry in payloads:
+            prefix = urldecode(prefix)
+            _pref = entry.prefix
+            if prefix.startswith(" "):
+                prefix = " "
+            if _pref and prefix and _pref[0] != prefix[0]:
+                logger.debug(f"skipping payload '{entry.raw}'")
+            if _pref and prefix and _pref[0] == prefix[0]:
+                _temp.append(entry)
+    # we should try all the suffix for now
+    # if suffix and not prefix:
+    #     for entry in payloads:
+    #         suffix = urldecode(suffix)
+    #         _suff = entry.suffix
+    #         if _suff != suffix:
+    #             logger.debug(f"skipping payload '{entry.raw}'")
+    #         if _suff == suffix:
+    #             _temp.append(entry)
+    if prefix and suffix:
+        logger.debug(
+            f" both prefix and suffix are found for injection.. '{prefix}', '{suffix}'"
+        )
+        logger.debug("checking payloads for provided prefix and suffix..")
+        for entry in payloads:
+            _pref = entry.prefix
+            prefix = urldecode(prefix)
+            if _pref and prefix and prefix[0] == _pref[0]:
+                _temp.append(entry)
+        if not _temp:
+            payload = payloads[-1].raw
+            if prefix and prefix[-1] in [")", "'", '"']:
+                prefix += " "
+            _temp = [
+                Payload(
+                    prefix=prefix,
+                    suffix=suffix,
+                    string=f"{prefix}{payload}{suffix}",
+                    raw=payload,
+                )
+            ]
+    return _temp
+
+
+def extract_json_data(data):
+    _temp = []
+    for key, value in data.items():
+        if isinstance(value, dict):
+            extract_json_data(value)
+        elif isinstance(value, list):
+            for i in value:
+                extract_json_data(v)
+        elif isinstance(value, str):
+            _temp.append({"key": key, "value": value})
+    return _temp
+
+
+def check_injection_points_for_level(level, injection_points):
+    is_ok = False
+    GET = injection_points.get("GET", [])
+    POST = injection_points.get("POST", [])
+    COOKIES = injection_points.get("COOKIE", [])
+    HEADERS = injection_points.get("HEADER", [])
+    if level == 1:
+        if GET or POST:
+            is_ok = True
+    if level == 2:
+        if GET or POST or COOKIES:
+            is_ok = True
+    if level == 3:
+        if GET or POST or COOKIES or HEADERS:
+            is_ok = True
+    return is_ok
+
+
+def extract_injection_points(url="", data="", headers="", cookies="", delimeter=""):
+    _injection_points = {}
+    custom_injection_in = []
+    is_multipart = False
+    is_json = False
+    InjectionPoints = collections.namedtuple(
+        "InjectionPoints",
+        ["custom_injection_in", "injection_points", "is_multipart", "is_json"],
+    )
+    if headers:
+        delimeter = "\n"
+        out = [i.strip() for i in headers.split(delimeter)]
+        params = [
+            {
+                "key": i.split(":")[0].strip(),
+                "value": i.split(":")[-1].strip(),
+            }
+            for i in out
+            if i
+            and i.split(":")[0].strip().lower()
+            in [h.lower() for h in INJECTABLE_HEADERS_DEFAULT]
+        ]
+        _temp = []
+        for entry in params:
+            v = entry.get("value")
+            if "*" in v:
+                _temp.append(entry)
+                break
+        if _temp:
+            params = _temp
+        if params:
+            _injection_points.update({"HEADER": params})
+        delimeter = ""
+    if cookies:
+        if not delimeter:
+            if ":" in cookies:
+                cookies = cookies.split(":", 1)[-1].strip()
+            delimeter = ";"
+        out = [i.strip() for i in cookies.split(delimeter)]
+        params = [
+            {"key": i.split("=")[0].strip(), "value": i.split("=")[-1].strip()}
+            for i in out
+            if i
+        ]
+        if params:
+            _injection_points.update({"COOKIE": params})
+    if data:
+        # checking if post data is multipart data or not
+        try:
+            data = json.loads(data)
+            is_json = True
+        except ValueError:
+            pass
+        if is_json:
+            params = extract_json_data(data)
+        else:
+            MULTIPART_RECOGNITION_REGEX = r"(?i)Content-Disposition:[^;]+;\s*name="
+            mobj = re.search(MULTIPART_RECOGNITION_REGEX, data)
+            if mobj:
+                is_multipart = True
+            if is_multipart:
+                params = extract_multipart_formdata(data)
+                # for entry in params:
+                #     multipart_formdata.update({entry.get("key"): entry.get("value")})
+            else:
+                params = parse_qs(data.strip(), keep_blank_values=True)
+                params = [
+                    {"key": k.strip(), "value": "".join(v).replace("+", "%2b")}
+                    for k, v in params.items()
+                ]
+        if params:
+            _injection_points.update({"POST": params})
+    if url:
+        parsed = urlparse(url)
+        path = parsed.path
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        params = [{"key": k.strip(), "value": "".join(v)} for k, v in params.items()]
+        if not params and path and path != "/" and "*" in path:
+            params = [{"key": "#1*", "value": "*"}]
+        _injection_points.update({"GET": params})
+    for _type, _params in _injection_points.items():
+        for entry in _params:
+            value = entry.get("value")
+            if value and "*" in value:
+                custom_injection_in.append(_type)
+    _temp = InjectionPoints(
+        custom_injection_in=custom_injection_in,
+        injection_points=_injection_points,
+        is_multipart=is_multipart,
+        is_json=is_json,
+    )
+    return _temp
+
+
+def prepare_custom_headers(
+    host="", header="", cookies="", headers="", referer="", user_agent=""
+):
+    _headers = {}
+    raw_cookies = ""
+    custom_headers = ""
+    Headers = collections.namedtuple(
+        "Headers",
+        ["headers", "raw_cookies", "raw_full_headers"],
+    )
+    if host:
+        custom_headers += f"Host: {host}\n"
+    if USER_AGENT:
+        custom_headers += f"User-agent: {USER_AGENT}\n"
+    if referer:
+        custom_headers += f"Referer: {referer}\n"
+    if header and ":" in header:
+        custom_headers += f"{header}\n"
+    if headers and ":" in headers:
+        if "\\n" in headers:
+            headers = headers.replace("\\n", "\n")
+        custom_headers += f"{headers}\n"
+    if cookies:
+        raw_cookies = f"Cookie: {cookies}"
+        custom_headers += raw_cookies
+    for entry in custom_headers.rstrip().split("\n"):
+        line = [i.strip() for i in entry.strip().split(":")]
+        if len(line) == 2:
+            _headers.update({line[0]: line[-1]})
+    custom_headers = "\n".join([i.strip() for i in custom_headers.rstrip().split("\n")])
+    _temp = Headers(
+        headers=_headers, raw_cookies=raw_cookies, raw_full_headers=custom_headers
+    )
+    return _temp
+
+
+def search_possible_dbms_errors(html):
+    """check SQL error is in HTML or not"""
+    html = get_filtered_page_content(html)
+    Response = collections.namedtuple("DBMS", ["error", "possible_dbms"])
+    _temp = Response(error=None, possible_dbms=None)
+    for possible_dbms, errors in SQL_ERRORS.items():
+        is_found = False
+        for error in errors:
+            err = re.compile(error)
+            mobj = err.search(html)
+            if mobj:
+                groups = "".join(list(mobj.groups()))
+                _temp = Response(error=groups, possible_dbms=possible_dbms)
+                is_found = True
+        if is_found:
+            break
+    return _temp
+
+
+def prepare_request(url, data, custom_headers, use_requests=False):
+    Response = collections.namedtuple("Response", ["raw", "path", "headers", "request"])
+    request_type = "GET"
+    if url and data:
+        request_type = "POST"
+    parsed = urlparse(url)
+    path = parsed.path if not parsed.query else f"{parsed.path}?{parsed.query}"
+    if not path:
+        path = "/"
+    if not custom_headers:
+        custom_headers = f"User-agent: {USER_AGENT}"
+    if custom_headers and "user-agent" not in custom_headers.lower():
+        custom_headers += f"\nUser-agent: {USER_AGENT}"
+    if custom_headers and "host" not in custom_headers.lower():
+        custom_headers += f"\nHost: {parsed.netloc}"
+    if custom_headers and "cache-control" not in custom_headers.lower():
+        custom_headers += "\nCache-Control: no-cache"
+    if custom_headers and "accept" not in custom_headers.lower():
+        custom_headers += "\nAccept: */*"
+    if custom_headers and "accept-encoding" not in custom_headers.lower():
+        custom_headers += "\nAccept-Encoding: none"
+    custom_headers = "\n".join([i.strip() for i in custom_headers.split("\n") if i])
+    raw = f"{request_type} {path} HTTP/1.1\n"
+    raw += f"{custom_headers if custom_headers else ''}\n"
+    if data:
+        raw += f"\n{data}\n"
+    header = {}
+    headers = custom_headers.split("\n")
+    for i in headers:
+        sph = [i.strip() for i in i.split(":", 1)]
+        if sph and len(sph) == 2:
+            header.update({sph[0].strip(): sph[1].strip()})
+    if not use_requests:
+        # building headers for build_opener addHeaders
+        # _temp = []
+        # for key, value in header.items():
+        #     _temp.append((key, value))
+        # custom_headers = _temp
+        # Request object uses headers in dictionary format..
+        custom_headers = header
+    else:
+        custom_headers = header
+    resp = Response(
+        raw=raw,
+        path=path,
+        headers=custom_headers,
+        request={"url": url, "data": data, "headers": header},
+    )
+    return resp
+
+
+def prepare_response(resp):
+    raw_response = f"({resp.status_code} {resp.reason}):\n"
+    raw_headers = "\n".join([f"{k}: {v}" for k, v in resp.headers.items()])
+    raw_response += f"{raw_headers}"
+    if hasattr(resp, "url"):
+        raw_response += f"\nURI: {resp.url}"
+    return raw_response
+
+
+def fetch_db_specific_payload(
+    dbms=None,
+    timebased_only=False,
+    booleanbased_only=False,
+    error_based_only=False,
+):
+    _temp = []
+    if dbms:
+        _all_dbms = [i.strip() for i in PAYLOADS.keys()]
+        for _dbms in _all_dbms:
+            if dbms and dbms.lower() == _dbms.lower():
+                dbms = _dbms
+    if dbms:
+        dbms_dict = PAYLOADS.get(dbms)
+        if dbms_dict:
+            payloads = dbms_dict
+            _temp = prepare_payloads(
+                payloads,
+                dbms=dbms,
+                timebased_only=timebased_only,
+                booleanbased_only=booleanbased_only,
+                error_based_only=error_based_only,
+            )
+    if not dbms:
+        # fetch only boolean based and blind based payloads as we can't identify the backend dbms
+        for _, entry in PAYLOADS.items():
+            ok = prepare_payloads(
+                entry,
+                dbms=_,
+                timebased_only=timebased_only,
+                booleanbased_only=booleanbased_only,
+                error_based_only=error_based_only,
+            )
+            if ok:
+                _temp.extend(ok)
+    return _temp
+
+
+def prepare_payloads(
+    payloads,
+    dbms=None,
+    timebased_only=False,
+    booleanbased_only=False,
+    error_based_only=False,
+):
+    Payload = collections.namedtuple("Payload", ["prefix", "suffix", "string", "raw"])
+    Response = collections.namedtuple(
+        "Response", ["dbms", "type", "title", "payloads", "vector"]
+    )
+    _temp = []
+    if timebased_only:
+        entries = payloads.get("time-based", [])
+        for entry in entries:
+            _ = entry.get("payload")
+            title = entry.get("title")
+            comments = entry.get("comments", [])
+            vector = entry.get("vector", "")
+            backend = entry.get("dbms", "")
+            if backend and dbms:
+                backend = dbms
+            elif backend and not dbms:
+                backend = backend
+            else:
+                backend = None
+            __temp = []
+            for comment in comments:
+                pref = comment.get("pref")
+                suf = comment.get("suf")
+                _p = Payload(
+                    prefix=pref,
+                    suffix=suf,
+                    string="{}{}{}".format(pref, _, suf),
+                    raw=_,
+                )
+                __temp.append(_p)
+            _r = Response(
+                dbms=backend,
+                type="time-based",
+                title=title,
+                payloads=__temp,
+                vector=vector,
+            )
+            _temp.append(_r)
+    elif booleanbased_only:
+        entries = payloads.get("boolean-based", [])
+        for entry in entries:
+            _ = entry.get("payload")
+            title = entry.get("title")
+            comments = entry.get("comments", [])
+            vector = entry.get("vector", "")
+            backend = entry.get("dbms", "")
+            if backend and dbms:
+                backend = dbms
+            elif backend and not dbms:
+                backend = backend
+            else:
+                backend = None
+            __temp = []
+            for comment in comments:
+                pref = comment.get("pref")
+                suf = comment.get("suf")
+                _p = Payload(
+                    prefix=pref,
+                    suffix=suf,
+                    string="{}{}{}".format(pref, _, suf),
+                    raw=_,
+                )
+                __temp.append(_p)
+            _r = Response(
+                dbms=backend,
+                type="boolean-based",
+                title=title,
+                payloads=__temp,
+                vector=vector,
+            )
+            _temp.append(_r)
+    elif error_based_only:
+        entries = payloads.get("error-based", [])
+        for entry in entries:
+            _ = entry.get("payload")
+            title = entry.get("title")
+            comments = entry.get("comments", [])
+            vector = entry.get("vector", "")
+            backend = entry.get("dbms", "")
+            if backend and dbms:
+                backend = dbms
+            elif backend and not dbms:
+                backend = backend
+            else:
+                backend = None
+            __temp = []
+            for comment in comments:
+                pref = comment.get("pref")
+                suf = comment.get("suf")
+                _p = Payload(
+                    prefix=pref,
+                    suffix=suf,
+                    string="{}{}{}".format(pref, _, suf),
+                    raw=_,
+                )
+                __temp.append(_p)
+            _r = Response(
+                dbms=backend,
+                type="error-based",
+                title=title,
+                payloads=__temp,
+                vector=vector,
+            )
+            _temp.append(_r)
+    else:
+        for _t, entries in payloads.items():
+            for entry in entries:
+                _ = entry.get("payload")
+                title = entry.get("title")
+                comments = entry.get("comments", [])
+                vector = entry.get("vector", "")
+                backend = entry.get("dbms", "")
+                if backend and dbms:
+                    backend = dbms
+                elif backend and not dbms:
+                    backend = backend
+                else:
+                    backend = None
+                __temp = []
+                for comment in comments:
+                    pref = comment.get("pref")
+                    suf = comment.get("suf")
+                    _p = Payload(
+                        prefix=pref,
+                        suffix=suf,
+                        string="{}{}{}".format(pref, _, suf),
+                        raw=_,
+                    )
+                    __temp.append(_p)
+                _r = Response(
+                    dbms=backend if _t != "boolean-based" else None,
+                    type=_t,
+                    title=title,
+                    payloads=__temp,
+                    vector=vector,
+                )
+                _temp.append(_r)
+    return _temp
