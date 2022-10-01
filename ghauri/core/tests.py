@@ -1511,8 +1511,6 @@ def check_injections(
             match_string=retval_session.match_string,
             is_string=retval_session.is_string,
         )
-    if is_multipart:
-        param_name += "MULTIPART "
     param_name += parameter.get("key")
     param_value = parameter.get("value")
     if "E" in techniques and possible_dbms:
