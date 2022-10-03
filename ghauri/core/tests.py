@@ -56,6 +56,7 @@ from ghauri.common.utils import (
     get_filtered_page_content,
     search_possible_dbms_errors,
     fetch_payloads_by_suffix_prefix,
+    get_payloads_with_functions,
 )
 
 
@@ -97,37 +98,39 @@ def basic_check(
             is_multipart=is_multipart,
             timeout=timeout,
         )
-        logger.info("testing if the target URL content is stable")
-        time.sleep(0.5)
-        resp = request.perform(
-            url=url,
-            data=data,
-            proxy=proxy,
-            headers=headers,
-            connection_test=True,
-            is_multipart=is_multipart,
-            timeout=timeout,
-        )
-        is_stable = get_filtered_page_content(base.text) == get_filtered_page_content(
-            resp.text
-        )
-        if is_stable:
-            logger.info("target URL content is stable")
-        else:
-            is_dynamic = True
-            warnMsg = "target URL content is not stable (i.e. content differs). Ghauri will base the page "
-            warnMsg += "comparison on a sequence matcher, Switching to 'text-only'"  # . If no dynamic nor "
-            # warnMsg += "injectable parameters are detected, or in case of "
-            # warnMsg += "junk results, refer to user's manual paragraph "
-            # warnMsg += "'Page comparison'"
-            logger.warning(warnMsg)
-            # choice = logger.read_input(
-            #     "how do you want to proceed? [(C)ontinue/(s)tring/(r)egex/(q)uit] ",
-            #     batch=batch,
-            #     user_input="C",
-            # )
-            # if choice == "c":
-            #     pass
+        if not is_resumed:
+            logger.info("testing if the target URL content is stable")
+            time.sleep(0.5)
+            resp = request.perform(
+                url=url,
+                data=data,
+                proxy=proxy,
+                headers=headers,
+                connection_test=True,
+                is_multipart=is_multipart,
+                timeout=timeout,
+            )
+            logger.debug(f"r1: {base.content_length}, r2: {resp.content_length}")
+            baseSet = set(base.filtered_text.split("\n"))
+            respSet = set(resp.filtered_text.split("\n"))
+            is_stable = bool(baseSet == respSet)
+            if is_stable:
+                logger.info("target URL content is stable")
+            else:
+                is_dynamic = True
+                warnMsg = "target URL content is not stable (i.e. content differs). Ghauri will base the page "
+                warnMsg += "comparison on a textual content, Switching to 'text-only'"  # . If no dynamic nor "
+                # warnMsg += "injectable parameters are detected, or in case of "
+                # warnMsg += "junk results, refer to user's manual paragraph "
+                # warnMsg += "'Page comparison'"
+                logger.warning(warnMsg)
+                # choice = logger.read_input(
+                #     "how do you want to proceed? [(C)ontinue/(s)tring/(r)egex/(q)uit] ",
+                #     batch=batch,
+                #     user_input="C",
+                # )
+                # if choice == "c":
+                #     pass
     except KeyboardInterrupt:
         logger.error("user quit")
         logger.end("ending")
@@ -195,6 +198,10 @@ def extended_dbms_check(
     vector="",
     backend="",
     attack="",
+    code=None,
+    match_string=None,
+    not_match_string=None,
+    text_only=False,
 ):
     _temp = ""
     inj = FingerPrintDBMS(
@@ -212,6 +219,10 @@ def extended_dbms_check(
         timesec=timesec,
         vector=vector,
         attack=attack,
+        code=code,
+        match_string=match_string,
+        not_match_string=not_match_string,
+        text_only=text_only,
     )
     response = ""
     if backend == "MySQL":
@@ -241,6 +252,7 @@ def confirm_booleanbased_sqli(
     delay=0,
     timesec=5,
     response_time=8,
+    match_string=None,
 ):
     _temp = []
     Response = collections.namedtuple("Response", ["vulnerable", "tests_performed"])
@@ -311,7 +323,7 @@ def confirm_booleanbased_sqli(
                 injection_type=injection_type,
             )
             confirm_response_type, case, _ = check_boolean_responses(
-                base, attack, attack01
+                base, attack, attack01, match_string=match_string
             )
             if confirm_response_type:
                 logger.debug(
@@ -344,7 +356,16 @@ def confirm_booleanbased_sqli(
         except Exception as error:
             logger.critical(f"error {error}, during time-based confirmation phase.")
             break
-    vulnerable = check_booleanbased_tests(_temp)
+    if len(_temp) >= 8:
+        vulnerable = check_booleanbased_tests(_temp)
+    else:
+        if response_time > 8:
+            if len(_temp) >= 4:
+                vulnerable = check_booleanbased_tests(_temp)
+            else:
+                vulnerable = False
+        else:
+            vulnerable = False
     ok = Response(vulnerable=vulnerable, tests_performed=_temp)
     return ok
 
@@ -367,6 +388,10 @@ def check_booleanbased_sqli(
     possible_dbms=None,
     is_json=False,
     retry=3,
+    code=None,
+    match_string=None,
+    not_match_string=None,
+    text_only=False,
 ):
     Response = collections.namedtuple(
         "SQLi",
@@ -415,20 +440,10 @@ def check_booleanbased_sqli(
                 logger.critical(f"terminating test phase due to multiple errors..")
                 logger.end("ending")
                 exit(0)
-            # for payload in entry.payloads:
             if delay > 0:
                 time.sleep(delay)
             random_boolean = random.randint(1234, 9999)
             string = payload.string
-            # if prefix:
-            #     prefix = urldecode(prefix)
-            #     if prefix.startswith(" "):
-            #         prefix = " "
-            #     else:
-            #         prefix = [i.strip() for i in prefix.split()][0]
-            #     if not string.startswith(prefix):
-            #         logger.debug(f"skipping '{entry.title}'..")
-            #         continue
             expression = string.replace(
                 "[RANDNUM]=[RANDNUM]",
                 "{:05}={:05}".format(random_boolean, random_boolean),
@@ -505,7 +520,15 @@ def check_booleanbased_sqli(
                 )
                 retry_on_error += 1
             requests_counter += 1
-            retval, case, diff = check_boolean_responses(base, attack, attack01)
+            retval, case, diff = check_boolean_responses(
+                base,
+                attack,
+                attack01,
+                code=code,
+                match_string=match_string,
+                not_match_string=not_match_string,
+                text_only=text_only,
+            )
             if not retval and end_detection_phase:
                 return None
             with_status_code_msg = ""
@@ -529,7 +552,6 @@ def check_booleanbased_sqli(
                 else:
                     message = f"{injection_type} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 logger.notice(message)
-                backend = ""
                 if not possible_dbms:
                     inj = FingerPrintDBMS(
                         base,
@@ -546,6 +568,10 @@ def check_booleanbased_sqli(
                         timesec=timesec,
                         vector=f"{payload.prefix}{entry.vector}{payload.suffix}",
                         attacks=[attack, attack01],
+                        code=code,
+                        match_string=match_string,
+                        not_match_string=not_match_string,
+                        text_only=text_only,
                     )
                     response_dbms = inj.check_mysql(heuristic_backend_check=True)
                     if not response_dbms:
@@ -557,12 +583,50 @@ def check_booleanbased_sqli(
                     if response_dbms:
                         backend = response_dbms
                     if not response_dbms:
-                        logger.warning(
-                            "Ghauri could not determine the backend DBMS, performing further tests.."
+                        logger.debug(
+                            "Ghauri could not determine the backend DBMS, detected payload is false positive, performing further tests.."
+                        )
+                        logger.debug(
+                            "false positive payload detected, continue testing remaining payloads.."
                         )
                         continue
                 if possible_dbms and not backend:
                     backend = possible_dbms
+                # message = None
+                # if backend:
+                #     message = f"heuristic (extended) test shows that the back-end DBMS could be '{mc}{backend}{nc}'"
+                # if not possible_dbms and message:
+                #     logger.notice(message)
+                # if not possible_dbms:
+                #     inj = FingerPrintDBMS(
+                #         base,
+                #         parameter,
+                #         url=url,
+                #         data=data,
+                #         headers=headers,
+                #         injection_type=injection_type,
+                #         proxy=proxy,
+                #         batch=batch,
+                #         is_multipart=is_multipart,
+                #         timeout=timeout,
+                #         delay=delay,
+                #         timesec=timesec,
+                #         vector=f"{payload.prefix}{entry.vector}{payload.suffix}",
+                #         attacks=[attack, attack01],
+                #         code=code,
+                #         match_string=match_string,
+                #         not_match_string=not_match_string,
+                #         text_only=text_only,
+                #     )
+                #     response_dbms = inj.check_mysql(heuristic_backend_check=True)
+                #     if not response_dbms:
+                #         response_dbms = inj.check_oracle(heuristic_backend_check=True)
+                #     if not response_dbms:
+                #         response_dbms = inj.check_mssql(heuristic_backend_check=True)
+                #     if not response_dbms:
+                #         response_dbms = inj.check_postgre(heuristic_backend_check=True)
+                #     if response_dbms:
+                #         backend = response_dbms
                 _url = attack.request_url if injection_type == "GET" else attack.url
                 _temp = Response(
                     url=_url,
@@ -742,7 +806,6 @@ def check_timebased_sqli(
         logger.info(f"testing '{entry.title}'")
         while index_of_payload < total_payloads:
             _payload = payloads[index_of_payload]
-            # for _payload in entry.payloads:
             if retry_on_error >= retry:
                 logger.critical(f"terminating test phase due to multiple errors..")
                 logger.end("ending")
@@ -750,15 +813,6 @@ def check_timebased_sqli(
             if delay > 0:
                 time.sleep(delay)
             string = _payload.string
-            # if prefix:
-            #     prefix = urldecode(prefix)
-            #     if prefix.startswith(" "):
-            #         prefix = " "
-            #     else:
-            #         prefix = [i.strip() for i in prefix.split()][0]
-            #     if not string.startswith(prefix):
-            #         logger.debug(f"skipping '{entry.title}'..")
-            #         continue
             expression = string.replace("[SLEEPTIME]", "%s" % (sleep_time))
             decoded_expression = urldecode(expression)
             logger.payload(f"{decoded_expression}")
@@ -922,6 +976,9 @@ def check_errorbased_sqli(
     is_string = False
     end_detection_phase = False
     is_different_status_code_injectable = False
+    error_based_payloads = get_payloads_with_functions(
+        error_based_payloads, backend=dbms, possible_dbms=possible_dbms
+    )
     for entry in error_based_payloads:
         backend = entry.dbms
         index_of_payload = 0
@@ -930,9 +987,6 @@ def check_errorbased_sqli(
             payloads=entry.payloads, prefix=prefix, suffix=suffix
         )
         total_payloads = len(payloads)
-        func_in_name = bool("AND" in entry.title)
-        if not possible_dbms and not func_in_name:
-            continue
         logger.info(f"testing '{entry.title}'")
         while index_of_payload < total_payloads:
             _payload = payloads[index_of_payload]
@@ -940,20 +994,10 @@ def check_errorbased_sqli(
                 logger.critical(f"terminating test phase due to multiple errors..")
                 logger.end("ending")
                 exit(0)
-            # for _payload in entry.payloads:
             if delay > 0:
                 time.sleep(delay)
             expression = _payload.string
             decoded_expression = urldecode(expression)
-            # if prefix:
-            #     prefix = urldecode(prefix)
-            #     if prefix.startswith(" "):
-            #         prefix = " "
-            #     else:
-            #         prefix = [i.strip() for i in prefix.split()][0]
-            #     if not decoded_expression.startswith(prefix):
-            #         logger.debug(f"skipping '{entry.title}'..")
-            #         continue
             logger.payload(f"{decoded_expression}")
             try:
                 attack = inject_expression(
@@ -1123,6 +1167,10 @@ def check_session(
     injection_type="",
     session_filepath="",
     is_json=False,
+    code=None,
+    match_string=None,
+    not_match_string=None,
+    text_only=False,
 ):
     retval = session.fetch_from_table(
         session_filepath=session_filepath, table_name="tbl_payload", cursor=False
@@ -1228,7 +1276,13 @@ def check_session(
                     )
                     attack_false = attack01
                     retval, case, match_string = check_boolean_responses(
-                        base, attack, attack01
+                        base,
+                        attack,
+                        attack01,
+                        code=code,
+                        match_string=match_string,
+                        not_match_string=not_match_string,
+                        text_only=text_only,
                     )
                     if retval:
                         vulnerable = True
@@ -1414,6 +1468,10 @@ def check_session(
                 vector=boolean_vector,
                 backend=backend,
                 attack=attack,
+                code=code,
+                match_string=match_string,
+                not_match_string=not_match_string,
+                text_only=text_only,
             )
         else:
             logger.info(f"testing {backend}")
@@ -1445,6 +1503,10 @@ def check_injections(
     retries=3,
     prefix=None,
     suffix=None,
+    code=None,
+    string=None,
+    not_string=None,
+    text_only=False,
 ):
     sqlis = []
     is_injected = False
@@ -1494,6 +1556,10 @@ def check_injections(
         injection_type=injection_type,
         session_filepath=session_filepath,
         is_json=is_json,
+        code=code,
+        match_string=string,
+        not_match_string=not_string,
+        text_only=text_only,
     )
     if retval_session and retval_session.vulnerable:
         return Ghauri(
@@ -1562,6 +1628,10 @@ def check_injections(
             suffix=suffix,
             is_json=is_json,
             retry=retries,
+            code=code,
+            match_string=string,
+            not_match_string=not_string,
+            text_only=text_only,
         )
         is_injected_bool = bool(bsqli and bsqli.injected)
         if is_injected_bool:
@@ -1662,6 +1732,10 @@ def check_injections(
                 delay=delay,
                 timesec=timesec,
                 response_time=retval.response_time,
+                match_string=retval.string if not string else string,
+            )
+            logger.debug(
+                f"successfull tests performed {len(retval_boolean_based.tests_performed)}, vulnerable: {retval_boolean_based.vulnerable}"
             )
             is_vulnerable = retval_boolean_based.vulnerable
             is_boolean_confirmed = is_vulnerable
@@ -1785,6 +1859,10 @@ def check_injections(
                         vector=boolean_vector,
                         backend=backend,
                         attack=attack,
+                        code=code,
+                        match_string=string,
+                        not_match_string=not_string,
+                        text_only=text_only,
                     )
                 else:
                     logger.info(f"testing {backend}")
@@ -1807,6 +1885,13 @@ def check_injections(
                 )
         else:
             logger.warning("false positive or unexploitable injection point detected")
+            if is_multipart:
+                msg = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_name}{nc}' does not seem to be injectable"
+            if is_json:
+                msg = f"(custom) {injection_type} parameter '{mc}JSON {param_name}{nc}' does not seem to be injectable"
+            else:
+                msg = f"{injection_type} parameter '{mc}{param_name}{nc}' does not seem to be injectable"
+            logger.notice(msg)
     else:
         if is_multipart:
             msg = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_name}{nc}' does not seem to be injectable"

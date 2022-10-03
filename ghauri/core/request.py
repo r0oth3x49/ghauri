@@ -86,6 +86,7 @@ class HTTPRequestHandler:
                 "status_code",
                 "response_time",
                 "content_length",
+                "filtered_text",
             ],
         )
         # commented out as we have figured out how to use build_opener with multipart/json based post request..
@@ -252,9 +253,10 @@ class HTTPRequestHandler:
             status_code=parsed_response.status_code,
             response_time=response_time,
             content_length=parsed_response.content_length,
+            filtered_text=parsed_response.filtered_text,
         )
         raw_response = prepare_response(http_response)
-        logger.debug(f"response time: {response_time}")
+        # logger.debug(f"response time: {response_time}")
         logger.traffic_in(f"HTTP Response {raw_response}\n")
         return http_response
 

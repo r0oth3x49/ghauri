@@ -57,6 +57,9 @@ class GhauriCommon:
         timesec=5,
         attack=None,
         match_string=None,
+        not_match_string=None,
+        code=None,
+        text_only=False,
     ):
         logger.info("fetching banner")
         retval = ghauri_extractor.fetch_characters(
@@ -76,6 +79,9 @@ class GhauriCommon:
             timesec=timesec,
             attack01=attack,
             match_string=match_string,
+            not_match_string=not_match_string,
+            code=code,
+            text_only=text_only,
         )
         if retval.ok:
             logger.info("retrieved: '%s'" % (retval.result))
@@ -103,6 +109,9 @@ class GhauriCommon:
         timesec=5,
         attack=None,
         match_string=None,
+        not_match_string=None,
+        code=None,
+        text_only=False,
     ):
         logger.info("fetching current user")
         retval = ghauri_extractor.fetch_characters(
@@ -122,6 +131,9 @@ class GhauriCommon:
             timesec=timesec,
             attack01=attack,
             match_string=match_string,
+            not_match_string=not_match_string,
+            code=code,
+            text_only=text_only,
         )
         if retval.ok:
             logger.info("retrieved: '%s'" % (retval.result))
@@ -149,6 +161,9 @@ class GhauriCommon:
         timesec=5,
         attack=None,
         match_string=None,
+        not_match_string=None,
+        code=None,
+        text_only=False,
     ):
         logger.info("fetching current database")
         retval = ghauri_extractor.fetch_characters(
@@ -168,6 +183,9 @@ class GhauriCommon:
             timesec=timesec,
             attack01=attack,
             match_string=match_string,
+            not_match_string=not_match_string,
+            code=code,
+            text_only=text_only,
         )
         if retval.ok:
             logger.info("retrieved: '%s'" % (retval.result))

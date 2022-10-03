@@ -78,6 +78,10 @@ def perform_injection(
     retries=3,
     prefix=None,
     suffix=None,
+    code=200,
+    string=None,
+    not_string=None,
+    text_only=False,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -112,6 +116,9 @@ def perform_injection(
             "attack",
             "match_string",
             "vectors",
+            "not_match_string",
+            "code",
+            "text_only",
         ],
     )
     levels = {2: "COOKIE", 3: "HEADER"}
@@ -321,6 +328,10 @@ def perform_injection(
                     retries=retries,
                     prefix=prefix,
                     suffix=suffix,
+                    code=code if code != 200 else None,
+                    string=string,
+                    not_string=not_string,
+                    text_only=is_dynamic,
                 )
                 if retval and retval.vulnerable:
                     backend = retval.backend
@@ -352,6 +363,11 @@ def perform_injection(
                         attack=attack,
                         match_string=match_string,
                         vectors=vectors,
+                        code=code if code != 200 else None,
+                        not_match_string=None,
+                        text_only=is_dynamic
+                        if is_dynamic and not text_only
+                        else text_only,
                     )
     # end of injection
     logger.critical("all tested parameters do not appear to be injectable.")
@@ -373,6 +389,9 @@ def perform_injection(
         attack=None,
         match_string=None,
         vectors={},
+        code=None,
+        not_match_string=None,
+        text_only=None,
     )
 
 
@@ -398,6 +417,9 @@ class Ghauri:
         attack=None,
         match_string=None,
         vectors=None,
+        not_match_string=None,
+        code=None,
+        text_only=False,
     ):
         self.url = url
         self.data = data
@@ -417,6 +439,9 @@ class Ghauri:
         self._attack = attack
         self._match_string = match_string
         self._vectors = vectors
+        self._not_match_string = not_match_string
+        self._code = code
+        self._text_only = text_only
 
     def __end(self, database="", table="", fetched=True):
         new_line = ""
@@ -452,6 +477,9 @@ class Ghauri:
             timesec=self.timesec,
             attack=self._attack,
             match_string=self._match_string,
+            not_match_string=self._not_match_string,
+            code=self._code,
+            text_only=self._text_only,
         )
         fetched = response.ok
         if fetched:
@@ -476,6 +504,9 @@ class Ghauri:
             timesec=self.timesec,
             attack=self._attack,
             match_string=self._match_string,
+            not_match_string=self._not_match_string,
+            code=self._code,
+            text_only=self._text_only,
         )
         fetched = response.ok
         if fetched:
@@ -500,6 +531,9 @@ class Ghauri:
             timesec=self.timesec,
             attack=self._attack,
             match_string=self._match_string,
+            not_match_string=self._not_match_string,
+            code=self._code,
+            text_only=self._text_only,
         )
         fetched = response.ok
         if fetched:
@@ -524,6 +558,9 @@ class Ghauri:
             timesec=self.timesec,
             attack=self._attack,
             match_string=self._match_string,
+            not_match_string=self._not_match_string,
+            code=self._code,
+            text_only=self._text_only,
         )
         fetched = response.ok
         if fetched:
@@ -548,6 +585,9 @@ class Ghauri:
             timesec=self.timesec,
             attack=self._attack,
             match_string=self._match_string,
+            not_match_string=self._not_match_string,
+            code=self._code,
+            text_only=self._text_only,
             start=start,
             stop=stop,
         )
@@ -574,6 +614,9 @@ class Ghauri:
             timesec=self.timesec,
             attack=self._attack,
             match_string=self._match_string,
+            not_match_string=self._not_match_string,
+            code=self._code,
+            text_only=self._text_only,
             start=start,
             stop=stop,
             database=database,
@@ -604,6 +647,9 @@ class Ghauri:
             timesec=self.timesec,
             attack=self._attack,
             match_string=self._match_string,
+            not_match_string=self._not_match_string,
+            code=self._code,
+            text_only=self._text_only,
             start=start,
             stop=stop,
             database=database,
@@ -632,6 +678,9 @@ class Ghauri:
             timesec=self.timesec,
             attack=self._attack,
             match_string=self._match_string,
+            not_match_string=self._not_match_string,
+            code=self._code,
+            text_only=self._text_only,
             start=start,
             stop=stop,
             database=database,

@@ -72,6 +72,9 @@ class GhauriAdvance:
         suppress_output=False,
         query_check=False,
         list_of_chars=None,
+        not_match_string=None,
+        code=None,
+        text_only=False,
     ):
         retval = ghauri_extractor.fetch_characters(
             url=url,
@@ -116,6 +119,9 @@ class GhauriAdvance:
         start=0,
         stop=None,
         batch=False,
+        not_match_string=None,
+        code=None,
+        text_only=False,
     ):
         if start != 0 and start > 0:
             if backend != "Oracle":
@@ -150,6 +156,9 @@ class GhauriAdvance:
             match_string=match_string,
             suppress_output=True,
             list_of_chars="0123456789",
+            not_match_string=not_match_string,
+            code=code,
+            text_only=text_only,
         )
         if not retval.ok and backend == "Microsoft SQL Server":
             logger.debug(
@@ -178,6 +187,9 @@ class GhauriAdvance:
                     match_string=match_string,
                     suppress_output=True,
                     query_check=True,
+                    not_match_string=not_match_string,
+                    code=code,
+                    text_only=text_only,
                 )
                 if _.ok:
                     payload = _.payload
@@ -219,6 +231,9 @@ class GhauriAdvance:
                     match_string=match_string,
                     suppress_output=True,
                     query_check=False,
+                    not_match_string=not_match_string,
+                    code=code,
+                    text_only=text_only,
                     # list_of_chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789",
                 )
                 if retval.ok:
@@ -271,6 +286,9 @@ class GhauriAdvance:
                         match_string=match_string,
                         suppress_output=True,
                         query_check=True,
+                        not_match_string=not_match_string,
+                        code=code,
+                        text_only=text_only,
                     )
                     if _.ok:
                         payload = _.payload
@@ -314,6 +332,9 @@ class GhauriAdvance:
                             match_string=match_string,
                             suppress_output=True,
                             query_check=False,
+                            not_match_string=not_match_string,
+                            code=code,
+                            text_only=text_only,
                             # list_of_chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789",
                         )
                         if retval.ok:
@@ -357,6 +378,9 @@ class GhauriAdvance:
         stop=None,
         database=None,
         batch=False,
+        not_match_string=None,
+        code=None,
+        text_only=False,
     ):
         if start != 0 and start > 0:
             if backend != "Oracle":
@@ -397,6 +421,9 @@ class GhauriAdvance:
             match_string=match_string,
             suppress_output=True,
             list_of_chars="0123456789",
+            not_match_string=not_match_string,
+            code=code,
+            text_only=text_only,
         )
         if retval.ok:
             total = 0
@@ -437,6 +464,9 @@ class GhauriAdvance:
                         match_string=match_string,
                         suppress_output=True,
                         query_check=True,
+                        not_match_string=not_match_string,
+                        code=code,
+                        text_only=text_only,
                     )
                     if _.ok:
                         payload = _.payload
@@ -474,6 +504,9 @@ class GhauriAdvance:
                             match_string=match_string,
                             suppress_output=True,
                             query_check=False,
+                            not_match_string=not_match_string,
+                            code=code,
+                            text_only=text_only,
                             # list_of_chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789",
                         )
                         if retval.ok:
@@ -521,6 +554,9 @@ class GhauriAdvance:
         database=None,
         table=None,
         batch=False,
+        not_match_string=None,
+        code=None,
+        text_only=False,
     ):
         if start != 0 and start > 0:
             if backend != "Oracle":
@@ -562,6 +598,9 @@ class GhauriAdvance:
             match_string=match_string,
             suppress_output=True,
             list_of_chars="0123456789",
+            not_match_string=not_match_string,
+            code=code,
+            text_only=text_only,
         )
         if retval.ok:
             total = 0
@@ -602,6 +641,9 @@ class GhauriAdvance:
                         match_string=match_string,
                         suppress_output=True,
                         query_check=True,
+                        not_match_string=not_match_string,
+                        code=code,
+                        text_only=text_only,
                     )
                     if _.ok:
                         payload = _.payload
@@ -634,6 +676,9 @@ class GhauriAdvance:
                             match_string=match_string,
                             suppress_output=True,
                             query_check=False,
+                            not_match_string=not_match_string,
+                            code=code,
+                            text_only=text_only,
                         )
                         if retval.ok:
                             logger.info("retrieved: %s" % (retval.result))
@@ -685,6 +730,9 @@ class GhauriAdvance:
         table=None,
         columns=None,
         batch=False,
+        not_match_string=None,
+        code=None,
+        text_only=False,
     ):
         __columns = to_list(columns)
         if start != 0 and start > 0:
@@ -731,6 +779,9 @@ class GhauriAdvance:
             match_string=match_string,
             suppress_output=True,
             list_of_chars="0123456789",
+            not_match_string=not_match_string,
+            code=code,
+            text_only=text_only,
         )
         if retval.ok:
             total = 0
@@ -772,6 +823,9 @@ class GhauriAdvance:
                         match_string=match_string,
                         suppress_output=True,
                         query_check=True,
+                        not_match_string=not_match_string,
+                        code=code,
+                        text_only=text_only,
                     )
                     if _.ok:
                         payload = _.payload
@@ -825,6 +879,9 @@ class GhauriAdvance:
                                 match_string=match_string,
                                 suppress_output=True,
                                 query_check=False,
+                                not_match_string=not_match_string,
+                                code=code,
+                                text_only=text_only,
                             )
                             if retval.ok:
                                 if retval.result not in __temp:

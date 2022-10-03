@@ -318,6 +318,27 @@ def get_boolean_ratio(w1, w2):
     return ratio
 
 
+def get_payloads_with_functions(payloads, backend, possible_dbms=None):
+    _temp = []
+    if not possible_dbms:
+        reg = r"(?is)(?:UPDATEXML|EXTRACTVALUE|FLOOR|PROCEDURE\sANALYSE)"
+        for entry in payloads:
+            if "AND" in entry.title:
+                if backend == "MySQL":
+                    mobj = re.search(reg, entry.title)
+                    if mobj:
+                        _temp.append(entry)
+                else:
+                    _temp.append(entry)
+        if possible_dbms:
+            _temp = payloads
+        if not _temp:
+            _temp = payloads
+    else:
+        _temp = payloads
+    return _temp
+
+
 def get_page_ratio_difference(response, response_01):
     _temp = []
     _diff = []
@@ -326,17 +347,45 @@ def get_page_ratio_difference(response, response_01):
     seq = SequenceMatcher(None, response, response_01)
     for tag, i1, i2, j1, j2 in seq.get_opcodes():
         if tag == "replace":
-            logger.debug(
-                "{:7}   response[{}:{}] --> response_01[{}:{}] {!r:>8} --> {!r}".format(
-                    tag, i1, i2, j1, j2, response[i1:i2], response_01[j1:j2]
-                )
+            new = re.sub(
+                r" +",
+                " ",
+                re.sub(r"[^a-zA-Z0-9\.\s]+", " ", response[i1:i2]).lstrip().rstrip(),
             )
-            _temp.append({"true": response[i1:i2], "false": response_01[j1:j2]})
-            _diff.append(response[i1:i2])
-    return ",".join(_diff), _temp
+            old = re.sub(
+                r" +",
+                " ",
+                re.sub(r"[^a-zA-Z0-9\.\s]+", " ", response_01[j1:j2]).lstrip().rstrip(),
+            )
+            if len(new) >= 2 and len(old) >= 2:
+                # logger.debug(
+                #     "{:7}   response[{}:{}] --> response_01[{}:{}] {!r:>8} --> {!r}".format(
+                #         tag, i1, i2, j1, j2, new, old
+                #     )
+                # )
+                logger.debug(
+                    "{:7} page difference: {!r:>8} --> {!r}".format(tag, new, old)
+                )
+                _temp.append(
+                    f'--string="{response[i1:i2]}", --not-string="{response_01[j1:j2]}"'
+                )
+                std = response[i1:i2]
+                std = re.sub(r"[^a-zA-Z0-9\.\s]+", " ", std)
+                if std:
+                    std = re.sub(r" +", " ", std.lstrip().rstrip())
+                _diff.append(std)
+    return _diff, _temp
 
 
-def check_boolean_responses(base, attack_true, attack_false, match_string=None):
+def check_boolean_responses(
+    base,
+    attack_true,
+    attack_false,
+    code="",
+    match_string="",
+    not_match_string="",
+    text_only=False,
+):
     is_vulner = False
     scb = base.status_code
     sct = attack_true.status_code
@@ -347,55 +396,165 @@ def check_boolean_responses(base, attack_true, attack_false, match_string=None):
     case = ""
     difference = ""
     _cases = []
-    if ctt != ctf and ctb == ctt:
-        # case 1: when True attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
-        is_vulner = True
-        _cases.append("Content Length")
-    elif ctt != ctf and ctb == ctf:
-        # case 2: when False attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
-        is_vulner = True
-        _cases.append("Content Length")
-    # case 3: True injected page is compared with original page (to get something called ratio),
-    # then False injected page is compared to original page (to also get the ratio) and
-    # then those two ratios are compared together.
-    # It compares those two ratios and they should be clearly distinct
-    # based on https://github.com/sqlmapproject/sqlmap/issues/2442
-    w0 = base.text
-    w1 = attack_true.text
-    w2 = attack_false.text
+    if text_only:
+        w0 = base.text
+        w1 = attack_true.text
+        w2 = attack_false.text
+    if not text_only:
+        w0 = base.filtered_text
+        w1 = attack_true.filtered_text
+        w2 = attack_false.filtered_text
     ratio_true = get_boolean_ratio(w0, w1)
     ratio_false = get_boolean_ratio(w0, w2)
-    if ratio_true != ratio_false:
-        _cases.append("Page Ratio")
-        is_vulner = True
-    # if with page comparision we didn't found the target vulnerable then also compare the response status codes
-    if scb == sct and scb != scf:
-        # case 4: when True attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
-        _cases.append("Status Code")
-        is_vulner = True
-    elif scb == scf and scb != sct:
-        # case 5: when False attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
-        is_vulner = True
-        _cases.append("Status Code")
+    # this case will be run when --code=500 is specified.
+    if code:
+        logger.debug(
+            f"matching based on status code with true attack type: --code={code}"
+        )
+        if code == sct or code == scf:
+            logger.debug(
+                f"matching based on status code with true attack type: {code} (found)"
+            )
+            is_vulner = True
+            _cases.append("Status code")
+        else:
+            logger.debug(
+                f"matching based on status code with true attack type: {code} (not found)"
+            )
+    elif match_string:
+        logger.debug(f'matching true payload string: --string="{match_string}"')
+        mobj = re.search(r"(?is)(?:%s)" % (match_string), w1)
+        if mobj:
+            logger.debug(f"matching true payload string: {match_string} (found)")
+            is_vulner = True
+            difference = match_string
+            _cases.append("Page Content")
+        else:
+            is_vulner = False
+            logger.debug(f"matching true payload string: {match_string} (not found)")
+    elif not_match_string:
+        logger.debug(
+            f'matching false payload string: --not-string="{not_match_string}"'
+        )
+        mobj = re.search(r"(?is)(?:%s)" % (not_match_string), w2)
+        if mobj:
+            logger.debug(f"matching false payload string: {not_match_string} (found)")
+            is_vulner = True
+            difference = not_match_string
+            _cases.append("Page Content")
+        else:
+            is_vulner = False
+            logger.debug(
+                f"matching false payload string: {not_match_string} (not found)"
+            )
+    else:
+        if ctt != ctf and ctb == ctt:
+            # case 1: when True attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
+            is_vulner = True
+            _cases.append("Content Length")
+        elif ctt != ctf and ctb == ctf:
+            # case 2: when False attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
+            is_vulner = True
+            _cases.append("Content Length")
+        # case 3: True injected page is compared with original page (to get something called ratio),
+        # then False injected page is compared to original page (to also get the ratio) and
+        # then those two ratios are compared together.
+        # It compares those two ratios and they should be clearly distinct
+        # based on https://github.com/sqlmapproject/sqlmap/issues/2442
+        if ratio_true != ratio_false:
+            _cases.append("Page Ratio")
+            is_vulner = True
+        # if with page comparision we didn't found the target vulnerable then also compare the response status codes
+        if scb == sct and scb != scf:
+            # case 4: when True attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
+            _cases.append("Status Code")
+            is_vulner = True
+        elif scb == scf and scb != sct:
+            # case 5: when False attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
+            is_vulner = True
+            _cases.append("Status Code")
     if _cases:
         case = ", ".join(_cases)
     if is_vulner:
         logger.debug(f"target is potentially vulnerable with cases: {case}..")
     if case == "Page Ratio":
-        # logger.debug("checking page difference...")
-        difference, _ = get_page_ratio_difference(w1, w2)
-        difference = difference.split(",")[0]
-        if match_string:
-            logger.debug(f"matching string '{match_string}' in response..")
-            mobj = re.search("(?is)(?:%s)" % match_string, w1)
-            if not mobj:
-                logger.debug(f"string '{match_string}' not found in response.")
-                is_vulner = False
-                case = ""
-            else:
-                logger.debug(f"string '{match_string}' found in response.")
-                difference = match_string
-
+        logger.debug("checking page difference.")
+        w0set = set(get_filtered_page_content(w0, True, "\n").split("\n"))
+        w1set = set(get_filtered_page_content(w1, True, "\n").split("\n"))
+        w2set = set(get_filtered_page_content(w2, True, "\n").split("\n"))
+        is_vulner = False
+        case = ""
+        if w0set == w1set != w2set:
+            candidates = w1set - w2set - w0set
+            logger.debug(f"total candidates: {len(candidates)}")
+            if candidates:
+                candidates = sorted(candidates, key=len)
+                for candidate in candidates:
+                    mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
+                    logger.debug(f"candidate: {candidate}")
+                    if (
+                        mobj
+                        and " " in candidate
+                        and candidate.strip()
+                        and len(candidate) > 10
+                    ):
+                        difference = candidate
+                        is_vulner = True
+                        case = "Page Ratio"
+                        logger.debug(f"difference found: {difference}")
+                        break
+        else:
+            w1 = get_filtered_page_content(w1)
+            w2 = get_filtered_page_content(w2)
+            candidates, _ = get_page_ratio_difference(w1, w2)
+            suggestion = None
+            for candidate in candidates:
+                mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
+                logger.debug(f"candidate: {candidate}")
+                if (
+                    mobj
+                    and " " in candidate
+                    and candidate.strip()
+                    and len(candidate) > 10
+                ):
+                    logger.debug(f"candidate {candidate} found for --string switch...")
+                    difference = candidate
+                    is_vulner = True
+                    case = "Page Ratio"
+                    suggestion = candidate
+                    # logger.debug(f"difference found: {difference}")
+                    break
+            if not suggestion and not is_vulner:
+                # candidates = candidates[0].strip() if candidates else []
+                for candidate in candidates:
+                    candidate = re.sub(r"\d+\.\d+", "", candidate)
+                    mobj = re.search(r"\A[\w.,! ]+\Z", candidate)
+                    if mobj and len(candidate) >= 4:
+                        logger.debug(f"string candidate could be: {candidate}")
+                        difference = candidate
+                        is_vulner = True
+                        case = "Page Ratio"
+            if difference:
+                logger.debug(
+                    f'vulnerable to page content with --string="{difference}"..'
+                )
+        # difference, _ = get_page_ratio_difference(w1, w2)
+        # logger.debug(f"difference detected: '{difference}'..")
+        # difference = difference.split(",")[0].strip()
+        # if len(difference) == 0:
+        #     is_vulner = False
+        #     case = ""
+        #     difference = ""
+        # if match_string:
+        #     logger.debug(f"matching string '{match_string}' in response..")
+        #     mobj = re.search("(?is)(?:%s)" % match_string, w1)
+        #     if not mobj:
+        #         logger.debug(f"string '{match_string}' not found in response.")
+        #         is_vulner = False
+        #         case = ""
+        #     else:
+        #         logger.debug(f"string '{match_string}' found in response.")
+        #         difference = match_string
     return is_vulner, case, difference
 
 
@@ -629,6 +788,7 @@ def parse_http_error(error, url=None, is_timeout=False):
             "reason",
             "error",
             "content_length",
+            "filtered_text",
         ],
     )
     text = ""
@@ -645,6 +805,7 @@ def parse_http_error(error, url=None, is_timeout=False):
             url = error.response.url
             error_msg = f"{status_code} ({reason})"
             content_length = headers.get("Content-Length", len(text))
+            filtered_text = get_filtered_page_content(text)
         else:
             status_code = error.code
             reason = error.reason
@@ -655,6 +816,7 @@ def parse_http_error(error, url=None, is_timeout=False):
             url = error.geturl()
             error_msg = f"{status_code} ({reason})"
             content_length = headers.get("Content-Length", len(text))
+            filtered_text = get_filtered_page_content(text)
     if is_timeout:
         status_code = 4001
         reason = "Read Timeout"
@@ -663,6 +825,7 @@ def parse_http_error(error, url=None, is_timeout=False):
         url = url
         error_msg = f"{status_code} ({reason})"
         content_length = 0
+        filtered_text = ""
     return Response(
         ok=False,
         url=url,
@@ -672,6 +835,7 @@ def parse_http_error(error, url=None, is_timeout=False):
         reason=reason,
         error=error_msg,
         content_length=content_length,
+        filtered_text=filtered_text,
     )
 
 
@@ -687,6 +851,7 @@ def parse_http_response(resp):
             "reason",
             "error",
             "content_length",
+            "filtered_text",
         ],
     )
     text = ""
@@ -703,6 +868,7 @@ def parse_http_response(resp):
         ok = bool(200 == status_code)
         error_msg = f"{status_code} ({reason})"
         content_length = headers.get("Content-Length", len(text))
+        filtered_text = get_filtered_page_content(text)
     else:
         url = resp.geturl()
         status_code = resp.status
@@ -712,8 +878,10 @@ def parse_http_response(resp):
         text = unescape_html(
             resp, is_compressed=bool("gzip" in headers.get("Content-Encoding", ""))
         )
+        text = text
         error_msg = f"{status_code} ({reason})"
         content_length = headers.get("Content-Length", len(text))
+        filtered_text = get_filtered_page_content(text)
     return Response(
         ok=ok,
         url=url,
@@ -723,6 +891,7 @@ def parse_http_response(resp):
         reason=reason,
         error=error_msg,
         content_length=content_length,
+        filtered_text=filtered_text,
     )
 
 
@@ -744,7 +913,7 @@ def prepare_attack_request(
         is_json = True
     except ValueError:
         pass
-    if not is_json:
+    if not is_json and not key == "#1*":
         text = urlencode(
             value=text,
             safe="/=*?&:;,+",
@@ -766,28 +935,32 @@ def prepare_attack_request(
             injection_type=injection_type,
             is_multipart=is_multipart,
         )
-    key = re.escape(key)
-    value = re.escape(value)
-    REGEX_GET_POST_COOKIE_INJECTION = r"(?is)(?:(%s)(=)(%s))" % (key, value)
-    REGEX_HEADER_INJECTION = r"(?is)(?:(%s)(:)(\s*%s))" % (key, value)
-    REGEX_JSON_INJECTION = r"(?is)(?:(['\"]%s['\"])(:)(\s*['\"]%s)(['\"]))" % (
-        key,
-        value,
-    )  # (?is)(?:(['\"]%s['\"])(:)(\s*[\['\"]+%s)(['\"\]]))
-    REGEX_MULTIPART_INJECTION = (
-        r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?(.*?))(%s)(\n--))"
-        % (key, value)
-    )
-    replace_value = bool(
-        payload.startswith("if(")
-        or payload.startswith("OR(")
-        or payload.startswith("XOR")
-        or payload.startswith("(SELEC")
-        or payload.startswith("AND(")
-    )
     if key == "#1*" and injection_type == "GET":
-        pk = value
+        init, last = text.split(value)
+        prepared_payload = f"{init}{payload}{last}"
     else:
+        key = re.escape(key)
+        value = re.escape(value)
+        REGEX_GET_POST_COOKIE_INJECTION = r"(?is)(?:((?:\?| |&)%s)(=)(%s))" % (
+            key,
+            value,
+        )
+        REGEX_HEADER_INJECTION = r"(?is)(?:(%s)(:)(\s*%s))" % (key, value)
+        REGEX_JSON_INJECTION = r"(?is)(?:(['\"]%s['\"])(:)(\s*['\"]%s)(['\"]))" % (
+            key,
+            value,
+        )  # (?is)(?:(['\"]%s['\"])(:)(\s*[\['\"]+%s)(['\"\]]))
+        REGEX_MULTIPART_INJECTION = (
+            r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?(.*?))(%s)(\n--))"
+            % (key, value)
+        )
+        replace_value = bool(
+            payload.startswith("if(")
+            or payload.startswith("OR(")
+            or payload.startswith("XOR")
+            or payload.startswith("(SELEC")
+            or payload.startswith("AND(")
+        )
         if injection_type in ["GET", "POST", "COOKIE"]:
             if injection_type == "POST" and is_json:
                 _ = re.search(REGEX_JSON_INJECTION, text)

@@ -131,7 +131,10 @@ class GhauriExtractor:
         timeout=30,
         proxy=None,
         attack01=None,
+        code=None,
         match_string=None,
+        not_match_string=None,
+        text_only=False,
         is_multipart=False,
         suppress_output=False,
         query_check=False,
@@ -189,7 +192,10 @@ class GhauriExtractor:
                     base,
                     attack,
                     attack01,
+                    code=code,
                     match_string=match_string,
+                    not_match_string=not_match_string,
+                    text_only=text_only,
                 )
                 if result:
                     minimum = ascii_char + 1
@@ -223,8 +229,11 @@ class GhauriExtractor:
         delay=0,
         timesec=5,
         attack01=None,
+        code=None,
         match_string=None,
+        not_match_string=None,
         suppress_output=False,
+        text_only=False,
     ):
 
         noc = 0
@@ -265,7 +274,10 @@ class GhauriExtractor:
                             base,
                             attack,
                             attack01,
+                            code=code,
                             match_string=match_string,
+                            not_match_string=not_match_string,
+                            text_only=text_only,
                         )
                         if result:
                             working_query = entry
@@ -309,9 +321,12 @@ class GhauriExtractor:
         delay=0,
         timesec=5,
         attack01=None,
+        code=None,
         match_string=None,
+        not_match_string=None,
         suppress_output=False,
         query_check=False,
+        text_only=False,
     ):
 
         noc, _ = self.fetch_noc(
@@ -330,8 +345,11 @@ class GhauriExtractor:
             delay=delay,
             timesec=timesec,
             attack01=attack01,
+            code=code,
             match_string=match_string,
+            not_match_string=not_match_string,
             suppress_output=suppress_output,
+            text_only=text_only,
         )
         if query_check and noc > 0:
             return _
@@ -364,7 +382,9 @@ class GhauriExtractor:
                             timeout=timeout,
                             proxy=proxy,
                             attack01=attack01,
+                            code=code,
                             match_string=match_string,
+                            not_match_string=not_match_string,
                             is_multipart=is_multipart,
                             suppress_output=suppress_output,
                             query_check=query_check,
@@ -374,6 +394,7 @@ class GhauriExtractor:
                             expression_payload=value,
                             queryable=entry,
                             chars=chars,
+                            text_only=text_only,
                         )
                         chars += retval
                         logger.debug(f"character found: '{str(chars)}'")
@@ -409,7 +430,10 @@ class GhauriExtractor:
                                     base,
                                     attack,
                                     attack01,
+                                    code=code,
                                     match_string=match_string,
+                                    not_match_string=not_match_string,
+                                    text_only=text_only,
                                 )
                                 if result:
                                     chars += str(chr(i))
@@ -531,10 +555,13 @@ class GhauriExtractor:
         delay=0,
         timesec=5,
         attack01=None,
+        code=None,
         match_string=None,
+        not_match_string=None,
         suppress_output=False,
         query_check=False,
         list_of_chars=None,
+        text_only=False,
     ):
         PayloadResponse = collections.namedtuple(
             "PayloadResponse",
@@ -566,40 +593,20 @@ class GhauriExtractor:
                 payload=retval_error.payload,
             )
             return _temp_error
-        if (
-            error_based_in_vectors
-            and not retval_error.ok
-            and backend == "Microsoft SQL Server"
-        ):
-            _temp_error = PayloadResponse(
-                ok=retval_error.ok,
-                error=retval_error.error,
-                result=retval_error.result,
-                payload=retval_error.payload,
-            )
-            return _temp_error
-        length = self.fetch_length(
-            url,
-            data,
-            vector,
-            parameter,
-            headers,
-            base,
-            injection_type,
-            payloads=payloads,
-            backend=backend,
-            proxy=proxy,
-            is_multipart=is_multipart,
-            timeout=timeout,
-            delay=delay,
-            timesec=timesec,
-            attack01=attack01,
-            match_string=match_string,
-            query_check=query_check,
-            suppress_output=suppress_output,
-        )
-        if query_check:
-            return PayloadResponse(ok=True, error="", result="", payload=length)
+        # if (
+        #     error_based_in_vectors
+        #     and not retval_error.ok
+        #     and backend == "Microsoft SQL Server"
+        # ):
+        #     _temp_error = PayloadResponse(
+        #         ok=retval_error.ok,
+        #         error=retval_error.error,
+        #         result=retval_error.result,
+        #         payload=retval_error.payload,
+        #     )
+        #     return _temp_error
+        if not retval_error.ok:
+            logger.debug("Switching to other injection types if any..")
         if not list_of_chars:
             list_of_chars = "._-1234567890aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ@+!#$%^&*()+"
         data_extraction_payloads = DATA_EXTRACTION_PAYLOADS.get(backend)
@@ -608,14 +615,39 @@ class GhauriExtractor:
         attack_url = url
         attack_data = data
         attack_headers = headers
-        if length == 0:
-            logger.debug(
-                "it was not possible to extract query output length for the SQL query provided."
-            )
         for vector_type, vector in self.vectors.items():
             if vector_type == "error_vector":
                 continue
             logger.debug(f"Ghauri is testing the with vector type: '{vector_type}'..")
+            length = self.fetch_length(
+                url,
+                data,
+                vector,
+                parameter,
+                headers,
+                base,
+                injection_type,
+                payloads=payloads,
+                backend=backend,
+                proxy=proxy,
+                is_multipart=is_multipart,
+                timeout=timeout,
+                delay=delay,
+                timesec=timesec,
+                attack01=attack01,
+                code=code,
+                match_string=match_string,
+                not_match_string=not_match_string,
+                query_check=query_check,
+                suppress_output=suppress_output,
+                text_only=text_only,
+            )
+            if length == 0:
+                logger.debug(
+                    "it was not possible to extract query output length for the SQL query provided."
+                )
+            if query_check:
+                return PayloadResponse(ok=True, error="", result="", payload=length)
             is_done_with_vector = False
             for entries in data_extraction_payloads:
                 is_extracted = False
@@ -639,7 +671,9 @@ class GhauriExtractor:
                                     timeout=timeout,
                                     proxy=proxy,
                                     attack01=attack01,
+                                    code=code,
                                     match_string=match_string,
+                                    not_match_string=not_match_string,
                                     is_multipart=is_multipart,
                                     suppress_output=suppress_output,
                                     query_check=query_check,
@@ -649,6 +683,7 @@ class GhauriExtractor:
                                     expression_payload=value,
                                     queryable=entry,
                                     chars=chars,
+                                    text_only=text_only,
                                 )
                                 chars += retval
                                 logger.debug(f"character found: '{str(chars)}'")

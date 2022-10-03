@@ -226,7 +226,37 @@ def main():
         type=int,
         help="Level of tests to perform (1-3, default 1)",
         default=1,
+        # metavar="",
+    )
+    detection.add_argument(
+        "--code",
+        dest="code",
+        type=int,
+        help="HTTP code to match when query is evaluated to True",
+        default=200,
+        # metavar="",
+    )
+    detection.add_argument(
+        "--string",
+        dest="string",
+        type=str,
+        help="String to match when query is evaluated to True",
+        default=None,
         metavar="",
+    )
+    detection.add_argument(
+        "--not-string",
+        dest="not_string",
+        type=str,
+        help="String to match when query is evaluated to False",
+        default=None,
+        metavar="",
+    )
+    detection.add_argument(
+        "--text-only",
+        dest="text_only",
+        action="store_true",
+        help="Compare pages based only on the textual content",
     )
     techniques = parser.add_argument_group(
         "Techniques",
@@ -377,6 +407,10 @@ def main():
         retries=args.retries,
         prefix=args.prefix,
         suffix=args.suffix,
+        code=args.code,
+        string=args.string,
+        not_string=args.not_string,
+        text_only=args.text_only,
     )
     if resp.is_injected:
         target = ghauri.Ghauri(
@@ -433,9 +467,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        logger.error("User interrupted.")
-        logger.end("ending")
-        exit(0)
+    main()
