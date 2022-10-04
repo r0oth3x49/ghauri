@@ -90,7 +90,7 @@ class SessionFactory:
         user = expanduser("~")
         _t = target
         target = urlparse(target).netloc
-        filepath = os.path.join(user, ".BSQLi")
+        filepath = os.path.join(user, ".ghauri")
         filepath = os.path.join(filepath, target)
         if flush_session:
             logger.info("flushing session file")
