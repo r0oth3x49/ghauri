@@ -138,3 +138,4 @@ Example:
 
 ## **TODO**
   - Add support for inline queries.
+  - Add support for Union based queries
