@@ -163,7 +163,14 @@ class SmartRedirectHandler(HTTPRedirectHandler):
     http_error_301 = http_error_303 = http_error_307 = http_error_302
 
 
-def parse_payload(url=None, data=None, is_multipart=False, injection_type=None, payload=None, param_name=None):
+def parse_payload(
+    url=None,
+    data=None,
+    is_multipart=False,
+    injection_type=None,
+    payload=None,
+    param_name=None,
+):
     clean = lambda x: x.replace("%2b", "+").replace("%2B", "+")
     if injection_type == "GET":
         if param_name and param_name == "#1*":
@@ -762,27 +769,14 @@ def prettifier(cursor_or_list, field_names="", header=False):
     table = PrettyTable(field_names=[""] if not fields else fields)
     table.align = "l"
     table.header = header
-    entries = len(cursor_or_list)
-    table.add_rows([cursor_or_list])
+    entries = 0
+    for d in cursor_or_list:
+        if d and isinstance(d, str):
+            d = (d,)
+        table.add_row(d)
+        entries += 1
     _temp = Prettified(data=table, entries=entries)
     return _temp
-
-# def prettifier(cursor_or_list, field_names="", header=False):
-#     fields = []
-#     Prettified = collections.namedtuple("Prettified", ["data", "entries"])
-#     if field_names:
-#         fields = re.sub(" +", "", field_names).split(",")
-#     table = PrettyTable(field_names=[""] if not fields else fields)
-#     table.align = "l"
-#     table.header = header
-#     entries = 0
-#     for d in cursor_or_list:
-#         if d and isinstance(d, str):
-#             d = (d,)
-#         table.add_row(d)
-#         entries += 1
-#     _temp = Prettified(data=table, entries=entries)
-#     return _temp
 
 
 def prepare_proxy(proxy):
@@ -1409,7 +1403,7 @@ def fetch_db_specific_payload(
     timebased_only=False,
     booleanbased_only=False,
     error_based_only=False,
-    stack_queries_only=False
+    stack_queries_only=False,
 ):
     _temp = []
     if dbms:
@@ -1427,7 +1421,7 @@ def fetch_db_specific_payload(
                 timebased_only=timebased_only,
                 booleanbased_only=booleanbased_only,
                 error_based_only=error_based_only,
-                stack_queries_only=stack_queries_only
+                stack_queries_only=stack_queries_only,
             )
     if not dbms:
         # fetch only boolean based and blind based payloads as we can't identify the backend dbms
@@ -1438,7 +1432,7 @@ def fetch_db_specific_payload(
                 timebased_only=timebased_only,
                 booleanbased_only=booleanbased_only,
                 error_based_only=error_based_only,
-                stack_queries_only=stack_queries_only
+                stack_queries_only=stack_queries_only,
             )
             if ok:
                 _temp.extend(ok)
@@ -1451,7 +1445,7 @@ def prepare_payloads(
     timebased_only=False,
     booleanbased_only=False,
     error_based_only=False,
-    stack_queries_only=False
+    stack_queries_only=False,
 ):
     Payload = collections.namedtuple("Payload", ["prefix", "suffix", "string", "raw"])
     Response = collections.namedtuple(
