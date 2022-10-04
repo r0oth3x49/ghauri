@@ -10,7 +10,9 @@
 
 ## ***Module Installation***
 
-    pip install -r requirements.txt
+ - cd to **ghauri** directory.
+ - run: `python setup.py install` or `python -m pip install -e .`
+ - you will be able to access and run the ghauri with simple `ghauri --help` command.
 
 ## ***Download Ghauri***
 
@@ -19,10 +21,25 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
     git clone https://github.com/r0oth3x49/ghauri.git
 
 ## ***Features***
- - Supports boolean/time/error based MySQL/PostgreSQL/MSSQL/Oracle injections.
- - Supports all types (HEADERS/COOKIE/POST/GET) for the listed dbms.
- - Added switch to support proxy option `--proxy`.
- - Added swicth to force SSL connection `--force-ssl`.
+ - Supports following types of injection payloads:
+   - Boolean based.
+   - Error Based
+   - Time Based
+   - Stacked Queries
+ - Support SQL injection for following DBMS.
+   - MySQL
+   - Microsoft SQL Server
+   - Postgre
+   - Oracle
+ - Supports following injection types.
+   - GET/POST Based injections
+   - Headers Based injections
+   - Cookies Based injections
+   - Mulitipart Form data injections
+   - JSON based injections
+ - support proxy option `--proxy`.
+ - supports parsing request from txt file: switch for that `-r file.txt`
+ - supports limiting data extraction for dbs/tables/columns/dump: swicth `--start 1 --stop 2`
 
 
 ## **Advanced Usage**
@@ -76,13 +93,17 @@ Injection:
 Detection:
   These options can be used to customize the detection phase
 
-  --level             Level of tests to perform (1-3, default 1)
+  --level LEVEL       Level of tests to perform (1-3, default 1)
+  --code CODE         HTTP code to match when query is evaluated to True
+  --string            String to match when query is evaluated to True
+  --not-string        String to match when query is evaluated to False
+  --text-only         Compare pages based only on the textual content
 
 Techniques:
   These options can be used to tweak testing of specific SQL injection
   techniques
 
-  --technique TECH    SQL injection techniques to use (default "BTE")
+  --technique TECH    SQL injection techniques to use (default "BEST")
   --time-sec TIMESEC  Seconds to delay the DBMS response (default 5)
 
 Enumeration:
@@ -114,3 +135,6 @@ Example:
     Usage of Ghauri for attacking targets without prior mutual consent is illegal.
     It is the end user's responsibility to obey all applicable local,state and federal laws. 
     Developer assume no liability and is not responsible for any misuse or damage caused by this program.
+
+## **TODO**
+  - Add support for inline queries.
