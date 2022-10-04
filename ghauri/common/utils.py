@@ -163,11 +163,11 @@ class SmartRedirectHandler(HTTPRedirectHandler):
     http_error_301 = http_error_303 = http_error_307 = http_error_302
 
 
-def parse_payload(url=None, data=None, is_multipart=False, injection_type=None, payload=None):
+def parse_payload(url=None, data=None, is_multipart=False, injection_type=None, payload=None, param_name=None):
     clean = lambda x: x.replace("%2b", "+").replace("%2B", "+")
-    if injection_type == "URI":
-        return clean(urldecode(url))
     if injection_type == "GET":
+        if param_name and param_name == "#1*":
+            return clean(urldecode(url))
         return clean(urldecode(urlparse(url).query))
     if injection_type == "POST":
         if is_multipart:
@@ -1409,6 +1409,7 @@ def fetch_db_specific_payload(
     timebased_only=False,
     booleanbased_only=False,
     error_based_only=False,
+    stack_queries_only=False
 ):
     _temp = []
     if dbms:
@@ -1426,6 +1427,7 @@ def fetch_db_specific_payload(
                 timebased_only=timebased_only,
                 booleanbased_only=booleanbased_only,
                 error_based_only=error_based_only,
+                stack_queries_only=stack_queries_only
             )
     if not dbms:
         # fetch only boolean based and blind based payloads as we can't identify the backend dbms
@@ -1436,6 +1438,7 @@ def fetch_db_specific_payload(
                 timebased_only=timebased_only,
                 booleanbased_only=booleanbased_only,
                 error_based_only=error_based_only,
+                stack_queries_only=stack_queries_only
             )
             if ok:
                 _temp.extend(ok)
@@ -1448,6 +1451,7 @@ def prepare_payloads(
     timebased_only=False,
     booleanbased_only=False,
     error_based_only=False,
+    stack_queries_only=False
 ):
     Payload = collections.namedtuple("Payload", ["prefix", "suffix", "string", "raw"])
     Response = collections.namedtuple(
@@ -1482,6 +1486,39 @@ def prepare_payloads(
             _r = Response(
                 dbms=backend,
                 type="time-based",
+                title=title,
+                payloads=__temp,
+                vector=vector,
+            )
+            _temp.append(_r)
+    if stack_queries_only:
+        entries = payloads.get("stacked-queries", [])
+        for entry in entries:
+            _ = entry.get("payload")
+            title = entry.get("title")
+            comments = entry.get("comments", [])
+            vector = entry.get("vector", "")
+            backend = entry.get("dbms", "")
+            if backend and dbms:
+                backend = dbms
+            elif backend and not dbms:
+                backend = backend
+            else:
+                backend = None
+            __temp = []
+            for comment in comments:
+                pref = comment.get("pref")
+                suf = comment.get("suf")
+                _p = Payload(
+                    prefix=pref,
+                    suffix=suf,
+                    string="{}{}{}".format(pref, _, suf),
+                    raw=_,
+                )
+                __temp.append(_p)
+            _r = Response(
+                dbms=backend,
+                type="error-based",
                 title=title,
                 payloads=__temp,
                 vector=vector,

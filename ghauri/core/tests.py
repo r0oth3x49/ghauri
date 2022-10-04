@@ -757,6 +757,7 @@ def check_timebased_sqli(
     suffix=None,
     is_json=False,
     retry=3,
+    techniques="T",
 ):
     Response = collections.namedtuple(
         "SQLi",
@@ -786,7 +787,10 @@ def check_timebased_sqli(
         ],
     )
     time_based_payloads = fetch_db_specific_payload(
-        dbms=dbms, timebased_only=True, booleanbased_only=False
+        dbms=dbms,
+        booleanbased_only=False,
+        timebased_only=bool("T" in techniques),
+        stack_queries_only=bool("S" in techniques),
     )
     param_key = parameter.get("key")
     param_value = parameter.get("value")
@@ -1396,7 +1400,7 @@ def check_session(
                 )
             if injection_type == "GET":
                 payload = parse_payload(
-                    _url, injection_type=injection_type, is_multipart=is_multipart
+                    _url, injection_type=injection_type, param_name=param_name
                 )
             elif injection_type == "POST":
                 payload = parse_payload(
@@ -1641,7 +1645,7 @@ def check_injections(
             dbms = bsqli.backend if not dbms else dbms
             if number_of_requests_performed == 4:
                 number_of_requests_performed += bsqli.number_of_requests
-    if "T" in techniques:
+    if "T" in techniques or "S" in techniques:
         if not dbms and possible_dbms:
             dbms = possible_dbms
         tsqli = check_timebased_sqli(
@@ -1662,6 +1666,7 @@ def check_injections(
             suffix=suffix,
             is_json=is_json,
             retry=retries,
+            techniques=techniques,
         )
         is_injected_time = bool(tsqli and tsqli.injected)
         if is_injected_time:
@@ -1810,8 +1815,9 @@ def check_injections(
                     )
                     if injection_type == "GET":
                         payload = parse_payload(
-                            url,
+                            entry.url,
                             injection_type=injection_type,
+                            param_name=param_name,
                         )
                     elif injection_type == "POST":
                         payload = parse_payload(

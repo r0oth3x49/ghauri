@@ -266,8 +266,8 @@ def main():
         "--technique",
         dest="tech",
         type=str,
-        help='SQL injection techniques to use (default "BTE")',
-        default="BTE",
+        help='SQL injection techniques to use (default "BEST")',
+        default="BEST",
     )
     techniques.add_argument(
         "--time-sec",
