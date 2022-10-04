@@ -674,6 +674,7 @@ class GhauriExtractor:
                 logger.debug(
                     "it was not possible to extract query output length for the SQL query provided."
                 )
+                return _temp
             if query_check:
                 return PayloadResponse(ok=True, error="", result="", payload=length)
             is_done_with_vector = False

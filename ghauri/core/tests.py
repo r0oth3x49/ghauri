@@ -1822,6 +1822,7 @@ def check_injections(
                     elif injection_type == "POST":
                         payload = parse_payload(
                             url,
+                            data=entry.data,
                             injection_type=injection_type,
                             is_multipart=is_multipart,
                         )
