@@ -282,12 +282,30 @@ def perform_injection(
                     possible_dbms = retval_check.possible_dbms
                     is_connection_tested = retval_check.is_connection_tested
                 if not is_resumed:
-                    if is_multipart:
-                        msg = f"testing for SQL injection on (custom) {injection_type} parameter 'MULTIPART {param_name}'"
-                    elif is_json:
-                        msg = f"testing for SQL injection on (custom) {injection_type} parameter 'JSON {param_name}'"
+                    if custom_injection_in:
+                        custom_point = custom_injection_in[-1]
+                        if "HEADER" in custom_point:
+                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name} #1*'"
+                        elif "COOKIE" in custom_point:
+                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name} #1*'"
+                        elif param_name == "#1*" and "GET" in custom_point:
+                            msg = f"testing for SQL injection on (custom) URI parameter '#1*'"
+                        elif "GET" in custom_point and param_name != "#1*":
+                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name}'"
+                        elif "POST" in custom_point:
+                            if is_multipart:
+                                msg = f"testing for SQL injection on (custom) {injection_type} parameter 'MULTIPART {param_name}'"
+                            elif is_json:
+                                msg = f"testing for SQL injection on (custom) {injection_type} parameter 'JSON {param_name}'"
+                            else:
+                                msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name}'"
                     else:
-                        msg = f"testing for SQL injection on {injection_type} parameter '{param_name}'"
+                        if is_multipart:
+                            msg = f"testing for SQL injection on (custom) {injection_type} parameter 'MULTIPART {param_name}'"
+                        elif is_json:
+                            msg = f"testing for SQL injection on (custom) {injection_type} parameter 'JSON {param_name}'"
+                        else:
+                            msg = f"testing for SQL injection on {injection_type} parameter '{param_name}'"
                     logger.info(msg)
                 if possible_dbms:
                     techniques = f"E{techniques.upper()}"

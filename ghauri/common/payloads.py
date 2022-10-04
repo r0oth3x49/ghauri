@@ -86,6 +86,9 @@ REGEX_GEOMETRIC_BASED = r"(?isx)(Illegal.*geometric.*\s.*Injected~(?:\()?(?P<err
 REGEX_GTID_BASED = r"(?isx)(?:Malformed.*?GTID.*?set.*?specification.*?\'Injected~(?:\()?(?P<error_based_response>.*?))\~END"
 REGEX_JSON_KEYS = r"(?isx)(?:Injected~(?:\()?(?P<error_based_response>.*?))\~END"
 REGEX_GENERIC = r"(?isx)(?:(?:r0oth3x49|START)~(?P<error_based_response>.*?)\~END)"
+REGEX_GENERIC_ERRORS = (
+    r"(?is)(?:['\"]injected~(?:(?:\()?(?P<error_based_response>(.*?))(?:\()?~END['\"]))"
+)
 REGEX_MSSQL_STRING = r"(?isx)(?:'(?:~(?P<error_based_response>.*?))')"
 
 PAYLOADS_BANNER = {

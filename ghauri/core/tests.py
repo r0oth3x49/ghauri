@@ -48,6 +48,7 @@ from ghauri.common.utils import (
     urlencode,
     urldecode,
     search_regex,
+    parse_payload,
     to_dbms_encoding,
     prepare_attack_request,
     check_boolean_responses,
@@ -76,7 +77,6 @@ def basic_check(
 ):
     is_dynamic = False
     param_name = ""
-    expression = "'\"..))"
     if is_multipart:
         param_name += "MULTIPART "
     if is_json:
@@ -143,34 +143,39 @@ def basic_check(
         exit(0)
     if not is_resumed:
         param_name = f"{mc}{param_name}{nc}"
-        attack = inject_expression(
-            url=url,
-            data=data,
-            proxy=proxy,
-            headers=headers,
-            parameter=parameter,
-            expression=expression,
-            is_multipart=is_multipart,
-            injection_type=injection_type,
-        )
-        html = get_filtered_page_content(attack.text) if is_dynamic else attack.text
-        retval = search_possible_dbms_errors(html=attack.text)
-        if retval.possible_dbms:
-            _possible_dbms = retval.possible_dbms
-            possible_dbms = f"{mc}{_possible_dbms}{nc}"
-            logger.notice(
-                f"heuristic (basic) test shows that {injection_type} parameter '{param_name}' might be injectable (possible DBMS: '{possible_dbms}')"
+        expressions = ["'\",..))", "',..))", '",..))']
+        for expression in expressions:
+            attack = inject_expression(
+                url=url,
+                data=data,
+                proxy=proxy,
+                headers=headers,
+                parameter=parameter,
+                expression=expression,
+                is_multipart=is_multipart,
+                injection_type=injection_type,
             )
-            _tech = (
-                f"{mc}--technique='E{techniques}'{nc}"
-                if "E" not in techniques
-                else None
-            )
-            if _tech:
+            html = attack.filtered_text
+            retval = search_possible_dbms_errors(html=attack.text)
+            if retval.possible_dbms:
+                _possible_dbms = retval.possible_dbms
+                possible_dbms = f"{mc}{_possible_dbms}{nc}"
                 logger.notice(
-                    f"Ghauri is going to set {_tech} as heuristic (basic) detected a possible DBMS '{possible_dbms}' from SQL error message"
+                    f"heuristic (basic) test shows that {injection_type} parameter '{param_name}' might be injectable (possible DBMS: '{possible_dbms}')"
                 )
-        else:
+                _tech = (
+                    f"{mc}--technique='E{techniques}'{nc}"
+                    if "E" not in techniques
+                    else None
+                )
+                if _tech:
+                    logger.notice(
+                        f"Ghauri is going to set {_tech} as heuristic (basic) detected a possible DBMS '{possible_dbms}' from SQL error message"
+                    )
+                break
+            if attack.status_code == 200:
+                break
+        if not _possible_dbms:
             logger.notice(
                 f"heuristic (basic) test shows that {injection_type} parameter '{param_name}' might not be injectable"
             )
@@ -417,6 +422,7 @@ def check_booleanbased_sqli(
             "payload_type",
             "string",
             "payload_raw",
+            "skipp_all_other_dbms",
         ],
     )
     blind_payloads = fetch_db_specific_payload(booleanbased_only=True)
@@ -426,6 +432,8 @@ def check_booleanbased_sqli(
     injection_type = injection_type.upper()
     requests_counter = 1
     end_detection_phase = False
+    backend = possible_dbms
+    skipp_all_other_dbms = False
     for entry in blind_payloads:
         index_of_payload = 0
         retry_on_error = 0
@@ -545,6 +553,25 @@ def check_booleanbased_sqli(
                 with_status_code_msg = f' (with --string="{diff}")'
             if retval:
                 is_injected = True
+                if not possible_dbms:
+                    _ = confirm_booleanbased_sqli(
+                        base,
+                        parameter,
+                        payload,
+                        url=url,
+                        data=data,
+                        headers=headers,
+                        injection_type=injection_type,
+                        proxy=proxy,
+                        is_multipart=is_multipart,
+                        timeout=timeout,
+                        delay=delay,
+                        timesec=timesec,
+                        response_time=attack.response_time,
+                        match_string=match_string,
+                    )
+                    if not _.vulnerable:
+                        continue
                 if is_multipart:
                     message = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 elif is_json:
@@ -586,47 +613,20 @@ def check_booleanbased_sqli(
                         logger.debug(
                             "Ghauri could not determine the backend DBMS, detected payload is false positive, performing further tests.."
                         )
-                        logger.debug(
+                        logger.warning(
                             "false positive payload detected, continue testing remaining payloads.."
                         )
                         continue
+                    if backend:
+                        choice = logger.read_input(
+                            f"it looks like the back-end DBMS is '{backend}'. Do you want to skip test payloads specific for other DBMSes? [Y/n] ",
+                            batch=batch,
+                            user_input="Y",
+                        )
+                        if choice == "n":
+                            skipp_all_other_dbms = False
                 if possible_dbms and not backend:
                     backend = possible_dbms
-                # message = None
-                # if backend:
-                #     message = f"heuristic (extended) test shows that the back-end DBMS could be '{mc}{backend}{nc}'"
-                # if not possible_dbms and message:
-                #     logger.notice(message)
-                # if not possible_dbms:
-                #     inj = FingerPrintDBMS(
-                #         base,
-                #         parameter,
-                #         url=url,
-                #         data=data,
-                #         headers=headers,
-                #         injection_type=injection_type,
-                #         proxy=proxy,
-                #         batch=batch,
-                #         is_multipart=is_multipart,
-                #         timeout=timeout,
-                #         delay=delay,
-                #         timesec=timesec,
-                #         vector=f"{payload.prefix}{entry.vector}{payload.suffix}",
-                #         attacks=[attack, attack01],
-                #         code=code,
-                #         match_string=match_string,
-                #         not_match_string=not_match_string,
-                #         text_only=text_only,
-                #     )
-                #     response_dbms = inj.check_mysql(heuristic_backend_check=True)
-                #     if not response_dbms:
-                #         response_dbms = inj.check_oracle(heuristic_backend_check=True)
-                #     if not response_dbms:
-                #         response_dbms = inj.check_mssql(heuristic_backend_check=True)
-                #     if not response_dbms:
-                #         response_dbms = inj.check_postgre(heuristic_backend_check=True)
-                #     if response_dbms:
-                #         backend = response_dbms
                 _url = attack.request_url if injection_type == "GET" else attack.url
                 _temp = Response(
                     url=_url,
@@ -650,6 +650,7 @@ def check_booleanbased_sqli(
                     payload_type="boolean-based blind",
                     string=diff,
                     payload_raw=payload,
+                    skipp_all_other_dbms=skipp_all_other_dbms,
                 )
                 return _temp
     return None
@@ -1110,15 +1111,11 @@ def check_errorbased_sqli(
                             "user aborted during string error-based 'Microsoft SQL Server' injection confirmation"
                         )
                         continue
-                        # logger.end("ending")
-                        # exit(0)
                     except Exception as error:
                         logger.critical(
                             f"error {error}, during string error-based 'Microsoft SQL Server' injection confirmation.."
                         )
                         continue
-                        # logger.end("ending")
-                        # exit(0)
                 if is_multipart:
                     message = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 elif is_json:
@@ -1387,7 +1384,7 @@ def check_session(
                     param=parameter,
                     is_multipart=is_multipart,
                     injection_type=injection_type,
-                    encode=True,
+                    encode=False,
                 )
             if injection_type == "GET":
                 _url = prepare_attack_request(
@@ -1395,30 +1392,31 @@ def check_session(
                     payload=payload,
                     param=parameter,
                     injection_type=injection_type,
-                    encode=True,
+                    encode=False,
                 )
             if injection_type == "GET":
-                _payload = urldecode(payload)
-                if backend == "Microsoft SQL Server":
-                    _payload = _payload.replace("%2b", "+")
-                payload = f"{param_name}={param_value}{_payload}"
+                payload = parse_payload(
+                    _url, injection_type=injection_type, is_multipart=is_multipart
+                )
             elif injection_type == "POST":
-                if is_multipart:
-                    payload = _data.encode("unicode_escape").decode("utf-8")
-                else:
-                    payload = urldecode(_data)
-                if backend == "Microsoft SQL Server":
-                    payload = payload.replace("%2b", "+")
+                payload = parse_payload(
+                    url,
+                    data=_data,
+                    injection_type=injection_type,
+                    is_multipart=is_multipart,
+                )
             elif injection_type == "HEADER":
-                _payload = urldecode(payload)
-                payload = f"{param_name}: {param_value}{_payload}"
-                if backend == "Microsoft SQL Server":
-                    payload = payload.replace("%2b", "+")
+                payload = f"{param_name}: {param_value}{payload}"
+                payload = parse_payload(
+                    payload=payload,
+                    injection_type=injection_type,
+                )
             elif injection_type == "COOKIE":
-                _payload = urldecode(payload)
-                payload = f"{param_name}={param_value}{_payload}"
-                if backend == "Microsoft SQL Server":
-                    payload = payload.replace("%2b", "+")
+                payload = f"{param_name}={param_value}{payload}"
+                payload = parse_payload(
+                    payload=payload,
+                    injection_type=injection_type,
+                )
             _msg = TEMPLATE_INJECTED_MESSAGE.format(
                 PAYLOAD_TYPE=payload_type,
                 TITLE=title,
@@ -1774,9 +1772,6 @@ def check_injections(
                     nor=number_of_requests_performed
                 )
                 message += "---\n"
-                # message += "Parameter: {} ({})".format(
-                #     param_name, injection_type if param_name != "#1*" else "URI"
-                # )
                 _p = param_name
                 _it = injection_type if param_name != "#1*" else "URI"
                 if is_json:
@@ -1814,20 +1809,28 @@ def check_injections(
                         ),
                     )
                     if injection_type == "GET":
-                        payload = f"{param_name}={param_value}{_payload}"
+                        payload = parse_payload(
+                            url,
+                            injection_type=injection_type,
+                        )
                     elif injection_type == "POST":
-                        if is_multipart:
-                            payload = entry.data.encode("unicode_escape").decode(
-                                "utf-8"
-                            )
-                        else:
-                            payload = urldecode(entry.data)
-                        if entry.backend == "Microsoft SQL Server":
-                            payload = payload.replace("%2b", "+")
+                        payload = parse_payload(
+                            url,
+                            injection_type=injection_type,
+                            is_multipart=is_multipart,
+                        )
                     elif injection_type == "HEADER":
                         payload = f"{param_name}: {param_value}{_payload}"
+                        payload = parse_payload(
+                            payload=payload,
+                            injection_type=injection_type,
+                        )
                     elif injection_type == "COOKIE":
                         payload = f"{param_name}={param_value}{_payload}"
+                        payload = parse_payload(
+                            payload=payload,
+                            injection_type=injection_type,
+                        )
                     _msg = TEMPLATE_INJECTED_MESSAGE.format(
                         PAYLOAD_TYPE=entry.payload_type,
                         TITLE=entry.title,

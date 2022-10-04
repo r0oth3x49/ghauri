@@ -41,6 +41,7 @@ from ghauri.common.payloads import (
     REGEX_JSON_KEYS,
     REGEX_GENERIC,
     REGEX_MSSQL_STRING,
+    REGEX_GENERIC_ERRORS,
 )
 from ghauri.common.utils import (
     urlencode,
@@ -182,10 +183,8 @@ class GhauriExtractor:
                     is_multipart=is_multipart,
                     injection_type=injection_type,
                 )
-            except KeyboardInterrupt:
-                logger.error("user interrupted during data retrieval..")
-                logger.end("ending")
-                exit(0)
+            except KeyboardInterrupt as error:
+                raise error
             response_time = attack.response_time
             if attack01:
                 result, case, _ = check_boolean_responses(
@@ -256,19 +255,26 @@ class GhauriExtractor:
                     if not attack01:
                         expression = expression.replace("[SLEEPTIME]", f"{sleep_time}")
                     logger.payload(f"{expression}")
-                    attack = inject_expression(
-                        url=url,
-                        data=data,
-                        proxy=proxy,
-                        delay=delay,
-                        timesec=timesec,
-                        timeout=timeout,
-                        headers=headers,
-                        parameter=parameter,
-                        expression=expression,
-                        is_multipart=is_multipart,
-                        injection_type=injection_type,
-                    )
+                    try:
+                        attack = inject_expression(
+                            url=url,
+                            data=data,
+                            proxy=proxy,
+                            delay=delay,
+                            timesec=timesec,
+                            timeout=timeout,
+                            headers=headers,
+                            parameter=parameter,
+                            expression=expression,
+                            is_multipart=is_multipart,
+                            injection_type=injection_type,
+                        )
+                    except KeyboardInterrupt as error:
+                        logger.error(
+                            "user interrupted during number of characters in length query retrieval.."
+                        )
+                        logger.end("ending")
+                        exit(0)
                     if attack01:
                         result, case, _ = check_boolean_responses(
                             base,
@@ -369,35 +375,42 @@ class GhauriExtractor:
                 for pos in range(1, noc + 1):
                     if attack01:
                         # extract characters using binary search algorithm
-                        retval = self._binary_search(
-                            url=url,
-                            data=data,
-                            vector=vector,
-                            parameter=parameter,
-                            headers=headers,
-                            base=base,
-                            injection_type=injection_type,
-                            delay=delay,
-                            timesec=timesec,
-                            timeout=timeout,
-                            proxy=proxy,
-                            attack01=attack01,
-                            code=code,
-                            match_string=match_string,
-                            not_match_string=not_match_string,
-                            is_multipart=is_multipart,
-                            suppress_output=suppress_output,
-                            query_check=query_check,
-                            minimum=48,
-                            maximum=58,
-                            offset=pos,
-                            expression_payload=value,
-                            queryable=entry,
-                            chars=chars,
-                            text_only=text_only,
-                        )
-                        chars += retval
-                        logger.debug(f"character found: '{str(chars)}'")
+                        try:
+                            retval = self._binary_search(
+                                url=url,
+                                data=data,
+                                vector=vector,
+                                parameter=parameter,
+                                headers=headers,
+                                base=base,
+                                injection_type=injection_type,
+                                delay=delay,
+                                timesec=timesec,
+                                timeout=timeout,
+                                proxy=proxy,
+                                attack01=attack01,
+                                code=code,
+                                match_string=match_string,
+                                not_match_string=not_match_string,
+                                is_multipart=is_multipart,
+                                suppress_output=suppress_output,
+                                query_check=query_check,
+                                minimum=48,
+                                maximum=58,
+                                offset=pos,
+                                expression_payload=value,
+                                queryable=entry,
+                                chars=chars,
+                                text_only=text_only,
+                            )
+                            chars += retval
+                            logger.debug(f"character found: '{str(chars)}'")
+                        except KeyboardInterrupt:
+                            logger.error(
+                                "user interrupted during length of query output retrieval.."
+                            )
+                            logger.end("ending")
+                            exit(0)
                     else:
                         for i in [49, 48, 50, 51, 52, 53, 54, 55, 56, 57]:
                             if delay > 0:
@@ -411,20 +424,26 @@ class GhauriExtractor:
                                     "[SLEEPTIME]", f"{sleep_time}"
                                 )
                             logger.payload(f"{expression}")
-
-                            attack = inject_expression(
-                                url=url,
-                                data=data,
-                                proxy=proxy,
-                                delay=delay,
-                                timesec=timesec,
-                                timeout=timeout,
-                                headers=headers,
-                                parameter=parameter,
-                                expression=expression,
-                                is_multipart=is_multipart,
-                                injection_type=injection_type,
-                            )
+                            try:
+                                attack = inject_expression(
+                                    url=url,
+                                    data=data,
+                                    proxy=proxy,
+                                    delay=delay,
+                                    timesec=timesec,
+                                    timeout=timeout,
+                                    headers=headers,
+                                    parameter=parameter,
+                                    expression=expression,
+                                    is_multipart=is_multipart,
+                                    injection_type=injection_type,
+                                )
+                            except KeyboardInterrupt:
+                                logger.error(
+                                    "user interrupted during length of query output retrieval.."
+                                )
+                                logger.end("ending")
+                                exit(0)
                             if attack01:
                                 result, case, _ = check_boolean_responses(
                                     base,
@@ -471,6 +490,7 @@ class GhauriExtractor:
         timesec=5,
         suppress_output=False,
         query_check=False,
+        text_only=False,
     ):
         PayloadResponse = collections.namedtuple(
             "PayloadResponse",
@@ -487,19 +507,25 @@ class GhauriExtractor:
                 if backend == "Microsoft SQL Server":
                     expression = expression.replace("+", "%2b")
                 logger.payload(f"{expression}")
-                attack = inject_expression(
-                    url=url,
-                    data=data,
-                    proxy=proxy,
-                    delay=delay,
-                    timesec=timesec,
-                    timeout=timeout,
-                    headers=headers,
-                    parameter=parameter,
-                    expression=expression,
-                    is_multipart=is_multipart,
-                    injection_type=injection_type,
-                )
+                try:
+                    attack = inject_expression(
+                        url=url,
+                        data=data,
+                        proxy=proxy,
+                        delay=delay,
+                        timesec=timesec,
+                        timeout=timeout,
+                        headers=headers,
+                        parameter=parameter,
+                        expression=expression,
+                        is_multipart=is_multipart,
+                        injection_type=injection_type,
+                    )
+                except KeyboardInterrupt:
+                    logger.error("user interrupted during query output retrieval..")
+                    logger.end("ending")
+                    exit(0)
+                response_string = attack.filtered_text if text_only else attack.text
                 retval = search_regex(
                     pattern=(
                         REGEX_XPATH,
@@ -511,8 +537,9 @@ class GhauriExtractor:
                         REGEX_JSON_KEYS,
                         REGEX_GENERIC,
                         REGEX_MSSQL_STRING,
+                        REGEX_GENERIC_ERRORS,
                     ),
-                    string=attack.text,
+                    string=response_string,
                     default=None,
                     group="error_based_response",
                 )
@@ -584,6 +611,7 @@ class GhauriExtractor:
             timesec=timesec,
             suppress_output=suppress_output,
             query_check=query_check,
+            text_only=text_only,
         )
         if retval_error.ok:
             _temp_error = PayloadResponse(
@@ -658,35 +686,44 @@ class GhauriExtractor:
                         for pos in range(1, length + 1):
                             if attack01 and vector_type == "boolean_vector":
                                 # extract characters using binary search algorithm
-                                retval = self._binary_search(
-                                    url=url,
-                                    data=data,
-                                    vector=vector,
-                                    parameter=parameter,
-                                    headers=headers,
-                                    base=base,
-                                    injection_type=injection_type,
-                                    delay=delay,
-                                    timesec=timesec,
-                                    timeout=timeout,
-                                    proxy=proxy,
-                                    attack01=attack01,
-                                    code=code,
-                                    match_string=match_string,
-                                    not_match_string=not_match_string,
-                                    is_multipart=is_multipart,
-                                    suppress_output=suppress_output,
-                                    query_check=query_check,
-                                    minimum=32,
-                                    maximum=127,
-                                    offset=pos,
-                                    expression_payload=value,
-                                    queryable=entry,
-                                    chars=chars,
-                                    text_only=text_only,
-                                )
-                                chars += retval
-                                logger.debug(f"character found: '{str(chars)}'")
+                                try:
+                                    retval = self._binary_search(
+                                        url=url,
+                                        data=data,
+                                        vector=vector,
+                                        parameter=parameter,
+                                        headers=headers,
+                                        base=base,
+                                        injection_type=injection_type,
+                                        delay=delay,
+                                        timesec=timesec,
+                                        timeout=timeout,
+                                        proxy=proxy,
+                                        attack01=attack01,
+                                        code=code,
+                                        match_string=match_string,
+                                        not_match_string=not_match_string,
+                                        is_multipart=is_multipart,
+                                        suppress_output=suppress_output,
+                                        query_check=query_check,
+                                        minimum=32,
+                                        maximum=127,
+                                        offset=pos,
+                                        expression_payload=value,
+                                        queryable=entry,
+                                        chars=chars,
+                                        text_only=text_only,
+                                    )
+                                    chars += retval
+                                    logger.debug(f"character found: '{str(chars)}'")
+                                except KeyboardInterrupt:
+                                    if chars:
+                                        logger.info(f"retrieved: {chars}")
+                                    logger.error(
+                                        "user interrupted during query output retrieval.."
+                                    )
+                                    logger.end("ending")
+                                    exit(0)
                             else:
                                 for i in list_of_chars:
                                     sleep_time = timesec
@@ -704,19 +741,28 @@ class GhauriExtractor:
                                             "[SLEEPTIME]", f"{sleep_time}"
                                         )
                                     logger.payload(f"{expression}")
-                                    attack = inject_expression(
-                                        url=url,
-                                        data=data,
-                                        proxy=proxy,
-                                        delay=delay,
-                                        timesec=timesec,
-                                        timeout=timeout,
-                                        headers=headers,
-                                        parameter=parameter,
-                                        expression=expression,
-                                        is_multipart=is_multipart,
-                                        injection_type=injection_type,
-                                    )
+                                    try:
+                                        attack = inject_expression(
+                                            url=url,
+                                            data=data,
+                                            proxy=proxy,
+                                            delay=delay,
+                                            timesec=timesec,
+                                            timeout=timeout,
+                                            headers=headers,
+                                            parameter=parameter,
+                                            expression=expression,
+                                            is_multipart=is_multipart,
+                                            injection_type=injection_type,
+                                        )
+                                    except KeyboardInterrupt as e:
+                                        if chars:
+                                            logger.info(f"retrieved: {chars}")
+                                        logger.error(
+                                            "user interrupted during query output retrieval.."
+                                        )
+                                        logger.end("ending")
+                                        exit(0)
                                     if attack01:
                                         result, case, _ = check_boolean_responses(
                                             base,

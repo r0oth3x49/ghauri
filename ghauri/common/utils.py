@@ -163,6 +163,23 @@ class SmartRedirectHandler(HTTPRedirectHandler):
     http_error_301 = http_error_303 = http_error_307 = http_error_302
 
 
+def parse_payload(url=None, data=None, is_multipart=False, injection_type=None, payload=None):
+    clean = lambda x: x.replace("%2b", "+").replace("%2B", "+")
+    if injection_type == "URI":
+        return clean(urldecode(url))
+    if injection_type == "GET":
+        return clean(urldecode(urlparse(url).query))
+    if injection_type == "POST":
+        if is_multipart:
+            return clean(urldecode(data)).encode("unicode_escape").decode("utf-8")
+        else:
+            return clean(urldecode(data))
+    if injection_type == "HEADER":
+        return clean(urldecode(payload))
+    if injection_type == "COOKIE":
+        return clean(urldecode(payload))
+
+
 def html_escape(value):
     """
     Returns (basic conversion) HTML unescaped value
@@ -225,7 +242,7 @@ def value_cleanup(value, strip_value=None):
     if value and "S3PR4T0R" in value:
         value = value.strip().split("S3PR4T0R")
         value = f"{len(value)}"
-    value = re.sub(r"\s+", " ", re.sub(r"^\(+", "", value)).strip()
+    value = re.sub(r"\s+", " ", re.sub(r"(?:(?:[\(]+)|(?:[~]+))", "", value)).strip()
     if strip_value:
         value = re.sub(strip_value, "", value)
     return value
@@ -238,7 +255,7 @@ def search_regex(
     fatal=True,
     flags=0,
     group=None,
-    strip_value=r"(?is)(?:\(+)(?:\~+)",
+    strip_value=r"(?is)(?:[\(]+)(?:[\~]+)",
 ):
     """
     Perform a regex search on the given string, using a single or a list of
@@ -246,6 +263,7 @@ def search_regex(
     In case of failure return a default value or raise a WARNING or a
     RegexNotFoundError, depending on fatal, specifying the field name.
     """
+    logger.debug("searching for payload response in response content..")
     string = get_filtered_page_content(string)
     if isinstance(pattern, str):
         mobj = re.search(pattern, string, flags)
@@ -254,17 +272,18 @@ def search_regex(
             mobj = re.search(p, string, flags)
             if mobj:
                 break
-
     if mobj:
+        logger.debug(f"payload response found filtering out value based on regex..")
         if group is None:
             # return the first matching group
             value = next(g for g in mobj.groups() if g is not None)
         else:
             value = mobj.group(group)
-            value = re.sub(r"^\(+", "", value)
+            logger.debug(f"value returned in response: {value}")
         if not value:
             value = "<blank_value>"
         value = value_cleanup(value, strip_value=strip_value)
+        logger.debug(f"cleaned value returned in response: {value}")
         return value
     elif default is not NO_DEFAULT:
         return default
@@ -276,20 +295,6 @@ def search_regex(
 
 def to_list(columns):
     return [i.strip() for i in re.sub(" +", "", columns).split(",")]
-
-
-def prettifier(cursor_or_list, field_names="", header=False):
-    fields = []
-    Prettified = collections.namedtuple("Prettified", ["data", "entries"])
-    if field_names:
-        fields = re.sub(" +", "", field_names).split(",")
-    table = PrettyTable(field_names=[""] if not fields else fields)
-    table.align = "l"
-    table.header = header
-    entries = len(cursor_or_list)
-    table.add_rows([cursor_or_list])
-    _temp = Prettified(data=table, entries=entries)
-    return _temp
 
 
 def dbms_full_name(dbms):
@@ -450,10 +455,16 @@ def check_boolean_responses(
     else:
         if ctt != ctf and ctb == ctt:
             # case 1: when True attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
+            logger.debug(
+                f"vulnerable to case when false attack content length = base content length, but not equals to true attack content length"
+            )
             is_vulner = True
             _cases.append("Content Length")
         elif ctt != ctf and ctb == ctf:
             # case 2: when False attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
+            logger.debug(
+                f"vulnerable to case when true attack content length = base content length, but not equals to false attack content length"
+            )
             is_vulner = True
             _cases.append("Content Length")
         # case 3: True injected page is compared with original page (to get something called ratio),
@@ -463,14 +474,23 @@ def check_boolean_responses(
         # based on https://github.com/sqlmapproject/sqlmap/issues/2442
         if ratio_true != ratio_false:
             _cases.append("Page Ratio")
+            logger.debug(
+                f"vulnerable to case when true attack page ratio is not equals to false attack page ratio"
+            )
             is_vulner = True
         # if with page comparision we didn't found the target vulnerable then also compare the response status codes
         if scb == sct and scb != scf:
             # case 4: when True attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
+            logger.debug(
+                f"vulnerable to case when true attack status code = base status code, but not equals to false attack status code"
+            )
             _cases.append("Status Code")
             is_vulner = True
         elif scb == scf and scb != sct:
             # case 5: when False attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
+            logger.debug(
+                f"vulnerable to case when false attack status code = base status code, but not equals to true attack status code"
+            )
             is_vulner = True
             _cases.append("Status Code")
     if _cases:
@@ -507,54 +527,40 @@ def check_boolean_responses(
             w1 = get_filtered_page_content(w1)
             w2 = get_filtered_page_content(w2)
             candidates, _ = get_page_ratio_difference(w1, w2)
-            suggestion = None
-            for candidate in candidates:
-                mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
-                logger.debug(f"candidate: {candidate}")
-                if (
-                    mobj
-                    and " " in candidate
-                    and candidate.strip()
-                    and len(candidate) > 10
-                ):
-                    logger.debug(f"candidate {candidate} found for --string switch...")
-                    difference = candidate
-                    is_vulner = True
-                    case = "Page Ratio"
-                    suggestion = candidate
-                    # logger.debug(f"difference found: {difference}")
-                    break
-            if not suggestion and not is_vulner:
-                # candidates = candidates[0].strip() if candidates else []
+            if candidates:
+                suggestion = None
+                candidates = sorted(candidates, key=len)
                 for candidate in candidates:
-                    candidate = re.sub(r"\d+\.\d+", "", candidate)
-                    mobj = re.search(r"\A[\w.,! ]+\Z", candidate)
-                    if mobj and len(candidate) >= 4:
-                        logger.debug(f"string candidate could be: {candidate}")
+                    mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
+                    logger.debug(f"candidate: {candidate}")
+                    if (
+                        mobj
+                        and " " in candidate
+                        and candidate.strip()
+                        and len(candidate) > 10
+                    ):
+                        logger.debug(
+                            f"candidate {candidate} found for --string switch..."
+                        )
                         difference = candidate
                         is_vulner = True
                         case = "Page Ratio"
+                        suggestion = candidate
+                        break
+                if not suggestion and not is_vulner:
+                    for candidate in candidates:
+                        candidate = re.sub(r"\d+\.\d+", "", candidate)
+                        mobj = re.search(r"\A[\w.,! ]+\Z", candidate)
+                        if mobj and len(candidate) >= 4:
+                            logger.debug(f"string candidate could be: {candidate}")
+                            difference = candidate
+                            is_vulner = True
+                            case = "Page Ratio"
+                            break
             if difference:
                 logger.debug(
-                    f'vulnerable to page content with --string="{difference}"..'
+                    f'vulnerable to page content difference with --string="{difference}"..'
                 )
-        # difference, _ = get_page_ratio_difference(w1, w2)
-        # logger.debug(f"difference detected: '{difference}'..")
-        # difference = difference.split(",")[0].strip()
-        # if len(difference) == 0:
-        #     is_vulner = False
-        #     case = ""
-        #     difference = ""
-        # if match_string:
-        #     logger.debug(f"matching string '{match_string}' in response..")
-        #     mobj = re.search("(?is)(?:%s)" % match_string, w1)
-        #     if not mobj:
-        #         logger.debug(f"string '{match_string}' not found in response.")
-        #         is_vulner = False
-        #         case = ""
-        #     else:
-        #         logger.debug(f"string '{match_string}' found in response.")
-        #         difference = match_string
     return is_vulner, case, difference
 
 
@@ -756,14 +762,27 @@ def prettifier(cursor_or_list, field_names="", header=False):
     table = PrettyTable(field_names=[""] if not fields else fields)
     table.align = "l"
     table.header = header
-    entries = 0
-    for d in cursor_or_list:
-        if d and isinstance(d, str):
-            d = (d,)
-        table.add_row(d)
-        entries += 1
+    entries = len(cursor_or_list)
+    table.add_rows([cursor_or_list])
     _temp = Prettified(data=table, entries=entries)
     return _temp
+
+# def prettifier(cursor_or_list, field_names="", header=False):
+#     fields = []
+#     Prettified = collections.namedtuple("Prettified", ["data", "entries"])
+#     if field_names:
+#         fields = re.sub(" +", "", field_names).split(",")
+#     table = PrettyTable(field_names=[""] if not fields else fields)
+#     table.align = "l"
+#     table.header = header
+#     entries = 0
+#     for d in cursor_or_list:
+#         if d and isinstance(d, str):
+#             d = (d,)
+#         table.add_row(d)
+#         entries += 1
+#     _temp = Prettified(data=table, entries=entries)
+#     return _temp
 
 
 def prepare_proxy(proxy):
@@ -941,7 +960,7 @@ def prepare_attack_request(
     else:
         key = re.escape(key)
         value = re.escape(value)
-        REGEX_GET_POST_COOKIE_INJECTION = r"(?is)(?:((?:\?| |&)%s)(=)(%s))" % (
+        REGEX_GET_POST_COOKIE_INJECTION = r"(?is)(?:((?:\?| |&)?%s)(=)(%s))" % (
             key,
             value,
         )
@@ -1258,6 +1277,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
     for _type, _params in _injection_points.items():
         for entry in _params:
             value = entry.get("value")
+            # logger.debug(f"type: {_type}, param: {entry}")
             if value and "*" in value:
                 custom_injection_in.append(_type)
     _temp = InjectionPoints(
