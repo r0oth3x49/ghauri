@@ -82,6 +82,7 @@ def basic_check(
     if is_json:
         param_name += "JSON "
     param_name += parameter.get("key")
+    param_key = parameter.get("key")
     Response = collections.namedtuple(
         "BasicCheckResponse",
         ["base", "possible_dbms", "is_connection_tested", "is_dynamic"],
@@ -160,8 +161,11 @@ def basic_check(
             if retval.possible_dbms:
                 _possible_dbms = retval.possible_dbms
                 possible_dbms = f"{mc}{_possible_dbms}{nc}"
+                _it = injection_type
+                if param_key == "#1*":
+                    _it = "URI"
                 logger.notice(
-                    f"heuristic (basic) test shows that {injection_type} parameter '{param_name}' might be injectable (possible DBMS: '{possible_dbms}')"
+                    f"heuristic (basic) test shows that {_it} parameter '{param_name}' might be injectable (possible DBMS: '{possible_dbms}')"
                 )
                 _tech = (
                     f"{mc}--technique='E{techniques}'{nc}"
@@ -173,11 +177,14 @@ def basic_check(
                         f"Ghauri is going to set {_tech} as heuristic (basic) detected a possible DBMS '{possible_dbms}' from SQL error message"
                     )
                 break
-            if attack.status_code == 200:
+            if attack.status_code != 400:
                 break
         if not _possible_dbms:
+            _it = injection_type
+            if param_key == "#1*":
+                _it = "URI"
             logger.notice(
-                f"heuristic (basic) test shows that {injection_type} parameter '{param_name}' might not be injectable"
+                f"heuristic (basic) test shows that {_it} parameter '{param_name}' might not be injectable"
             )
     return Response(
         base=base,
@@ -543,12 +550,13 @@ def check_booleanbased_sqli(
             with_status_code = attack.status_code
             if attack.status_code != attack01.status_code:
                 is_different_status_code_injectable = True
-                if with_status_code == 4001:
-                    with_status_code_msg = (
-                        f" (with error ReadTimeout on --timeout={timeout})"
-                    )
-                else:
-                    with_status_code_msg = f" (with --code={with_status_code})"
+                # if with_status_code == 4001:
+                #     with_status_code_msg = (
+                #         f" (with error ReadTimeout on --timeout={timeout})"
+                #     )
+                # else:
+                #     with_status_code_msg = f" (with --code={with_status_code})"
+                with_status_code_msg = f" (with --code={with_status_code})"
             if case == "Page Ratio":
                 with_status_code_msg = f' (with --string="{diff}")'
             if retval:
@@ -572,12 +580,15 @@ def check_booleanbased_sqli(
                     )
                     if not _.vulnerable:
                         continue
+                _it = injection_type
+                if param_key == "#1*":
+                    _it = "URI"
                 if is_multipart:
                     message = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 elif is_json:
                     message = f"(custom) {injection_type} parameter '{mc}JSON {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 else:
-                    message = f"{injection_type} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 logger.notice(message)
                 if not possible_dbms:
                     inj = FingerPrintDBMS(
@@ -890,12 +901,15 @@ def check_timebased_sqli(
                     with_status_code_msg = f" (with --code={with_status_code})"
             if response_time >= sleep_time:
                 is_injected = True
+                _it = injection_type
+                if param_key == "#1*":
+                    _it = "URI"
                 if is_multipart:
                     message = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 elif is_json:
                     message = f"(custom) {injection_type} parameter '{mc}JSON {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 else:
-                    message = f"{injection_type} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 logger.notice(message)
                 _url = attack.request_url if injection_type == "GET" else attack.url
                 _temp = Response(
@@ -1120,12 +1134,15 @@ def check_errorbased_sqli(
                             f"error {error}, during string error-based 'Microsoft SQL Server' injection confirmation.."
                         )
                         continue
+                _it = injection_type
+                if param_key == "#1*":
+                    _it = "URI"
                 if is_multipart:
                     message = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 elif is_json:
                     message = f"(custom) {injection_type} parameter '{mc}JSON {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 else:
-                    message = f"{injection_type} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 logger.notice(message)
                 _url = attack.request_url if injection_type == "GET" else attack.url
                 _temp = Response(
@@ -1712,12 +1729,15 @@ def check_injections(
         priority_keys = list(priorities.keys())
         error_based_in_priority = bool("error-based" in priority_keys)
         if "error-based" not in priority_keys:
+            _it = injection_type
+            if param_name == "#1*":
+                _it = "URI"
             if is_multipart:
                 message = f"checking if the injection point on (custom) {injection_type} parameter 'MULTIPART {param_name}' is a false positive"
             elif is_json:
                 message = f"checking if the injection point on (custom) {injection_type} parameter 'JSON {param_name}' is a false positive"
             else:
-                message = f"checking if the injection point on {injection_type} parameter '{param_name}' is a false positive"
+                message = f"checking if the injection point on {_it} parameter '{param_name}' is a false positive"
             logger.info(message)
         if "boolean-based" in priority_keys and not error_based_in_priority:
             retval = priorities.get("boolean-based")
@@ -1765,12 +1785,15 @@ def check_injections(
             )
             is_vulnerable = retval_time_based.vulnerable
         if is_vulnerable:
+            _it = injection_type
+            if param_name == "#1*":
+                _it = "URI"
             if is_multipart:
                 message = f"\n(custom) {injection_type} parameter 'MULTIPART {param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
             elif is_json:
                 message = f"\n(custom) {injection_type} parameter 'JSON {param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
             else:
-                message = f"\n{injection_type} parameter '{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
+                message = f"\n{_it} parameter '{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
             question = logger.read_input(message, batch=batch, user_input="N")
             if question == "n":
                 message = "Ghauri identified the following injection point(s) with a total of {nor} HTTP(s) requests:\n".format(
@@ -1895,19 +1918,27 @@ def check_injections(
                 )
         else:
             logger.warning("false positive or unexploitable injection point detected")
+            _it = injection_type
+            if param_name == "#1*":
+                _it = "URI"
             if is_multipart:
                 msg = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_name}{nc}' does not seem to be injectable"
             if is_json:
                 msg = f"(custom) {injection_type} parameter '{mc}JSON {param_name}{nc}' does not seem to be injectable"
             else:
-                msg = f"{injection_type} parameter '{mc}{param_name}{nc}' does not seem to be injectable"
+                msg = f"{_it} parameter '{mc}{param_name}{nc}' does not seem to be injectable"
             logger.notice(msg)
     else:
+        _it = injection_type
+        if param_name == "#1*":
+            _it = "URI"
         if is_multipart:
             msg = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_name}{nc}' does not seem to be injectable"
         if is_json:
             msg = f"(custom) {injection_type} parameter '{mc}JSON {param_name}{nc}' does not seem to be injectable"
         else:
-            msg = f"{injection_type} parameter '{mc}{param_name}{nc}' does not seem to be injectable"
+            msg = (
+                f"{_it} parameter '{mc}{param_name}{nc}' does not seem to be injectable"
+            )
         logger.notice(msg)
     return None
