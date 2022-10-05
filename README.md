@@ -18,7 +18,7 @@
 ## ***Installation***
 
  - cd to **ghauri** directory.
- - install requirements: `pip install --upgrade requirements.txt`
+ - install requirements: `pip install --upgrade -r requirements.txt`
  - run: `python setup.py install` or `python -m pip install -e .`
  - you will be able to access and run the ghauri with simple `ghauri --help` command.
 
