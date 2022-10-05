@@ -160,99 +160,101 @@ class GhauriAdvance:
             code=code,
             text_only=text_only,
         )
-        if not retval.ok and backend == "Microsoft SQL Server":
-            logger.debug(
-                "ghauri could not determine number of databases, using DB_NAME to fetch dbs .."
-            )
-            payloads_names = PAYLOADS_DBS_NAMES.get(backend)
-            payload = ""
-            total = 0
-            for pay in payloads_names:
-                _ = self.__execute_expression(
-                    url,
-                    data,
-                    vector,
-                    parameter,
-                    headers,
-                    base,
-                    injection_type,
-                    [pay],
-                    backend=backend,
-                    proxy=proxy,
-                    is_multipart=is_multipart,
-                    timeout=timeout,
-                    delay=delay,
-                    timesec=timesec,
-                    attack=attack,
-                    match_string=match_string,
-                    suppress_output=True,
-                    query_check=True,
-                    not_match_string=not_match_string,
-                    code=code,
-                    text_only=text_only,
+        if not retval.ok:
+            if backend == "Microsoft SQL Server":
+                logger.debug(
+                    "ghauri could not determine number of databases, using DB_NAME to fetch dbs .."
                 )
-                if _.ok:
-                    payload = _.payload
-                    logger.debug(
-                        f"Working payload found for database extraction: '{payload}'"
+                payloads_names = PAYLOADS_DBS_NAMES.get(backend)
+                payload = ""
+                total = 0
+                for pay in payloads_names:
+                    _ = self.__execute_expression(
+                        url,
+                        data,
+                        vector,
+                        parameter,
+                        headers,
+                        base,
+                        injection_type,
+                        [pay],
+                        backend=backend,
+                        proxy=proxy,
+                        is_multipart=is_multipart,
+                        timeout=timeout,
+                        delay=delay,
+                        timesec=timesec,
+                        attack=attack,
+                        match_string=match_string,
+                        suppress_output=True,
+                        query_check=True,
+                        not_match_string=not_match_string,
+                        code=code,
+                        text_only=text_only,
                     )
-                    break
-            payload = clean_up_offset_payload(payload, backend=backend)
-            if not payload:
-                logger.critical(
-                    "Ghauri was not able identify payload for database(s) fetching, try manually."
-                )
+                    if _.ok:
+                        payload = _.payload
+                        logger.debug(
+                            f"Working payload found for database extraction: '{payload}'"
+                        )
+                        break
+                payload = clean_up_offset_payload(payload, backend=backend)
+                if not payload:
+                    logger.critical(
+                        "Ghauri was not able identify payload for database(s) fetching, try manually."
+                    )
+                    return _temp
+                null_counter_limit = 0
+                stop = 20
+                while start < stop:
+                    if null_counter_limit == 3:
+                        logger.debug("limit reached..")
+                        break
+                    _payload = payload.format(offset=start)
+                    payloads = [_payload]
+                    retval = self.__execute_expression(
+                        url,
+                        data,
+                        vector,
+                        parameter,
+                        headers,
+                        base,
+                        injection_type,
+                        payloads,
+                        backend=backend,
+                        proxy=proxy,
+                        is_multipart=is_multipart,
+                        timeout=timeout,
+                        delay=delay,
+                        timesec=timesec,
+                        attack=attack,
+                        match_string=match_string,
+                        suppress_output=True,
+                        query_check=False,
+                        not_match_string=not_match_string,
+                        code=code,
+                        text_only=text_only,
+                        # list_of_chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789",
+                    )
+                    if retval.ok:
+                        if retval.result not in _results:
+                            logger.debug("retrieved: %s" % (retval.result))
+                            _results.add(retval.result)
+                    else:
+                        null_counter_limit += 1
+                    start += 1
+                if _results:
+                    _results = list(set(list(_results)))
+                    total = len(_results)
+                    logger.info("retrieved: %s" % (total))
+                    for db in _results:
+                        logger.info("retrieved: %s" % (db))
+                    _temp = Response(ok=True, error="", result=_results)
+                    logger.success(f"available databases [{total}]:")
+                    for db in _results:
+                        logger.success(f"[*] {db}")
+            else:
                 return _temp
-            null_counter_limit = 0
-            stop = 20
-            while start < stop:
-                if null_counter_limit == 3:
-                    logger.debug("limit reached..")
-                    break
-                _payload = payload.format(offset=start)
-                logger.payload(_payload)
-                payloads = [_payload]
-                retval = self.__execute_expression(
-                    url,
-                    data,
-                    vector,
-                    parameter,
-                    headers,
-                    base,
-                    injection_type,
-                    payloads,
-                    backend=backend,
-                    proxy=proxy,
-                    is_multipart=is_multipart,
-                    timeout=timeout,
-                    delay=delay,
-                    timesec=timesec,
-                    attack=attack,
-                    match_string=match_string,
-                    suppress_output=True,
-                    query_check=False,
-                    not_match_string=not_match_string,
-                    code=code,
-                    text_only=text_only,
-                    # list_of_chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789",
-                )
-                if retval.ok:
-                    if retval.result not in _results:
-                        logger.debug("retrieved: %s" % (retval.result))
-                        _results.add(retval.result)
-                else:
-                    null_counter_limit += 1
-                start += 1
-            if _results:
-                _results = list(set(list(_results)))
-                total = len(_results)
-                logger.info("retrieved: %s" % (total))
-                for db in _results:
-                    logger.info("retrieved: %s" % (db))
-                _temp = Response(ok=True, error="", result=_results)
-                logger.success(f"available databases [{total}]:")
-                for db in _results:
-                    logger.success(f"[*] {db}")
         if retval.ok:
             total = 0
             if retval.result.isdigit():

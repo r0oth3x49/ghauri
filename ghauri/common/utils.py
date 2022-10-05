@@ -375,9 +375,9 @@ def get_page_ratio_difference(response, response_01):
                 #         tag, i1, i2, j1, j2, new, old
                 #     )
                 # )
-                logger.debug(
-                    "{:7} page difference: {!r:>8} --> {!r}".format(tag, new, old)
-                )
+                # logger.debug(
+                #     "{:7} page difference: {!r:>8} --> {!r}".format(tag, new, old)
+                # )
                 _temp.append(
                     f'--string="{response[i1:i2]}", --not-string="{response_01[j1:j2]}"'
                 )
@@ -389,6 +389,56 @@ def get_page_ratio_difference(response, response_01):
     return _diff, _temp
 
 
+def check_page_difference(w1, w2, match_string=None):
+    Response = collections.namedtuple(
+        "PageDifference", ["is_vulner", "difference", "case", "ratio"]
+    )
+    w1 = get_filtered_page_content(w1)
+    w2 = get_filtered_page_content(w2)
+    candidates, _ = get_page_ratio_difference(w1, w2)
+    case = None
+    suggestion = None
+    is_vulner = False
+    difference = None
+    ratio = 0
+    _temp = Response(is_vulner=is_vulner, difference=difference, case=case, ratio=ratio)
+    if candidates:
+        candidates = sorted(candidates, key=len)
+        for candidate in candidates:
+            mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
+            if mobj and " " in candidate and candidate.strip() and len(candidate) > 10:
+                difference = candidate
+                is_vulner = True
+                case = "Page Ratio"
+                suggestion = candidate
+                break
+        if not suggestion and not is_vulner:
+            for candidate in candidates:
+                candidate = re.sub(r"\d+\.\d+", "", candidate)
+                mobj = re.search(r"\A[\w.,! ]+\Z", candidate)
+                if mobj and len(candidate) >= 4:
+                    difference = candidate
+                    is_vulner = True
+                    case = "Page Ratio"
+                    break
+    if difference:
+        if len(difference) > 30:
+            difference = difference[0:30]
+        if is_vulner and match_string:
+            is_vulner = bool(match_string == difference)
+            ratio = get_boolean_ratio(match_string, difference)
+            if is_vulner:
+                logger.debug(f'vulnerable with ratio: {ratio}, --string="{difference}"')
+            else:
+                logger.debug(
+                    f'could not inject ratio: {ratio}, --string="{match_string}" not found.'
+                )
+        _temp = Response(
+            is_vulner=is_vulner, difference=difference, case=case, ratio=ratio
+        )
+    return _temp
+
+
 def check_boolean_responses(
     base,
     attack_true,
@@ -398,6 +448,17 @@ def check_boolean_responses(
     not_match_string="",
     text_only=False,
 ):
+    """
+    case 1: when True attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
+    case 2: when False attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
+    case 3: True injected page is compared with original page (to get something called ratio), then False injected
+            page is compared to original page (to also get the ratio) and then those two ratios are compared together.
+            It compares those two ratios and they should be clearly distinct based on https://github.com/sqlmapproject/sqlmap/issues/2442
+    case 4: when True attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
+    case 5: when False attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
+    case 7: when page ratio is the case we will evalutae difference between content of the pages for True and False attack payload
+            and add proper marks for --string or --not-string injectable type.
+    """
     is_vulner = False
     scb = base.status_code
     sct = attack_true.status_code
@@ -418,94 +479,56 @@ def check_boolean_responses(
         w2 = attack_false.filtered_text
     ratio_true = get_boolean_ratio(w0, w1)
     ratio_false = get_boolean_ratio(w0, w2)
-    # this case will be run when --code=500 is specified.
     if code:
-        logger.debug(
-            f"matching based on status code with true attack type: --code={code}"
-        )
         if code == sct or code == scf:
-            logger.debug(
-                f"matching based on status code with true attack type: {code} (found)"
-            )
             is_vulner = True
             _cases.append("Status code")
         else:
-            logger.debug(
-                f"matching based on status code with true attack type: {code} (not found)"
-            )
+            is_vulner = False
     elif match_string:
-        logger.debug(f'matching true payload string: --string="{match_string}"')
         mobj = re.search(r"(?is)(?:%s)" % (match_string), w1)
         if mobj:
-            logger.debug(f"matching true payload string: {match_string} (found)")
             is_vulner = True
             difference = match_string
             _cases.append("Page Content")
         else:
-            is_vulner = False
-            logger.debug(f"matching true payload string: {match_string} (not found)")
+            ok = check_page_difference(w1, w2, match_string=match_string)
+            difference = ok.difference
+            is_vulner = ok.is_vulner
+            if is_vulner:
+                _cases.append("Page Content")
     elif not_match_string:
-        logger.debug(
-            f'matching false payload string: --not-string="{not_match_string}"'
-        )
         mobj = re.search(r"(?is)(?:%s)" % (not_match_string), w2)
         if mobj:
-            logger.debug(f"matching false payload string: {not_match_string} (found)")
             is_vulner = True
             difference = not_match_string
             _cases.append("Page Content")
         else:
-            is_vulner = False
-            logger.debug(
-                f"matching false payload string: {not_match_string} (not found)"
-            )
+            ok = check_page_difference(w1, w2, match_string=not_match_string)
+            difference = ok.difference
+            is_vulner = ok.is_vulner
+            if is_vulner:
+                _cases.append("Page Content")
     else:
         if ctt != ctf and ctb == ctt:
-            # case 1: when True attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
-            logger.debug(
-                f"vulnerable to case when false attack content length = base content length, but not equals to true attack content length"
-            )
             is_vulner = True
             _cases.append("Content Length")
         elif ctt != ctf and ctb == ctf:
-            # case 2: when False attack content length = baseResponse content length, but attack-true-ct != attack-false-ct
-            logger.debug(
-                f"vulnerable to case when true attack content length = base content length, but not equals to false attack content length"
-            )
             is_vulner = True
             _cases.append("Content Length")
-        # case 3: True injected page is compared with original page (to get something called ratio),
-        # then False injected page is compared to original page (to also get the ratio) and
-        # then those two ratios are compared together.
-        # It compares those two ratios and they should be clearly distinct
-        # based on https://github.com/sqlmapproject/sqlmap/issues/2442
         if ratio_true != ratio_false:
             _cases.append("Page Ratio")
-            logger.debug(
-                f"vulnerable to case when true attack page ratio is not equals to false attack page ratio"
-            )
             is_vulner = True
-        # if with page comparision we didn't found the target vulnerable then also compare the response status codes
         if scb == sct and scb != scf:
-            # case 4: when True attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
-            logger.debug(
-                f"vulnerable to case when true attack status code = base status code, but not equals to false attack status code"
-            )
             _cases.append("Status Code")
             is_vulner = True
         elif scb == scf and scb != sct:
-            # case 5: when False attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
-            logger.debug(
-                f"vulnerable to case when false attack status code = base status code, but not equals to true attack status code"
-            )
             is_vulner = True
             _cases.append("Status Code")
     if _cases:
         case = ", ".join(_cases)
-    if is_vulner:
-        logger.debug(f"target is potentially vulnerable with cases: {case}..")
     if case == "Page Ratio":
-        logger.debug("checking page difference.")
+        # logger.debug("checking page difference.")
         w0set = set(get_filtered_page_content(w0, True, "\n").split("\n"))
         w1set = set(get_filtered_page_content(w1, True, "\n").split("\n"))
         w2set = set(get_filtered_page_content(w2, True, "\n").split("\n"))
@@ -513,12 +536,10 @@ def check_boolean_responses(
         case = ""
         if w0set == w1set != w2set:
             candidates = w1set - w2set - w0set
-            logger.debug(f"total candidates: {len(candidates)}")
             if candidates:
                 candidates = sorted(candidates, key=len)
                 for candidate in candidates:
                     mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
-                    logger.debug(f"candidate: {candidate}")
                     if (
                         mobj
                         and " " in candidate
@@ -528,46 +549,16 @@ def check_boolean_responses(
                         difference = candidate
                         is_vulner = True
                         case = "Page Ratio"
-                        logger.debug(f"difference found: {difference}")
                         break
         else:
-            w1 = get_filtered_page_content(w1)
-            w2 = get_filtered_page_content(w2)
-            candidates, _ = get_page_ratio_difference(w1, w2)
-            if candidates:
-                suggestion = None
-                candidates = sorted(candidates, key=len)
-                for candidate in candidates:
-                    mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
-                    logger.debug(f"candidate: {candidate}")
-                    if (
-                        mobj
-                        and " " in candidate
-                        and candidate.strip()
-                        and len(candidate) > 10
-                    ):
-                        logger.debug(
-                            f"candidate {candidate} found for --string switch..."
-                        )
-                        difference = candidate
-                        is_vulner = True
-                        case = "Page Ratio"
-                        suggestion = candidate
-                        break
-                if not suggestion and not is_vulner:
-                    for candidate in candidates:
-                        candidate = re.sub(r"\d+\.\d+", "", candidate)
-                        mobj = re.search(r"\A[\w.,! ]+\Z", candidate)
-                        if mobj and len(candidate) >= 4:
-                            logger.debug(f"string candidate could be: {candidate}")
-                            difference = candidate
-                            is_vulner = True
-                            case = "Page Ratio"
-                            break
+            ok = check_page_difference(w1, w2)
+            difference = ok.difference
+            is_vulner = ok.is_vulner
+            case = ok.case
             if difference:
-                logger.debug(
-                    f'vulnerable to page content difference with --string="{difference}"..'
-                )
+                logger.debug(f'injectable with --string="{difference}".')
+    if is_vulner:
+        logger.debug(f"injectable with cases: '{case}'.")
     return is_vulner, case, difference
 
 
