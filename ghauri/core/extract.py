@@ -675,7 +675,7 @@ class GhauriExtractor:
         attack_data = data
         attack_headers = headers
         for vector_type, vector in self.vectors.items():
-            if vector_type in ["error_vector", "boolean_vector"]:
+            if vector_type in ["error_vector"]:
                 continue
             logger.debug(f"testing now with vector '{vector}'")
             length = self.fetch_length(
