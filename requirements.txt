@@ -1,0 +1,4 @@
+tldextract
+colorama
+requests
+chardet

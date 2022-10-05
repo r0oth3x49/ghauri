@@ -146,6 +146,7 @@ class GhauriExtractor:
         queryable=None,
         chars="",
         vector_type=None,
+        retry=3,
     ):
         # need to implement retry mechanism in case of http connection related errors..
         if not minimum:
@@ -156,8 +157,34 @@ class GhauriExtractor:
         is_found = False
         character = ""
         # logger.debug("performing a binary_search, for character..")
+        http_firewall_code_counter = 0
+        error_msg = None
+        retry_on_error = 0
         logger.progress(f"retrieved: {chars}")
         while not is_found:
+            if http_firewall_code_counter > 2:
+                message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                logger.warning(f"HTTP error code detected during run:")
+                choice = logger.read_input(
+                    f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+                    batch=False,
+                    user_input="C",
+                )
+                if choice == "q":
+                    break
+                if choice == "c":
+                    http_firewall_code_counter = 0
+            if retry_on_error >= retry:
+                logger.warning(f"Ghauri detected connection errors multiple times")
+                choice = logger.read_input(
+                    f"how do you want to proceed? [(C)continue/(q)uit] ",
+                    batch=False,
+                    user_input="C",
+                )
+                if choice == "q":
+                    break
+                if choice == "c":
+                    retry_on_error = 0
             sleep_time = timesec
             if delay > 0:
                 time.sleep(delay)
@@ -187,32 +214,74 @@ class GhauriExtractor:
                     is_multipart=is_multipart,
                     injection_type=injection_type,
                 )
+                if attack.status_code in [403, 406]:
+                    logger.critical(
+                        f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                    )
+                    time.sleep(0.5)
+                    error_msg = attack.error_msg
+                    http_firewall_code_counter += 1
+                    ascii_char = ascii_char
+                    minimum = minimum
+                    maximum = maximum
+                    continue
+                response_time = attack.response_time
+                if attack01 and vector_type == "boolean_vector":
+                    result, case, _ = check_boolean_responses(
+                        base,
+                        attack,
+                        attack01,
+                        code=code,
+                        match_string=match_string,
+                        not_match_string=not_match_string,
+                        text_only=text_only,
+                    )
+                    if result:
+                        minimum = ascii_char + 1
+                        maximum = maximum
+                    else:
+                        minimum = minimum
+                        maximum = ascii_char
+                if vector_type == "time_vector":
+                    if response_time >= sleep_time:
+                        minimum = ascii_char + 1
+                        maximum = maximum
+                    else:
+                        minimum = minimum
+                        maximum = ascii_char
             except KeyboardInterrupt as error:
-                raise error
-            response_time = attack.response_time
-            if attack01 and vector_type == "boolean_vector":
-                result, case, _ = check_boolean_responses(
-                    base,
-                    attack,
-                    attack01,
-                    code=code,
-                    match_string=match_string,
-                    not_match_string=not_match_string,
-                    text_only=text_only,
+                logger.warning("user aborted during data extraction phase")
+                quest = logger.read_input(
+                    "how do you want to proceed? [(C)continue/(e)nd this phase/(q)uit] ",
+                    batch=False,
+                    user_input="C",
                 )
-                if result:
-                    minimum = ascii_char + 1
-                    maximum = maximum
-                else:
-                    minimum = minimum
-                    maximum = ascii_char
-            if vector_type == "time_vector":
-                if response_time >= sleep_time:
-                    minimum = ascii_char + 1
-                    maximum = maximum
-                else:
-                    minimum = minimum
-                    maximum = ascii_char
+                if quest and quest == "e":
+                    raise error
+                if quest and quest == "q":
+                    logger.error("user quit")
+                    logger.end("ending")
+                    exit(0)
+            except ConnectionAbortedError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was aborted by the peer, Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except ConnectionRefusedError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was refused by the peer. Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except ConnectionResetError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was reset by the peer. Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except Exception as error:
+                logger.critical(
+                    f"error {error}, during detection phase. Ghauri is going to retry"
+                )
+                retry_on_error += 1
         return character
 
     def _linear_search(
@@ -234,14 +303,40 @@ class GhauriExtractor:
         chars="",
         offset=0,
         list_of_chars=None,
+        retry=3,
     ):
         # need to implement retry mechanism in case of http connection related errors..
         character = ""
         start = 0
         end = len(list_of_chars)
+        http_firewall_code_counter = 0
+        error_msg = None
+        retry_on_error = 0
         while start < end:
+            if http_firewall_code_counter > 2:
+                message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                logger.warning(f"HTTP error code detected during run:")
+                choice = logger.read_input(
+                    f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+                    batch=False,
+                    user_input="C",
+                )
+                if choice == "q":
+                    break
+                if choice == "c":
+                    http_firewall_code_counter = 0
+            if retry_on_error >= retry:
+                logger.warning(f"Ghauri detected connection errors multiple times")
+                choice = logger.read_input(
+                    f"how do you want to proceed? [(C)continue/(q)uit] ",
+                    batch=False,
+                    user_input="C",
+                )
+                if choice == "q":
+                    break
+                if choice == "c":
+                    retry_on_error = 0
             ascii_char = list_of_chars[start]
-            start += 1
             if delay > 0:
                 time.sleep(delay)
             sleep_time = timesec
@@ -267,13 +362,53 @@ class GhauriExtractor:
                     is_multipart=is_multipart,
                     injection_type=injection_type,
                 )
+                if attack.status_code in [403, 406]:
+                    logger.critical(
+                        f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                    )
+                    time.sleep(0.5)
+                    error_msg = attack.error_msg
+                    http_firewall_code_counter += 1
+                    continue
+                start += 1
+                response_time = attack.response_time
+                if response_time >= sleep_time:
+                    character += str(ascii_char)
+                    # logger.debug(f"retrieved character: '{str(character)}'")
+                    break
             except KeyboardInterrupt as error:
-                raise error
-            response_time = attack.response_time
-            if response_time >= sleep_time:
-                character += str(ascii_char)
-                # logger.debug(f"retrieved character: '{str(character)}'")
-                break
+                logger.warning("user aborted during data extraction phase")
+                quest = logger.read_input(
+                    "how do you want to proceed? [(C)continue/(e)nd this phase/(q)uit] ",
+                    batch=False,
+                    user_input="C",
+                )
+                if quest and quest == "e":
+                    raise error
+                if quest and quest == "q":
+                    logger.error("user quit")
+                    logger.end("ending")
+                    exit(0)
+            except ConnectionAbortedError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was aborted by the peer, Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except ConnectionRefusedError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was refused by the peer. Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except ConnectionResetError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was reset by the peer. Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except Exception as error:
+                logger.critical(
+                    f"error {error}, during detection phase. Ghauri is going to retry"
+                )
+                retry_on_error += 1
         return character
 
     def fetch_noc(
@@ -473,11 +608,9 @@ class GhauriExtractor:
                             chars += retval
                             logger.debug(f"character found: '{str(chars)}'")
                         except KeyboardInterrupt:
-                            logger.error(
-                                "user interrupted during length of query output retrieval.."
-                            )
-                            logger.end("ending")
-                            exit(0)
+                            is_length_found = True
+                            length = 0
+                            break
                     if vector_type == "time_vector":
                         try:
                             retval = self._linear_search(
@@ -502,11 +635,9 @@ class GhauriExtractor:
                             chars += retval
                             logger.debug(f"character found: '{str(chars)}'")
                         except KeyboardInterrupt:
-                            logger.error(
-                                "user interrupted during length of query output retrieval.."
-                            )
-                            logger.end("ending")
-                            exit(0)
+                            is_length_found = True
+                            length = 0
+                            break
                 if len(chars) == noc:
                     if not suppress_output:
                         logger.info(f"retrieved: {chars}")
@@ -534,6 +665,7 @@ class GhauriExtractor:
         suppress_output=False,
         query_check=False,
         text_only=False,
+        retry=3,
     ):
         PayloadResponse = collections.namedtuple(
             "PayloadResponse",
@@ -541,9 +673,39 @@ class GhauriExtractor:
         )
         _temp = PayloadResponse(ok=False, error="", result="", payload="")
         error_based_in_vectors = bool("error_vector" in self.vectors)
+        start = 0
+        end = len(payloads)
+        http_firewall_code_counter = 0
+        error_msg = None
+        retry_on_error = 0
         if error_based_in_vectors:
             vector = self.vectors.get("error_vector")
-            for entry in payloads:
+            while start < end:
+                if http_firewall_code_counter > 2:
+                    message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                    logger.warning(f"HTTP error code detected during run:")
+                    choice = logger.read_input(
+                        f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+                        batch=False,
+                        user_input="C",
+                    )
+                    if choice == "q":
+                        break
+                    if choice == "c":
+                        http_firewall_code_counter = 0
+                if retry_on_error >= retry:
+                    logger.warning(f"Ghauri detected connection errors multiple times")
+                    choice = logger.read_input(
+                        f"how do you want to proceed? [(C)continue/(q)uit] ",
+                        batch=False,
+                        user_input="C",
+                    )
+                    if choice == "q":
+                        break
+                    if choice == "c":
+                        retry_on_error = 0
+                entry = payloads[entry]
+                response_string = ""
                 if delay > 0:
                     time.sleep(delay)
                 expression = vector.replace("[INFERENCE]", f"{entry}")
@@ -564,11 +726,41 @@ class GhauriExtractor:
                         is_multipart=is_multipart,
                         injection_type=injection_type,
                     )
-                except KeyboardInterrupt:
-                    logger.error("user interrupted during query output retrieval..")
-                    logger.end("ending")
-                    exit(0)
-                response_string = attack.filtered_text if text_only else attack.text
+                    response_string = attack.filtered_text if text_only else attack.text
+                    start += 1
+                except KeyboardInterrupt as error:
+                    logger.warning("user aborted during data extraction phase")
+                    quest = logger.read_input(
+                        "how do you want to proceed? [(C)continue/(e)nd this phase/(q)uit] ",
+                        batch=False,
+                        user_input="C",
+                    )
+                    if quest and quest == "e":
+                        break
+                    if quest and quest == "q":
+                        logger.error("user quit")
+                        logger.end("ending")
+                        exit(0)
+                except ConnectionAbortedError as e:
+                    logger.critical(
+                        f"connection attempt to the target URL was aborted by the peer, Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
+                except ConnectionRefusedError as e:
+                    logger.critical(
+                        f"connection attempt to the target URL was refused by the peer. Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
+                except ConnectionResetError as e:
+                    logger.critical(
+                        f"connection attempt to the target URL was reset by the peer. Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
+                except Exception as error:
+                    logger.critical(
+                        f"error {error}, during detection phase. Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
                 retval = search_regex(
                     pattern=(
                         REGEX_XPATH,
@@ -676,6 +868,7 @@ class GhauriExtractor:
         attack_url = url
         attack_data = data
         attack_headers = headers
+        user_aborted = False
         for vector_type, vector in self.vectors.items():
             if vector_type in ["error_vector"]:
                 continue
@@ -753,13 +946,16 @@ class GhauriExtractor:
                                     chars += retval
                                     logger.debug(f"character(s) found: '{str(chars)}'")
                                 except KeyboardInterrupt:
-                                    if chars:
-                                        logger.info(f"retrieved: {chars}")
-                                    logger.error(
-                                        "user interrupted during query output retrieval.."
+                                    is_char_found = True
+                                    is_extracted = True
+                                    is_done_with_vector = True
+                                    _temp = PayloadResponse(
+                                        ok=False,
+                                        error="user_ended",
+                                        result=chars,
+                                        payload=entry,
                                     )
-                                    logger.end("ending")
-                                    exit(0)
+                                    break
                             if vector_type == "time_vector":
                                 try:
                                     retval = self._linear_search(
@@ -784,52 +980,16 @@ class GhauriExtractor:
                                     chars += retval
                                     logger.debug(f"character(s) found: '{str(chars)}'")
                                 except KeyboardInterrupt:
-                                    if chars:
-                                        logger.info(f"retrieved: {chars}")
-                                    logger.error(
-                                        "user aborted during query output retrieval.."
+                                    is_char_found = True
+                                    is_extracted = True
+                                    is_done_with_vector = True
+                                    _temp = PayloadResponse(
+                                        ok=False,
+                                        error="user_ended",
+                                        result=chars,
+                                        payload=entry,
                                     )
-                                    logger.end("ending")
-                                    exit(0)
-                                # for i in list_of_chars:
-                                #     sleep_time = timesec
-                                #     if delay > 0:
-                                #         time.sleep(delay)
-                                #     logger.progress(f"retrieved: {chars}{i}")
-                                #     condition = value.format(
-                                #         query=entry, position=pos, char=ord(i)
-                                #     )
-                                #     expression = vector.replace(
-                                #         "[INFERENCE]", f"{condition}"
-                                #     ).replace("[SLEEPTIME]", f"{sleep_time}")
-                                #     logger.payload(f"{expression}")
-                                #     try:
-                                #         attack = inject_expression(
-                                #             url=url,
-                                #             data=data,
-                                #             proxy=proxy,
-                                #             delay=delay,
-                                #             timesec=timesec,
-                                #             timeout=timeout,
-                                #             headers=headers,
-                                #             parameter=parameter,
-                                #             expression=expression,
-                                #             is_multipart=is_multipart,
-                                #             injection_type=injection_type,
-                                #         )
-                                #     except KeyboardInterrupt as e:
-                                #         if chars:
-                                #             logger.info(f"retrieved: {chars}")
-                                #         logger.error(
-                                #             "user interrupted during query output retrieval.."
-                                #         )
-                                #         logger.end("ending")
-                                #         exit(0)
-                                #     response_time = attack.response_time
-                                #     if response_time >= sleep_time:
-                                #         chars += i
-                                #         logger.debug(f"retrieved: '{str(chars)}'")
-                                #         break
+                                    break
                         if len(chars) == length:
                             is_char_found = True
                             _temp = PayloadResponse(

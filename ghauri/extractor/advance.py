@@ -343,6 +343,8 @@ class GhauriAdvance:
                             if retval.result not in _results:
                                 logger.info("retrieved: %s" % (retval.result))
                                 _results.add(retval.result)
+                        if not retval.ok and retval.error == "user_ended":
+                            break
                     except KeyboardInterrupt:
                         quest = logger.read_input(
                             "user interrupted during data fetching, Do you want to continue? [y/N] ",
@@ -515,6 +517,8 @@ class GhauriAdvance:
                             logger.info("retrieved: %s" % (retval.result))
                             if retval.result not in _results:
                                 _results.add(retval.result)
+                        if not retval.ok and retval.error == "user_ended":
+                            break
                     except KeyboardInterrupt:
                         quest = logger.read_input(
                             "user interrupted during data fetching, Do you want to continue? [y/N] ",
@@ -685,6 +689,8 @@ class GhauriAdvance:
                         if retval.ok:
                             logger.info("retrieved: %s" % (retval.result))
                             _results.append(retval.result)
+                        if not retval.ok and retval.error == "user_ended":
+                            break
                     except KeyboardInterrupt:
                         quest = logger.read_input(
                             "user interrupted during data fetching, Do you want to continue? [y/N] ",
@@ -889,6 +895,9 @@ class GhauriAdvance:
                                 if retval.result not in __temp:
                                     logger.info("retrieved: %s" % (retval.result))
                                     __temp.append(retval.result)
+                            if not retval.ok and retval.error == "user_ended":
+                                is_interrupted = True
+                                break
                         except KeyboardInterrupt:
                             quest = logger.read_input(
                                 "user interrupted during data fetching, Do you want to continue? [y/N] ",
