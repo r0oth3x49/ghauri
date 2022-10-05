@@ -704,7 +704,7 @@ class GhauriExtractor:
                         break
                     if choice == "c":
                         retry_on_error = 0
-                entry = payloads[entry]
+                entry = payloads[start]
                 response_string = ""
                 if delay > 0:
                     time.sleep(delay)
