@@ -1829,7 +1829,6 @@ def check_injections(
             dbms = tsqli.backend if not dbms else dbms
             if number_of_requests_performed == 4:
                 number_of_requests_performed += tsqli.number_of_requests
-    logger.info(possible_dbms)
     if "E" in techniques and not possible_dbms:
         esqli = check_errorbased_sqli(
             base,
