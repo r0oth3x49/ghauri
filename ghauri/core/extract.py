@@ -145,6 +145,7 @@ class GhauriExtractor:
         expression_payload=None,
         queryable=None,
         chars="",
+        vector_type=None,
     ):
         # need to implement retry mechanism in case of http connection related errors..
         if not minimum:
@@ -467,6 +468,7 @@ class GhauriExtractor:
                                 queryable=entry,
                                 chars=chars,
                                 text_only=text_only,
+                                vector_type=vector_type,
                             )
                             chars += retval
                             logger.debug(f"character found: '{str(chars)}'")
@@ -746,6 +748,7 @@ class GhauriExtractor:
                                         queryable=entry,
                                         chars=chars,
                                         text_only=text_only,
+                                        vector_type=vector_type,
                                     )
                                     chars += retval
                                     logger.debug(f"character(s) found: '{str(chars)}'")
