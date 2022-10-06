@@ -207,7 +207,7 @@ class HTTPRequestHandler:
                 response_time = end_time - start_time
                 parsed_response = parse_http_error(e)
             except (socket.timeout, requests.exceptions.ReadTimeout) as e:
-                logger.warning("read timeout during connection response reading..")
+                logger.warning("read timeout during connection response reading.")
                 end_time = time.time()
                 response_time = end_time - start_time
                 parsed_response = parse_http_error(e, url=url, is_timeout=True)

