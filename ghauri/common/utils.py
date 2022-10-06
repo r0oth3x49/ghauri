@@ -428,10 +428,10 @@ def check_page_difference(w1, w2, match_string=None):
             is_vulner = bool(match_string == difference)
             ratio = get_boolean_ratio(match_string, difference)
             if is_vulner:
-                logger.debug(f'vulnerable with ratio: {ratio}, --string="{difference}"')
+                logger.debug(f'page ratio: {ratio}, --string="{difference}"')
             else:
                 logger.debug(
-                    f'could not inject ratio: {ratio}, --string="{match_string}" not found.'
+                    f'page ratio: {ratio}, --string="{match_string}" (not found).'
                 )
         _temp = Response(
             is_vulner=is_vulner, difference=difference, case=case, ratio=ratio
@@ -456,7 +456,7 @@ def check_boolean_responses(
             It compares those two ratios and they should be clearly distinct based on https://github.com/sqlmapproject/sqlmap/issues/2442
     case 4: when True attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
     case 5: when False attack status code = baseResponse status code, but attack-true-sc != attack-false-sc
-    case 7: when page ratio is the case we will evalutae difference between content of the pages for True and False attack payload
+    case 6: when page ratio is the case we will evalutae difference between content of the pages for True and False attack payload
             and add proper marks for --string or --not-string injectable type.
     """
     is_vulner = False
@@ -469,11 +469,11 @@ def check_boolean_responses(
     case = ""
     difference = ""
     _cases = []
-    if text_only:
+    if not text_only:
         w0 = base.text
         w1 = attack_true.text
         w2 = attack_false.text
-    if not text_only:
+    if text_only:
         w0 = base.filtered_text
         w1 = attack_true.filtered_text
         w2 = attack_false.filtered_text
@@ -527,11 +527,13 @@ def check_boolean_responses(
             _cases.append("Status Code")
     if _cases:
         case = ", ".join(_cases)
+        logger.debug(f"injectable cases detected: '{case}'")
     if case == "Page Ratio":
-        # logger.debug("checking page difference.")
-        w0set = set(get_filtered_page_content(w0, True, "\n").split("\n"))
-        w1set = set(get_filtered_page_content(w1, True, "\n").split("\n"))
-        w2set = set(get_filtered_page_content(w2, True, "\n").split("\n"))
+        w0set = set(get_filtered_page_content(base.text, True, "\n").split("\n"))
+        w1set = set(get_filtered_page_content(attack_true.text, True, "\n").split("\n"))
+        w2set = set(
+            get_filtered_page_content(attack_false.text, True, "\n").split("\n")
+        )
         is_vulner = False
         case = ""
         if w0set == w1set != w2set:
@@ -550,7 +552,24 @@ def check_boolean_responses(
                         is_vulner = True
                         case = "Page Ratio"
                         break
-        else:
+        if w0set == w2set != w1set:
+            candidates = w2set - w1set - w0set
+            if candidates:
+                candidates = sorted(candidates, key=len)
+                for candidate in candidates:
+                    mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
+                    if (
+                        mobj
+                        and " " in candidate
+                        and candidate.strip()
+                        and len(candidate) > 10
+                    ):
+                        difference = candidate
+                        is_vulner = True
+                        case = "Page Ratio"
+                        break
+        if not difference and not is_vulner:
+            # special case when the above page ratio mechanism fails.
             ok = check_page_difference(w1, w2)
             difference = ok.difference
             is_vulner = ok.is_vulner
