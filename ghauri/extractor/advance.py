@@ -166,44 +166,42 @@ class GhauriAdvance:
                     "ghauri could not determine number of databases, using DB_NAME to fetch dbs .."
                 )
                 payloads_names = PAYLOADS_DBS_NAMES.get(backend)
-                payload = ""
+                payload = None
                 total = 0
-                for pay in payloads_names:
-                    _ = self.__execute_expression(
-                        url,
-                        data,
-                        vector,
-                        parameter,
-                        headers,
-                        base,
-                        injection_type,
-                        [pay],
-                        backend=backend,
-                        proxy=proxy,
-                        is_multipart=is_multipart,
-                        timeout=timeout,
-                        delay=delay,
-                        timesec=timesec,
-                        attack=attack,
-                        match_string=match_string,
-                        suppress_output=True,
-                        query_check=True,
-                        not_match_string=not_match_string,
-                        code=code,
-                        text_only=text_only,
+                guess = self.__execute_expression(
+                    url,
+                    data,
+                    vector,
+                    parameter,
+                    headers,
+                    base,
+                    injection_type,
+                    payloads_names,
+                    backend=backend,
+                    proxy=proxy,
+                    is_multipart=is_multipart,
+                    timeout=timeout,
+                    delay=delay,
+                    timesec=timesec,
+                    attack=attack,
+                    match_string=match_string,
+                    suppress_output=True,
+                    query_check=True,
+                    not_match_string=not_match_string,
+                    code=code,
+                    text_only=text_only,
+                )
+                if guess.ok:
+                    payload = guess.payload
+                    logger.debug(
+                        f"Working payload found for database extraction: '{payload}'"
                     )
-                    if _.ok:
-                        payload = _.payload
-                        logger.debug(
-                            f"Working payload found for database extraction: '{payload}'"
-                        )
-                        break
-                payload = clean_up_offset_payload(payload, backend=backend)
                 if not payload:
                     logger.critical(
                         "Ghauri was not able identify payload for database(s) fetching, try manually."
                     )
                     return _temp
+                payload = clean_up_offset_payload(payload, backend=backend)
                 null_counter_limit = 0
                 stop = 20
                 while start < stop:
@@ -267,37 +265,40 @@ class GhauriAdvance:
                 if not stop:
                     stop = total
                 payloads_names = PAYLOADS_DBS_NAMES.get(backend)
-                payload = ""
-                for pay in payloads_names:
-                    _ = self.__execute_expression(
-                        url,
-                        data,
-                        vector,
-                        parameter,
-                        headers,
-                        base,
-                        injection_type,
-                        [pay],
-                        backend=backend,
-                        proxy=proxy,
-                        is_multipart=is_multipart,
-                        timeout=timeout,
-                        delay=delay,
-                        timesec=timesec,
-                        attack=attack,
-                        match_string=match_string,
-                        suppress_output=True,
-                        query_check=True,
-                        not_match_string=not_match_string,
-                        code=code,
-                        text_only=text_only,
+                payload = None
+                guess = self.__execute_expression(
+                    url,
+                    data,
+                    vector,
+                    parameter,
+                    headers,
+                    base,
+                    injection_type,
+                    payloads_names,
+                    backend=backend,
+                    proxy=proxy,
+                    is_multipart=is_multipart,
+                    timeout=timeout,
+                    delay=delay,
+                    timesec=timesec,
+                    attack=attack,
+                    match_string=match_string,
+                    suppress_output=True,
+                    query_check=True,
+                    not_match_string=not_match_string,
+                    code=code,
+                    text_only=text_only,
+                )
+                if guess.ok:
+                    payload = guess.payload
+                    logger.debug(
+                        f"Working payload found for database extraction: '{payload}'"
                     )
-                    if _.ok:
-                        payload = _.payload
-                        logger.debug(
-                            f"Working payload found for database extraction: '{payload}'"
-                        )
-                        break
+                if not payload:
+                    logger.critical(
+                        "Ghauri was not able identify payload for database(s) fetching, try manually."
+                    )
+                    return _temp
                 payload = clean_up_offset_payload(payload, backend=backend)
                 if (
                     payload
@@ -305,11 +306,6 @@ class GhauriAdvance:
                     and "DB_NAME" in payload
                 ):
                     stop = stop + 1
-                if not payload:
-                    logger.critical(
-                        "Ghauri was not able identify payload for database(s) fetching, try manually."
-                    )
-                    return _temp
                 while start < stop:
                     payloads = prepare_query_payload(
                         backend=backend, offset=start, payload_string=payload
@@ -447,43 +443,41 @@ class GhauriAdvance:
                     payloads=payloads_names,
                     is_string=ghauri_extractor.is_string,
                 )
-                payload = ""
-                for pay in payloads_names:
-                    _ = self.__execute_expression(
-                        url,
-                        data,
-                        vector,
-                        parameter,
-                        headers,
-                        base,
-                        injection_type,
-                        [pay],
-                        backend=backend,
-                        proxy=proxy,
-                        is_multipart=is_multipart,
-                        timeout=timeout,
-                        delay=delay,
-                        timesec=timesec,
-                        attack=attack,
-                        match_string=match_string,
-                        suppress_output=True,
-                        query_check=True,
-                        not_match_string=not_match_string,
-                        code=code,
-                        text_only=text_only,
+                payload = None
+                guess = self.__execute_expression(
+                    url,
+                    data,
+                    vector,
+                    parameter,
+                    headers,
+                    base,
+                    injection_type,
+                    payloads_names,
+                    backend=backend,
+                    proxy=proxy,
+                    is_multipart=is_multipart,
+                    timeout=timeout,
+                    delay=delay,
+                    timesec=timesec,
+                    attack=attack,
+                    match_string=match_string,
+                    suppress_output=True,
+                    query_check=True,
+                    not_match_string=not_match_string,
+                    code=code,
+                    text_only=text_only,
+                )
+                if guess.ok:
+                    payload = guess.payload
+                    logger.debug(
+                        f"Working payload found for table(s) extraction: '{payload}'"
                     )
-                    if _.ok:
-                        payload = _.payload
-                        logger.debug(
-                            f"Working payload found for table(s) extraction: '{payload}'"
-                        )
-                        break
-                payload = clean_up_offset_payload(payload, backend=backend)
                 if not payload:
                     logger.critical(
                         "Ghauri was not able identify payload for table(s) fetching, try manually."
                     )
                     return _temp
+                payload = clean_up_offset_payload(payload, backend=backend)
                 while start < stop:
                     payloads = prepare_query_payload(
                         backend=backend, offset=start, payload_string=payload
@@ -626,37 +620,40 @@ class GhauriAdvance:
                     table=table,
                     is_string=ghauri_extractor.is_string,
                 )
-                payload = ""
-                for pay in payloads_names:
-                    _ = self.__execute_expression(
-                        url,
-                        data,
-                        vector,
-                        parameter,
-                        headers,
-                        base,
-                        injection_type,
-                        [pay],
-                        backend=backend,
-                        proxy=proxy,
-                        is_multipart=is_multipart,
-                        timeout=timeout,
-                        delay=delay,
-                        timesec=timesec,
-                        attack=attack,
-                        match_string=match_string,
-                        suppress_output=True,
-                        query_check=True,
-                        not_match_string=not_match_string,
-                        code=code,
-                        text_only=text_only,
+                payload = None
+                guess = self.__execute_expression(
+                    url,
+                    data,
+                    vector,
+                    parameter,
+                    headers,
+                    base,
+                    injection_type,
+                    payloads_names,
+                    backend=backend,
+                    proxy=proxy,
+                    is_multipart=is_multipart,
+                    timeout=timeout,
+                    delay=delay,
+                    timesec=timesec,
+                    attack=attack,
+                    match_string=match_string,
+                    suppress_output=True,
+                    query_check=True,
+                    not_match_string=not_match_string,
+                    code=code,
+                    text_only=text_only,
+                )
+                if guess.ok:
+                    payload = guess.payload
+                    logger.debug(
+                        f"Working payload found for column(s) extraction: '{payload}'"
                     )
-                    if _.ok:
-                        payload = _.payload
-                        logger.debug(
-                            f"Working payload found for column(s) extraction: '{payload}'"
-                        )
-                        break
+                if not payload:
+                    logger.critical(
+                        "Ghauri was not able identify payload for column(s) fetching, try manually."
+                    )
+                    return _temp
                 payload = clean_up_offset_payload(payload, backend=backend)
                 while start < stop:
                     payloads = prepare_query_payload(
@@ -810,37 +807,38 @@ class GhauriAdvance:
                     column=__columns[-1],
                     dump=True,
                 )
-                payload = ""
-                for pay in payloads_names:
-                    _ = self.__execute_expression(
-                        url,
-                        data,
-                        vector,
-                        parameter,
-                        headers,
-                        base,
-                        injection_type,
-                        [pay],
-                        backend=backend,
-                        proxy=proxy,
-                        is_multipart=is_multipart,
-                        timeout=timeout,
-                        delay=delay,
-                        timesec=timesec,
-                        attack=attack,
-                        match_string=match_string,
-                        suppress_output=True,
-                        query_check=True,
-                        not_match_string=not_match_string,
-                        code=code,
-                        text_only=text_only,
+                payload = None
+                guess = self.__execute_expression(
+                    url,
+                    data,
+                    vector,
+                    parameter,
+                    headers,
+                    base,
+                    injection_type,
+                    payloads_names,
+                    backend=backend,
+                    proxy=proxy,
+                    is_multipart=is_multipart,
+                    timeout=timeout,
+                    delay=delay,
+                    timesec=timesec,
+                    attack=attack,
+                    match_string=match_string,
+                    suppress_output=True,
+                    query_check=True,
+                    not_match_string=not_match_string,
+                    code=code,
+                    text_only=text_only,
+                )
+                if guess.ok:
+                    payload = guess.payload
+                    logger.debug(f"Working payload found for table dump: '{payload}'")
+                if not payload:
+                    logger.critical(
+                        "Ghauri was not able identify payload for table dump, try manually."
                     )
-                    if _.ok:
-                        payload = _.payload
-                        logger.debug(
-                            f"Working payload found for column(s) extraction: '{payload}'"
-                        )
-                        break
+                    return _temp
                 payload = clean_up_offset_payload(
                     payload, backend=backend, column=__columns[-1]
                 )

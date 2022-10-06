@@ -88,7 +88,7 @@ class GhauriCommon:
             logger.success(f"banner: '{retval.result}'")
         else:
             error = retval.error
-            message = f"BSQLi detected an error during data extraction..{error}"
+            message = f"Ghauri detected an error during data extraction..{error}"
             logger.warning(f"{message}")
         return retval
 
@@ -140,7 +140,7 @@ class GhauriCommon:
             logger.success(f"current user: '{retval.result}'")
         else:
             error = retval.error
-            message = f"BSQLi detected an error during data extraction..{error}"
+            message = f"Ghauri detected an error during data extraction..{error}"
             logger.warning(f"{message}")
         return retval
 
@@ -192,7 +192,7 @@ class GhauriCommon:
             logger.success(f"current database: '{retval.result}'")
         else:
             error = retval.error
-            message = f"BSQLi detected an error during data extraction..{error}"
+            message = f"Ghauri detected an error during data extraction..{error}"
             logger.warning(f"{message}")
         return retval
 
