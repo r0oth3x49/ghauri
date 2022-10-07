@@ -534,7 +534,8 @@ def check_booleanbased_sqli(
                     user_input="S",
                 )
                 if quest and quest == "n":
-                    return None
+                    # later on will handle this nicely..
+                    return "next parameter"
                 if quest and quest == "q":
                     logger.error("user quit")
                     logger.end("ending")
@@ -976,7 +977,8 @@ def check_timebased_sqli(
                     user_input="S",
                 )
                 if quest and quest == "n":
-                    return None
+                    # later on will handle this nicely..
+                    return "next parameter"
                 if quest and quest == "q":
                     logger.error("user quit")
                     logger.end("ending")
@@ -1234,7 +1236,8 @@ def check_errorbased_sqli(
                     user_input="S",
                 )
                 if quest and quest == "n":
-                    return None
+                    # later on will handle this nicely..
+                    return "next parameter"
                 if quest and quest == "q":
                     logger.error("user quit")
                     logger.end("ending")
@@ -1842,6 +1845,8 @@ def check_injections(
             retry=retries,
             possible_dbms=possible_dbms,
         )
+        if esqli and isinstance(esqli, str) and esqli == "next parameter":
+            return None
         if esqli:
             is_injected_error = True
             is_string = esqli.is_string
@@ -1875,6 +1880,8 @@ def check_injections(
             not_match_string=not_string,
             text_only=text_only,
         )
+        if bsqli and isinstance(bsqli, str) and bsqli == "next parameter":
+            return None
         is_injected_bool = bool(bsqli and bsqli.injected)
         if is_injected_bool:
             if is_injected_error:
@@ -1909,6 +1916,8 @@ def check_injections(
             retry=retries,
             techniques=techniques,
         )
+        if tsqli and isinstance(tsqli, str) and tsqli == "next parameter":
+            return None
         is_injected_time = bool(tsqli and tsqli.injected)
         if is_injected_time:
             if is_injected_error:
@@ -1939,6 +1948,8 @@ def check_injections(
             retry=retries,
             possible_dbms=possible_dbms,
         )
+        if esqli and isinstance(esqli, str) and esqli == "next parameter":
+            return None
         if esqli:
             is_injected_error = True
             is_string = esqli.is_string

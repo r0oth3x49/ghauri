@@ -49,6 +49,7 @@ from ghauri.common.lib import (
     HTTPRedirectHandler,
     BaseHTTPRequestHandler,
     INJECTABLE_HEADERS_DEFAULT,
+    HTTP_STATUS_CODES_REASONS,
 )
 from ghauri.common.payloads import PAYLOADS
 from ghauri.logger.colored_logger import logger
@@ -799,6 +800,16 @@ def prepare_proxy(proxy):
     return Response(for_requests=for_requests, for_urllib=for_urllib)
 
 
+def get_http_code_reason(code):
+    # Table mapping response codes to messages; entries have the
+    Reason = collections.namedtuple("Reason", ["code", "reason", "detail"])
+    out = HTTP_STATUS_CODES_REASONS.get(code, [])
+    _temp = Reason(code=code, reason="", detail="")
+    if out:
+        _temp = Reason(code=code, reason=out[0], detail=out[-1])
+    return _temp
+
+
 def parse_http_error(error, url=None, is_timeout=False):
     Response = collections.namedtuple(
         "Response",
@@ -823,7 +834,7 @@ def parse_http_error(error, url=None, is_timeout=False):
         if hasattr(error, "response"):
             text = unescape_html(error.response)
             status_code = error.response.status_code
-            reason = error.response.reason
+            reason = get_http_code_reason(status_code).reason  # error.response.reason
             headers = error.response.headers
             url = error.response.url
             error_msg = f"{status_code} ({reason})"
@@ -831,7 +842,7 @@ def parse_http_error(error, url=None, is_timeout=False):
             filtered_text = get_filtered_page_content(text)
         else:
             status_code = error.code
-            reason = error.reason
+            reason = get_http_code_reason(status_code).reason  # error.reason
             headers = dict(error.info())
             text = unescape_html(
                 error, is_compressed=bool("gzip" in headers.get("Content-Encoding", ""))
@@ -886,7 +897,7 @@ def parse_http_response(resp):
         text = resp.text
         url = resp.url
         status_code = resp.status_code
-        reason = resp.reason
+        reason = get_http_code_reason(status_code).reason  # resp.reason
         headers = resp.headers
         ok = bool(200 == status_code)
         error_msg = f"{status_code} ({reason})"
@@ -896,7 +907,7 @@ def parse_http_response(resp):
         url = resp.geturl()
         status_code = resp.status
         ok = bool(200 == status_code)
-        reason = resp.reason
+        reason = get_http_code_reason(status_code).reason  # resp.reason
         headers = dict(resp.info())
         text = unescape_html(
             resp, is_compressed=bool("gzip" in headers.get("Content-Encoding", ""))
@@ -964,8 +975,8 @@ def prepare_attack_request(
     else:
         key = re.escape(key)
         value = re.escape(value)
-        REGEX_GET_POST_COOKIE_INJECTION = r"(?is)(?:((?:\?| |&)?%s)(=)(%s))" % (
-            key,
+        REGEX_GET_POST_COOKIE_INJECTION = r"(?is)(?:((?:\?| |&)%s)(=)(%s))" % (
+            f"{'' if injection_type == 'GET' else '?'}{key}",
             value,
         )
         REGEX_HEADER_INJECTION = r"(?is)(?:(%s)(:)(\s*%s))" % (key, value)

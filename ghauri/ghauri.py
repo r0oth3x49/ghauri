@@ -174,6 +174,7 @@ def perform_injection(
     is_error_based_injected = False
     is_connection_tested = False
     injection_types = []
+    is_remaining_tests_asked = False
     sd = data
     if is_multipart:
         sd = data.encode("unicode_escape").decode("utf-8")
@@ -318,13 +319,15 @@ def perform_injection(
                         if choice == "y":
                             dbms = possible_dbms
                     if dbms and possible_dbms == dbms:
-                        choice = logger.read_input(
-                            f"for the remaining tests, do you want to include all tests for '{possible_dbms}'? [Y/n] ",
-                            batch=batch,
-                            user_input="Y",
-                        )
-                        if choice == "n":
-                            pass
+                        if not is_remaining_tests_asked:
+                            choice = logger.read_input(
+                                f"for the remaining tests, do you want to include all tests for '{possible_dbms}'? [Y/n] ",
+                                batch=batch,
+                                user_input="Y",
+                            )
+                            is_remaining_tests_asked = True
+                            if choice == "n":
+                                pass
                 retval = check_injections(
                     base,
                     parameter,
