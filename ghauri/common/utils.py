@@ -1107,10 +1107,6 @@ def extract_multipart_formdata(data):
                 content_type = _gdict.get("contenttype")
                 content_type = "" if not content_type else content_type
                 if content_type:
-                    # value = {
-                    #     "filename": filename,
-                    #     "content_type": content_type,
-                    # }
                     value = ""
             _out.update({"value": value})
         if _out:
@@ -1143,10 +1139,10 @@ def fetch_payloads_by_suffix_prefix(payloads, prefix=None, suffix=None):
     #         if _suff == suffix:
     #             _temp.append(entry)
     if prefix and suffix:
-        logger.debug(
-            f" both prefix and suffix are found for injection.. '{prefix}', '{suffix}'"
-        )
-        logger.debug("checking payloads for provided prefix and suffix..")
+        # logger.debug(
+        #     f" both prefix and suffix are found for injection.. '{prefix}', '{suffix}'"
+        # )
+        # logger.debug("checking payloads for provided prefix and suffix..")
         for entry in payloads:
             _pref = entry.prefix
             prefix = urldecode(prefix)

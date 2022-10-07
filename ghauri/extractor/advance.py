@@ -252,6 +252,8 @@ class GhauriAdvance:
                     for db in _results:
                         logger.success(f"[*] {db}")
             else:
+                logger.warning("the SQL query provided does not return any output")
+                logger.error("unable to retrieve the number of databases")
                 return _temp
         if retval.ok:
             total = 0

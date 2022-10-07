@@ -610,6 +610,8 @@ class Ghauri:
             stop=stop,
         )
         fetched = response.ok
+        if not fetched:
+            response = self.extract_current_db()
         if fetched:
             logger.success("")
         self.__end(fetched=fetched)
