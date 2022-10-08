@@ -120,18 +120,8 @@ def basic_check(
             else:
                 is_dynamic = True
                 warnMsg = "target URL content is not stable (i.e. content differs). Ghauri will base the page "
-                warnMsg += "comparison on a textual content, Switching to 'text-only'"  # . If no dynamic nor "
-                # warnMsg += "injectable parameters are detected, or in case of "
-                # warnMsg += "junk results, refer to user's manual paragraph "
-                # warnMsg += "'Page comparison'"
+                warnMsg += "comparison on a textual content, Switching to 'text-only'"
                 logger.warning(warnMsg)
-                # choice = logger.read_input(
-                #     "how do you want to proceed? [(C)ontinue/(s)tring/(r)egex/(q)uit] ",
-                #     batch=batch,
-                #     user_input="C",
-                # )
-                # if choice == "c":
-                #     pass
     except KeyboardInterrupt:
         logger.error("user quit")
         logger.end("ending")
@@ -264,7 +254,10 @@ def confirm_booleanbased_sqli(
     delay=0,
     timesec=5,
     response_time=8,
+    code=None,
     match_string=None,
+    not_match_string=None,
+    text_only=False,
 ):
     _temp = []
     Response = collections.namedtuple("Response", ["vulnerable", "tests_performed"])
@@ -334,9 +327,18 @@ def confirm_booleanbased_sqli(
                 is_multipart=is_multipart,
                 injection_type=injection_type,
             )
-            confirm_response_type, case, _ = check_boolean_responses(
-                base, attack, attack01, match_string=match_string
+            boolean_confirm_retval = check_boolean_responses(
+                base,
+                attack,
+                attack01,
+                code=code,
+                match_string=match_string,
+                not_match_string=not_match_string,
+                text_only=text_only,
             )
+            confirm_response_type = boolean_confirm_retval.vulnerable
+            case = boolean_confirm_retval.case
+            diff = boolean_confirm_retval.difference
             if confirm_response_type:
                 logger.debug(
                     "  Test: {}, Response Type {}".format(
@@ -428,6 +430,7 @@ def check_booleanbased_sqli(
             "backend",
             "payload_type",
             "string",
+            "not_string",
             "payload_raw",
             "skipp_all_other_dbms",
         ],
@@ -565,7 +568,7 @@ def check_booleanbased_sqli(
                 )
                 retry_on_error += 1
             requests_counter += 1
-            retval, case, diff = check_boolean_responses(
+            boolean_retval = check_boolean_responses(
                 base,
                 attack,
                 attack01,
@@ -573,6 +576,13 @@ def check_booleanbased_sqli(
                 match_string=match_string,
                 not_match_string=not_match_string,
                 text_only=text_only,
+            )
+            retval = boolean_retval.vulnerable
+            case = boolean_retval.case
+            diff = boolean_retval.difference
+            match_string = boolean_retval.string if not match_string else match_string
+            not_match_string = (
+                boolean_retval.not_string if not not_match_string else not_match_string
             )
             if not retval and end_detection_phase:
                 return None
@@ -608,7 +618,10 @@ def check_booleanbased_sqli(
                         delay=delay,
                         timesec=timesec,
                         response_time=attack.response_time,
+                        code=code,
                         match_string=match_string,
+                        not_match_string=not_match_string,
+                        text_only=text_only,
                     )
                     if not _.vulnerable:
                         continue
@@ -691,7 +704,8 @@ def check_booleanbased_sqli(
                     number_of_requests=requests_counter,
                     backend=backend,
                     payload_type="boolean-based blind",
-                    string=diff,
+                    string=match_string,
+                    not_string=not_match_string,
                     payload_raw=payload,
                     skipp_all_other_dbms=skipp_all_other_dbms,
                 )
@@ -1402,6 +1416,7 @@ def check_session(
             "vulnerable",
             "attack01",
             "match_string",
+            "not_match_string",
             "vectors",
             "injection_type",
             "param",
@@ -1496,7 +1511,7 @@ def check_session(
                         injection_type=injection_type,
                     )
                     attack_false = attack01
-                    retval, case, match_string = check_boolean_responses(
+                    boolean_retval = check_boolean_responses(
                         base,
                         attack,
                         attack01,
@@ -1504,6 +1519,16 @@ def check_session(
                         match_string=match_string,
                         not_match_string=not_match_string,
                         text_only=text_only,
+                    )
+                    retval = boolean_retval.vulnerable
+                    case = boolean_retval.case
+                    match_string = (
+                        boolean_retval.string if not match_string else match_string
+                    )
+                    not_match_string = (
+                        boolean_retval.not_string
+                        if not not_match_string
+                        else not_match_string
                     )
                     if retval:
                         vulnerable = True
@@ -1687,6 +1712,7 @@ def check_session(
             vulnerable=vulnerable,
             attack01=attack_false,
             match_string=match_string,
+            not_match_string=not_match_string,
             vectors=vectors,
             injection_type=__injecton_type,
             param=param,

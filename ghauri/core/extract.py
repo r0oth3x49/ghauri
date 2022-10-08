@@ -103,12 +103,13 @@ class GhauriExtractor:
                 injection_type=injection_type,
             )
             if attack01:
-                result, case, _ = check_boolean_responses(
+                bool_retval = check_boolean_responses(
                     base,
                     attack,
                     attack01,
                     match_string=match_string,
                 )
+                result = bool_retval.vulnerable
                 if result:
                     is_valid = True
                     logger.debug("character is valid..")
@@ -228,7 +229,7 @@ class GhauriExtractor:
                     continue
                 response_time = attack.response_time
                 if attack01 and vector_type == "boolean_vector":
-                    result, case, _ = check_boolean_responses(
+                    bool_retval = check_boolean_responses(
                         base,
                         attack,
                         attack01,
@@ -237,6 +238,7 @@ class GhauriExtractor:
                         not_match_string=not_match_string,
                         text_only=text_only,
                     )
+                    result = bool_retval.vulnerable
                     if result:
                         minimum = ascii_char + 1
                         maximum = maximum
@@ -476,7 +478,7 @@ class GhauriExtractor:
                         logger.end("ending")
                         exit(0)
                     if attack01 and vector_type == "boolean_vector":
-                        result, case, _ = check_boolean_responses(
+                        bool_retval = check_boolean_responses(
                             base,
                             attack,
                             attack01,
@@ -485,6 +487,7 @@ class GhauriExtractor:
                             not_match_string=not_match_string,
                             text_only=text_only,
                         )
+                        result = bool_retval.vulnerable
                         if result:
                             working_query = entry
                             logger.debug(

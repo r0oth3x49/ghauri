@@ -380,7 +380,10 @@ def get_page_ratio_difference(response, response_01):
                 #     "{:7} page difference: {!r:>8} --> {!r}".format(tag, new, old)
                 # )
                 _temp.append(
-                    f'--string="{response[i1:i2]}", --not-string="{response_01[j1:j2]}"'
+                    {
+                        "string": f"{response[i1:i2]}",
+                        "not_string": f"{response_01[j1:j2]}",
+                    }
                 )
                 std = response[i1:i2]
                 std = re.sub(r"[^a-zA-Z0-9\.\s]+", " ", std)
@@ -392,33 +395,42 @@ def get_page_ratio_difference(response, response_01):
 
 def check_page_difference(w1, w2, match_string=None):
     Response = collections.namedtuple(
-        "PageDifference", ["is_vulner", "difference", "case", "ratio"]
+        "PageDifference", ["is_vulner", "difference", "case", "ratio", "differences"]
     )
     w1 = get_filtered_page_content(w1)
     w2 = get_filtered_page_content(w2)
-    candidates, _ = get_page_ratio_difference(w1, w2)
+    candidates, differences = get_page_ratio_difference(w1, w2)
     case = None
     suggestion = None
     is_vulner = False
     difference = None
     ratio = 0
-    _temp = Response(is_vulner=is_vulner, difference=difference, case=case, ratio=ratio)
+    diffs = {}
+    _temp = Response(
+        is_vulner=is_vulner,
+        difference=difference,
+        case=case,
+        ratio=ratio,
+        differences=diffs,
+    )
     if candidates:
         candidates = sorted(candidates, key=len)
-        for candidate in candidates:
+        for index, candidate in enumerate(candidates):
             mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
             if mobj and " " in candidate and candidate.strip() and len(candidate) > 10:
                 difference = candidate
+                diffs = differences[index]
                 is_vulner = True
                 case = "Page Ratio"
                 suggestion = candidate
                 break
         if not suggestion and not is_vulner:
-            for candidate in candidates:
+            for index, candidate in enumerate(candidates):
                 candidate = re.sub(r"\d+\.\d+", "", candidate)
                 mobj = re.search(r"\A[\w.,! ]+\Z", candidate)
                 if mobj and len(candidate) >= 4:
                     difference = candidate
+                    diffs = differences[index]
                     is_vulner = True
                     case = "Page Ratio"
                     break
@@ -429,13 +441,19 @@ def check_page_difference(w1, w2, match_string=None):
             is_vulner = bool(match_string == difference)
             ratio = get_boolean_ratio(match_string, difference)
             if is_vulner:
-                logger.debug(f'page ratio: {ratio}, --string="{difference}"')
+                logger.debug(
+                    f'page ratio: {ratio}, matching string="{match_string}", differences: (--string="{diffs.get("string")}", --not-string="{diffs.get("not_string")}")'
+                )
             else:
                 logger.debug(
                     f'page ratio: {ratio}, --string="{match_string}" (not found).'
                 )
         _temp = Response(
-            is_vulner=is_vulner, difference=difference, case=case, ratio=ratio
+            is_vulner=is_vulner,
+            difference=difference,
+            case=case,
+            ratio=ratio,
+            differences=diffs,
         )
     return _temp
 
@@ -460,6 +478,18 @@ def check_boolean_responses(
     case 6: when page ratio is the case we will evalutae difference between content of the pages for True and False attack payload
             and add proper marks for --string or --not-string injectable type.
     """
+    BooleanInjectionResponse = collections.namedtuple(
+        "BooleanInjectionResponse",
+        [
+            "vulnerable",
+            "case",
+            "difference",
+            "string",
+            "not_string",
+            "status_code",
+            "content_length",
+        ],
+    )
     is_vulner = False
     scb = base.status_code
     sct = attack_true.status_code
@@ -469,7 +499,20 @@ def check_boolean_responses(
     ctf = attack_false.content_length
     case = ""
     difference = ""
+    string = match_string
+    not_string = not_match_string
+    status_code = code
+    content_length = None
     _cases = []
+    _temp = BooleanInjectionResponse(
+        vulnerable=is_vulner,
+        case=case,
+        difference=difference,
+        string=string,
+        not_string=not_string,
+        status_code=status_code,
+        content_length=content_length,
+    )
     if not text_only:
         w0 = base.text
         w1 = attack_true.text
@@ -483,6 +526,7 @@ def check_boolean_responses(
     if code:
         if code == sct or code == scf:
             is_vulner = True
+            status_code = code
             _cases.append("Status code")
         else:
             is_vulner = False
@@ -490,32 +534,42 @@ def check_boolean_responses(
         mobj = re.search(r"(?is)(?:%s)" % (match_string), w1)
         if mobj:
             is_vulner = True
+            not_string = not_match_string
             difference = match_string
+            string = match_string
             _cases.append("Page Content")
         else:
             ok = check_page_difference(w1, w2, match_string=match_string)
             difference = ok.difference
             is_vulner = ok.is_vulner
             if is_vulner:
+                not_string = not_match_string
+                string = difference
                 _cases.append("Page Content")
     elif not_match_string:
         mobj = re.search(r"(?is)(?:%s)" % (not_match_string), w2)
         if mobj:
             is_vulner = True
+            string = match_string
             difference = not_match_string
+            not_string = not_match_string
             _cases.append("Page Content")
         else:
             ok = check_page_difference(w1, w2, match_string=not_match_string)
             difference = ok.difference
             is_vulner = ok.is_vulner
             if is_vulner:
+                string = match_string
+                not_string = difference
                 _cases.append("Page Content")
     else:
         if ctt != ctf and ctb == ctt:
             is_vulner = True
+            content_length = ctt
             _cases.append("Content Length")
         elif ctt != ctf and ctb == ctf:
             is_vulner = True
+            content_length = ctf
             _cases.append("Content Length")
         if ratio_true != ratio_false:
             _cases.append("Page Ratio")
@@ -528,7 +582,7 @@ def check_boolean_responses(
             _cases.append("Status Code")
     if _cases:
         case = ", ".join(_cases)
-        logger.debug(f"injectable cases detected: '{case}'")
+        logger.debug(f"possible injectable cases detected: '{case}'")
     if case == "Page Ratio":
         w0set = set(get_filtered_page_content(base.text, True, "\n").split("\n"))
         w1set = set(get_filtered_page_content(attack_true.text, True, "\n").split("\n"))
@@ -550,6 +604,7 @@ def check_boolean_responses(
                         and len(candidate) > 10
                     ):
                         difference = candidate
+                        string = difference
                         is_vulner = True
                         case = "Page Ratio"
                         break
@@ -566,6 +621,7 @@ def check_boolean_responses(
                         and len(candidate) > 10
                     ):
                         difference = candidate
+                        string = difference
                         is_vulner = True
                         case = "Page Ratio"
                         break
@@ -576,10 +632,21 @@ def check_boolean_responses(
             is_vulner = ok.is_vulner
             case = ok.case
             if difference:
+                string = ok.differences.get("string")
+                not_string = ok.differences.get("not_string")
                 logger.debug(f'injectable with --string="{difference}".')
     if is_vulner:
         logger.debug(f"injectable with cases: '{case}'.")
-    return is_vulner, case, difference
+        _temp = BooleanInjectionResponse(
+            vulnerable=is_vulner,
+            case=case,
+            difference=difference,
+            string=string,
+            not_string=not_string,
+            status_code=status_code,
+            content_length=content_length,
+        )
+    return _temp
 
 
 def is_encoded(string):
