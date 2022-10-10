@@ -1443,6 +1443,8 @@ def prepare_request(url, data, custom_headers, use_requests=False):
         custom_headers += "\nAccept: */*"
     if custom_headers and "accept-encoding" not in custom_headers.lower():
         custom_headers += "\nAccept-Encoding: none"
+    if custom_headers and "connection" not in custom_headers.lower():
+        custom_headers += "Connection: close"
     custom_headers = "\n".join([i.strip() for i in custom_headers.split("\n") if i])
     raw = f"{request_type} {path} HTTP/1.1\n"
     raw += f"{custom_headers if custom_headers else ''}\n"

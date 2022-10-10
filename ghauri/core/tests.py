@@ -824,6 +824,9 @@ def confirm_timebased_sqli(
                     injection_type=injection_type,
                 )
                 response_time = attack.response_time
+                logger.debug(
+                    f"sleep time: {sleep_time}, response time: {response_time}"
+                )
                 if is_different_status_code_injectable:
                     condition_confirm_status_code = with_status_code
                 else:
