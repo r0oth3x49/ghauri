@@ -406,6 +406,7 @@ def check_booleanbased_sqli(
     match_string=None,
     not_match_string=None,
     text_only=False,
+    dbms=None,
 ):
     Response = collections.namedtuple(
         "SQLi",
@@ -1908,6 +1909,7 @@ def check_injections(
             match_string=string,
             not_match_string=not_string,
             text_only=text_only,
+            dbms=dbms,
         )
         if bsqli and isinstance(bsqli, str) and bsqli == "next parameter":
             return None

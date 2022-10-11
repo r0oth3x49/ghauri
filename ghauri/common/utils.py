@@ -85,6 +85,7 @@ class HTTPRequest(BaseHTTPRequestHandler):
             "application/x-www-form-urlencoded; charset=UTF-8",
             "application/json",
             "application/json; charset=UTF-8",
+            "application/json;charset=UTF-8",
         ]:
             return self.rfile.read().decode("utf-8").strip()
 
@@ -1047,10 +1048,17 @@ def prepare_attack_request(
             value,
         )
         REGEX_HEADER_INJECTION = r"(?is)(?:(%s)(:)(\s*%s))" % (key, value)
-        REGEX_JSON_INJECTION = r"(?is)(?:(['\"]%s['\"])(:)(\s*['\"]%s)(['\"]))" % (
-            key,
-            value,
-        )  # (?is)(?:(['\"]%s['\"])(:)(\s*[\['\"]+%s)(['\"\]]))
+        REGEX_JSON_INJECTION = (
+            r"(?is)(?:(['\"]%s['\"])(:)(\s*['\"\[]*)(%s)(['\"\],]*))"
+            % (
+                key,
+                value,
+            )
+        )
+        # REGEX_JSON_INJECTION = r"(?is)(?:(['\"]%s['\"])(:)(\s*['\"]%s)(['\"]))" % (
+        #     key,
+        #     json.dumps(value),
+        # )  # (?is)(?:(['\"]%s['\"])(:)(\s*[\['\"]+%s)(['\"\]]))
         REGEX_MULTIPART_INJECTION = (
             r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?(.*?))(%s)(\n--))"
             % (key, value)
@@ -1065,22 +1073,31 @@ def prepare_attack_request(
         if injection_type in ["GET", "POST", "COOKIE"]:
             if injection_type == "POST" and is_json:
                 _ = re.search(REGEX_JSON_INJECTION, text)
-                if _ and "*" in _.group(3).strip():
-                    prepared_payload = re.sub(
-                        REGEX_JSON_INJECTION,
-                        '\\1\\2"%s\\4' % (payload.replace('"', '\\"')),
-                        text,
-                    )
+                if _ and "*" in _.group(4).strip():
+                    value = re.sub(r"\*", "", _.group(4).strip())
+                    if len(value) > 0:
+                        prepared_payload = re.sub(
+                            REGEX_JSON_INJECTION,
+                            "\\1\\2\\3%s%s\\5"
+                            % (value.replace('"', '\\"'), payload.replace('"', '\\"')),
+                            text,
+                        )
+                    else:
+                        prepared_payload = re.sub(
+                            REGEX_JSON_INJECTION,
+                            "\\1\\2\\3%s\\5" % (payload.replace('"', '\\"')),
+                            text,
+                        )
                 else:
                     prepared_payload = re.sub(
                         REGEX_JSON_INJECTION,
-                        "\\1\\2\\3%s\\4" % (payload.replace('"', '\\"')),
+                        "\\1\\2\\3\\4%s\\5" % (payload.replace('"', '\\"')),
                         text,
                     )
                 if replace_value:
                     prepared_payload = re.sub(
                         REGEX_JSON_INJECTION,
-                        '\\1\\2"%s"' % (payload.replace('"', '\\"')),
+                        "\\1\\2\\3%s\\5" % (payload.replace('"', '\\"')),
                         text,
                     )
             else:
@@ -1243,14 +1260,19 @@ def fetch_payloads_by_suffix_prefix(payloads, prefix=None, suffix=None):
 
 def extract_json_data(data):
     _temp = []
-    for key, value in data.items():
-        if isinstance(value, dict):
-            extract_json_data(value)
-        elif isinstance(value, list):
-            for i in value:
-                extract_json_data(v)
-        elif isinstance(value, str):
-            _temp.append({"key": key, "value": value})
+    if hasattr(data, "items"):
+        for key, value in data.items():
+            if isinstance(value, dict):
+                extract_json_data(value)
+            elif isinstance(value, list):
+                for i in value:
+                    if isinstance(i, dict):
+                        extract_json_data(i)
+                    if isinstance(i, str):
+                        _temp.append({"key": key, "value": i})
+            elif isinstance(value, str):
+                _temp.append({"key": key, "value": value})
+    # logger.debug(_temp)
     return _temp
 
 
@@ -1604,7 +1626,7 @@ def prepare_payloads(
                 vector=vector,
             )
             _temp.append(_r)
-    elif booleanbased_only:
+    if booleanbased_only:
         entries = payloads.get("boolean-based", [])
         for entry in entries:
             _ = entry.get("payload")
@@ -1637,7 +1659,8 @@ def prepare_payloads(
                 vector=vector,
             )
             _temp.append(_r)
-    elif error_based_only:
+    if error_based_only:
+        logger.debug("preparing error based payloads")
         entries = payloads.get("error-based", [])
         for entry in entries:
             _ = entry.get("payload")
@@ -1670,37 +1693,4 @@ def prepare_payloads(
                 vector=vector,
             )
             _temp.append(_r)
-    else:
-        for _t, entries in payloads.items():
-            for entry in entries:
-                _ = entry.get("payload")
-                title = entry.get("title")
-                comments = entry.get("comments", [])
-                vector = entry.get("vector", "")
-                backend = entry.get("dbms", "")
-                if backend and dbms:
-                    backend = dbms
-                elif backend and not dbms:
-                    backend = backend
-                else:
-                    backend = None
-                __temp = []
-                for comment in comments:
-                    pref = comment.get("pref")
-                    suf = comment.get("suf")
-                    _p = Payload(
-                        prefix=pref,
-                        suffix=suf,
-                        string="{}{}{}".format(pref, _, suf),
-                        raw=_,
-                    )
-                    __temp.append(_p)
-                _r = Response(
-                    dbms=backend if _t != "boolean-based" else None,
-                    type=_t,
-                    title=title,
-                    payloads=__temp,
-                    vector=vector,
-                )
-                _temp.append(_r)
     return _temp
