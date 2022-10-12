@@ -177,7 +177,7 @@ def main():
         metavar="",
     )
     request.add_argument(
-        "--skip-urlencoding",
+        "--skip-urlencode",
         dest="skip_urlencoding",
         action="store_true",
         help="Skip URL encoding of payload data",
