@@ -24,10 +24,20 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
 import random
+from ghauri.common.config import conf
+from ghauri.common.session import session
 from ghauri.logger.colored_logger import logger
 from ghauri.core.inject import inject_expression
 from ghauri.common.colors import black, white, DIM, BRIGHT
-from ghauri.common.lib import re, time, collections, quote, unquote
+from ghauri.common.lib import (
+    re,
+    time,
+    collections,
+    quote,
+    unquote,
+    STORAGE,
+    STORAGE_UPDATE,
+)
 from ghauri.common.payloads import (
     NUMBER_OF_CHARACTERS_PAYLOADS,
     LENGTH_PAYLOADS,
@@ -56,10 +66,13 @@ from ghauri.common.utils import (
 class GhauriExtractor:
     """aa"""
 
-    def __init__(self, vectors="", is_string=False, skip_urlencodig=False):
+    def __init__(
+        self, vectors="", is_string=False, skip_urlencodig=False, filepaths=None
+    ):
         self.vectors = vectors
         self.is_string = is_string
         self.skip_urlencodig = skip_urlencodig
+        self.filepaths = filepaths
 
     def _check_operator(
         self,
@@ -1193,20 +1206,45 @@ class GhauriExtractor:
         query_check=False,
         text_only=False,
         retry=3,
+        dump_type=None,
     ):
         PayloadResponse = collections.namedtuple(
             "PayloadResponse",
-            ["ok", "error", "result", "payload"],
+            ["ok", "error", "result", "payload", "resumed"],
         )
-        _temp = PayloadResponse(ok=False, error="", result="", payload="")
-        error_based_in_vectors = bool("error_vector" in self.vectors)
+        _temp = PayloadResponse(
+            ok=False, error="", result="", payload="", resumed=False
+        )
+        error_based_in_vectors = bool("error_vector" in conf.vectors)
         start = 0
         end = len(payloads)
         http_firewall_code_counter = 0
         error_msg = None
         retry_on_error = 0
+        is_resumed = False
+        retval_session = session.fetchall(
+            session_filepath=conf.session_filepath,
+            query="SELECT * FROM storage WHERE `type`=?",
+            values=(dump_type,),
+        )
+        if retval_session:
+            retval_session = retval_session.pop()
+            is_resumed = True
+            result = retval_session.get("value")
+            length = retval_session.get("length")
+            logger.progress(f"resumed: {result}")
+            last_row_id = retval_session.get("id")
+            if len(result) == length:
+                _temp = PayloadResponse(
+                    ok=True,
+                    error="",
+                    result=result,
+                    payload="",
+                    resumed=is_resumed,
+                )
+                return _temp
         if error_based_in_vectors:
-            vector = self.vectors.get("error_vector")
+            vector = conf.vectors.get("error_vector")
             while start < end:
                 if http_firewall_code_counter > 2:
                     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
@@ -1321,8 +1359,25 @@ class GhauriExtractor:
                                 logger.warning(
                                     "it was not possible to count the number of entries for the SQL query provided. Ghauri will assume that it returns only one entry"
                                 )
+                        try:
+                            if dump_type:
+                                session.dump(
+                                    session_filepath=conf.session_filepath,
+                                    query=STORAGE,
+                                    values=(
+                                        retval,
+                                        len(retval),
+                                        dump_type,
+                                    ),
+                                )
+                        except Exception as error:
+                            logger.warning(error)
                         _temp = PayloadResponse(
-                            ok=True, error="", result=retval, payload=entry
+                            ok=True,
+                            error="",
+                            result=retval,
+                            payload=entry,
+                            resumed=is_resumed,
                         )
                         break
         return _temp
@@ -1351,12 +1406,15 @@ class GhauriExtractor:
         query_check=False,
         list_of_chars=None,
         text_only=False,
+        dump_type=None,
     ):
         PayloadResponse = collections.namedtuple(
             "PayloadResponse",
-            ["ok", "error", "result", "payload"],
+            ["ok", "error", "result", "payload", "resumed"],
         )
-        _temp = PayloadResponse(ok=False, error="", result="", payload="")
+        _temp = PayloadResponse(
+            ok=False, error="", result="", payload="", resumed=False
+        )
         error_based_in_vectors = bool("error_vector" in self.vectors)
         retval_error = self.fetch_using_error_based_vector(
             url,
@@ -1374,6 +1432,7 @@ class GhauriExtractor:
             suppress_output=suppress_output,
             query_check=query_check,
             text_only=text_only,
+            dump_type=dump_type,
         )
         if retval_error.ok:
             _temp_error = PayloadResponse(
@@ -1381,6 +1440,7 @@ class GhauriExtractor:
                 error=retval_error.error,
                 result=retval_error.result,
                 payload=retval_error.payload,
+                resumed=retval_error.resumed,
             )
             return _temp_error
         if not retval_error.ok and error_based_in_vectors:
@@ -1402,41 +1462,79 @@ class GhauriExtractor:
         binary_search = False
         in_based_search = False
         linear_search = False
-        for vector_type, vector in self.vectors.items():
+        is_resumed = False
+        start_pos = 1
+        start_chars = ""
+        if dump_type:
+            retval_session = session.fetchall(
+                session_filepath=conf.session_filepath,
+                query="SELECT * FROM storage WHERE `type`=?",
+                values=(dump_type,),
+            )
+            if retval_session:
+                retval_session = retval_session.pop()
+                is_resumed = True
+                _v = retval_session.get("value")
+                length = retval_session.get("length")
+                start_pos = len(_v) + 1
+                start_chars = _v
+                logger.progress(f"resumed: {_v}")
+                last_row_id = retval_session.get("id")
+                if len(_v) == length:
+                    _temp = PayloadResponse(
+                        ok=True, error="", result=_v, payload="", resumed=True
+                    )
+                    return _temp
+        for vector_type, vector in conf.vectors.items():
             if vector_type in ["error_vector"]:
                 continue
-            # logger.debug(f"testing now with vector '{vector}'")
-            length = self.fetch_length(
-                url,
-                data,
-                vector,
-                parameter,
-                headers,
-                base,
-                injection_type,
-                payloads=payloads,
-                backend=backend,
-                proxy=proxy,
-                is_multipart=is_multipart,
-                timeout=timeout,
-                delay=delay,
-                timesec=timesec,
-                attack01=attack01,
-                code=code,
-                match_string=match_string,
-                not_match_string=not_match_string,
-                query_check=query_check,
-                suppress_output=suppress_output,
-                text_only=text_only,
-                vector_type=vector_type,
-            )
+            if not is_resumed:
+                length = self.fetch_length(
+                    url,
+                    data,
+                    vector,
+                    parameter,
+                    headers,
+                    base,
+                    injection_type,
+                    payloads=payloads,
+                    backend=backend,
+                    proxy=proxy,
+                    is_multipart=is_multipart,
+                    timeout=timeout,
+                    delay=delay,
+                    timesec=timesec,
+                    attack01=attack01,
+                    code=code,
+                    match_string=match_string,
+                    not_match_string=not_match_string,
+                    query_check=query_check,
+                    suppress_output=suppress_output,
+                    text_only=text_only,
+                    vector_type=vector_type,
+                )
             if length == 0:
                 logger.debug(
                     "it was not possible to extract query output length for the SQL query provided."
                 )
                 continue
             if query_check:
-                return PayloadResponse(ok=True, error="", result="", payload=length)
+                return PayloadResponse(
+                    ok=True, error="", result="", payload=length, resumed=False
+                )
+            try:
+                if not is_resumed and dump_type:
+                    last_row_id = session.dump(
+                        session_filepath=conf.session_filepath,
+                        query=STORAGE,
+                        values=(
+                            "",
+                            length,
+                            dump_type,
+                        ),
+                    )
+            except Exception as error:
+                logger.warning(error)
             is_done_with_vector = False
             retval_check = self._check_operator(
                 url,
@@ -1472,8 +1570,8 @@ class GhauriExtractor:
                 for _, value in entries.items():
                     is_char_found = False
                     for entry in payloads:
-                        chars = ""
-                        pos = 1
+                        chars = start_chars
+                        pos = start_pos
                         total_length = length + 1
                         # for pos in range(1, length + 1):
                         while pos < total_length:
@@ -1565,6 +1663,19 @@ class GhauriExtractor:
                                         )
                                     pos += 1
                                     chars += retval
+                                    try:
+                                        if dump_type:
+                                            session.dump(
+                                                session_filepath=conf.session_filepath,
+                                                query=STORAGE_UPDATE,
+                                                values=(
+                                                    chars,
+                                                    last_row_id,
+                                                    dump_type,
+                                                ),
+                                            )
+                                    except Exception as error:
+                                        logger.warning(error)
                                     logger.debug(f"character(s) found: '{str(chars)}'")
                                 except KeyboardInterrupt:
                                     is_char_found = True
@@ -1575,6 +1686,7 @@ class GhauriExtractor:
                                         error="user_ended",
                                         result=chars,
                                         payload=entry,
+                                        resumed=False,
                                     )
                                     break
                             if vector_type == "time_vector":
@@ -1661,6 +1773,19 @@ class GhauriExtractor:
                                         )
                                         chars += retval
                                         pos += 1
+                                    try:
+                                        if dump_type:
+                                            session.dump(
+                                                session_filepath=conf.session_filepath,
+                                                query=STORAGE_UPDATE,
+                                                values=(
+                                                    chars,
+                                                    last_row_id,
+                                                    dump_type,
+                                                ),
+                                            )
+                                    except Exception as error:
+                                        logger.warning(error)
                                     logger.debug(f"character(s) found: '{str(chars)}'")
                                 except KeyboardInterrupt:
                                     is_char_found = True
@@ -1678,7 +1803,11 @@ class GhauriExtractor:
                         if len(chars) == length:
                             is_char_found = True
                             _temp = PayloadResponse(
-                                ok=True, error="", result=chars, payload=entry
+                                ok=True,
+                                error="",
+                                result=chars,
+                                payload=entry,
+                                resumed=False,
                             )
                             response = chars
                             break

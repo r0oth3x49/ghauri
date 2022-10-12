@@ -239,6 +239,9 @@ HTTP_STATUS_CODES_REASONS = {
 
 SESSION_STATEMENETS = """
 DROP TABLE IF EXISTS tbl_payload;
+DROP TABLE IF EXISTS tbl_common;
+DROP TABLE IF EXISTS tbl_dbs;
+DROP TABLE IF EXISTS storage;
 CREATE TABLE tbl_payload (
  id integer PRIMARY KEY AUTOINCREMENT,
  title text NOT NULL,
@@ -251,39 +254,20 @@ CREATE TABLE tbl_payload (
  payload_type text NOT NULL,
  endpoint text NOT NULL
 );
-"""
-
-DB_TABLES = """
-DROP TABLE IF EXISTS `{name}`;
-CREATE TABLE `{tbl_name}` (
- tbl_id integer PRIMARY KEY AUTOINCREMENT,
- tblname text
+CREATE TABLE tbl_common (
+ id integer PRIMARY KEY AUTOINCREMENT,
+ name text,
+ type text
 );
-"""
-
-TBL_COLUMNS = """
-DROP TABLE IF EXISTS `{name}`;
-CREATE TABLE `{tbl_name}` (
- col_id integer PRIMARY KEY AUTOINCREMENT,
- colname text
+CREATE TABLE tbl_dbs (
+ id integer PRIMARY KEY AUTOINCREMENT,
+ name text
 );
-"""
-
-TBL_RECS = """
-DROP TABLE IF EXISTS `{name}`;
-CREATE TABLE `{tbl_name}` (
- `index` integer,
- `column_name` text,
- `column_value` text
-);
-"""
-
-TBL_SEARCH = """
-DROP TABLE IF EXISTS `{name}`;
-CREATE TABLE `{name}` (
- `index` integer,
- `value` text,
- `search_type` text
+CREATE TABLE storage (
+ id integer PRIMARY KEY AUTOINCREMENT,
+ value text,
+ length integer,
+ type text
 );
 """
 
@@ -292,24 +276,21 @@ INSERT
     INTO tbl_payload (`title`, `attempts`, `payload`, `vector`, `backend`, `parameter`, `injection_type`, `payload_type`, `endpoint`)
 VALUES  (?, ?, ?, ?, ?, ?, ?, ?, ?);
 """
+COMMON_STATEMENT = """
+INSERT 
+    INTO tbl_common (`name`, `type`)
+VALUES  (?, ?);
+"""
 DBS_STATEMENT = """
 INSERT 
-    INTO tbl_databases (`dbname`)
-VALUES  ("{dbname}");
-"""
-TBLS_STATEMENT = """
-INSERT 
-    INTO `{tbl_name}` (`tblname`)
-VALUES  ('{tblname}');
-"""
-COLS_STATEMENT = """
-INSERT 
-    INTO `{tbl_name}` (`colname`)
-VALUES  ("{colname}");
+    INTO tbl_dbs (`name`)
+VALUES  (?, ?);
 """
 
-SEARCH_STATEMENT = """
-INSERT 
-    INTO `{name}` (`index`, `value`, `search_type`)
-VALUES  (?, ?, ?);
+STORAGE = """
+INSERT INTO storage (`value`, `length`, `type`) VALUES (?, ?, ?);
+"""
+
+STORAGE_UPDATE = """
+UPDATE storage set value=? WHERE id=? AND type=?;
 """

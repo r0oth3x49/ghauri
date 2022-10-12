@@ -24,6 +24,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
 import random
+from ghauri.common.config import conf
 from ghauri.core.request import request
 from ghauri.logger.colored_logger import logger
 from ghauri.common.lib import re, time, collections, quote, unquote, URLError
@@ -60,7 +61,6 @@ def inject_expression(
             expression,
             param=parameter,
             injection_type=injection_type,
-            is_multipart=is_multipart,
         )
     if injection_type == "GET":
         attack_url = prepare_attack_request(
@@ -69,7 +69,6 @@ def inject_expression(
             param=parameter,
             encode=True,
             injection_type=injection_type,
-            is_multipart=is_multipart,
         )
 
     if injection_type == "POST":
@@ -79,15 +78,14 @@ def inject_expression(
             param=parameter,
             encode=True,
             injection_type=injection_type,
-            is_multipart=is_multipart,
         )
     try:
         attack = request.perform(
             url=attack_url,
             data=attack_data,
-            proxy=proxy,
+            proxy=conf.proxy,
             headers=attack_headers,
-            is_multipart=is_multipart,
+            is_multipart=conf.is_multipart,
             timeout=timeout,
         )
     except URLError as e:

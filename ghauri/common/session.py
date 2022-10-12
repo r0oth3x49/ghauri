@@ -48,10 +48,13 @@ class SessionFactory:
             _temp[col[0]] = row[idx]
         return _temp
 
-    def fetchall(self, session_filepath="", query=""):
+    def fetchall(self, session_filepath="", query="", values=None):
         conn = sqlite3.connect(session_filepath)
         conn.row_factory = self._dict_factory
-        cursor = conn.execute(query)
+        if values:
+            cursor = conn.execute(query, values)
+        else:
+            cursor = conn.execute(query)
         return cursor.fetchall()
 
     def fetch_cursor(self, session_filepath="", query=""):
@@ -159,6 +162,7 @@ class SessionFactory:
         return session_filepath
 
     def dump(self, session_filepath="", query="", values=None):
+        last_row_id = None
         try:
             conn = sqlite3.connect(session_filepath)
             cursor = conn.cursor()
@@ -166,10 +170,12 @@ class SessionFactory:
                 cursor.execute(query, values)
             else:
                 cursor.execute(query)
+            last_row_id = cursor.lastrowid
             conn.commit()
             conn.close()
         except KeyboardInterrupt:
             pass
+        return last_row_id
 
     def drop_table(
         self,

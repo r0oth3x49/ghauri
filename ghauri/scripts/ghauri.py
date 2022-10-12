@@ -177,6 +177,12 @@ def main():
         metavar="",
     )
     request.add_argument(
+        "--skip-urlencoding",
+        dest="skip_urlencoding",
+        action="store_true",
+        help="Skip URL encoding of payload data",
+    )
+    request.add_argument(
         "--force-ssl",
         dest="force_ssl",
         action="store_true",
@@ -411,6 +417,7 @@ def main():
         string=args.string,
         not_string=args.not_string,
         text_only=args.text_only,
+        skip_urlencoding=args.skip_urlencoding,
     )
     if resp.is_injected:
         target = ghauri.Ghauri(

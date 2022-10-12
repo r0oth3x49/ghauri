@@ -23,6 +23,7 @@ ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
+from ghauri.common.config import conf
 from ghauri.common.session import session
 from ghauri.extractor.common import target
 from ghauri.extractor.advance import target_adv
@@ -82,6 +83,7 @@ def perform_injection(
     string=None,
     not_string=None,
     text_only=False,
+    skip_urlencoding=False,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -91,11 +93,12 @@ def perform_injection(
         5: logging.TRAFFIC_IN,
     }
     is_custom_point = False
+    conf.skip_urlencoding = skip_urlencoding
     logger.start("starting")
     if not force_ssl:
         ssl._create_default_https_context = ssl._create_unverified_context
     if proxy:
-        proxy = prepare_proxy(proxy)
+        conf.proxy = proxy = prepare_proxy(proxy)
     verbose_level = verbose_levels.get(verbosity, logging.INFO)
     set_level(verbose_level, "")
     GhauriResponse = collections.namedtuple(
@@ -162,8 +165,9 @@ def perform_injection(
     if "HEADER" in custom_injection_in:
         level = 3
     injection_points = obj.injection_points
-    is_multipart = obj.is_multipart
-    is_json = obj.is_json
+    conf.is_multipart = is_multipart = obj.is_multipart
+    conf.is_json = is_json = obj.is_json
+    conf.text_only = text_only
     base = None
     is_asked = False
     is_mp_asked = False
@@ -181,6 +185,7 @@ def perform_injection(
     filepaths = session.generate_filepath(
         url, flush_session=flush_session, method=method, data=sd
     )
+    conf.filepaths = filepaths
     filepath = os.path.dirname(filepaths.logs)
     set_level(verbose_level, filepaths.logs)
     is_params_found = check_injection_points_for_level(level, injection_points)
@@ -191,7 +196,7 @@ def perform_injection(
         logger.end("ending")
         exit(0)
     retval = session.fetch_from_table(
-        session_filepath=filepaths.session, table_name="tbl_payload", cursor=False
+        session_filepath=conf.session_filepath, table_name="tbl_payload", cursor=False
     )
     if retval:
         is_resumed = True
@@ -279,7 +284,9 @@ def perform_injection(
                         is_json=is_json,
                     )
                     base = retval_check.base
-                    is_dynamic = retval_check.is_dynamic
+                    conf.text_only = is_dynamic = (
+                        retval_check.is_dynamic if not text_only else text_only
+                    )
                     possible_dbms = retval_check.possible_dbms
                     is_connection_tested = retval_check.is_connection_tested
                 if not is_resumed:
@@ -352,7 +359,7 @@ def perform_injection(
                     code=code if code != 200 else None,
                     string=string,
                     not_string=not_string,
-                    text_only=is_dynamic,
+                    text_only=conf.text_only,
                 )
                 if retval and retval.vulnerable:
                     backend = retval.backend
@@ -361,8 +368,8 @@ def perform_injection(
                     attack = retval.boolean_false_attack
                     injection_type = retval.injection_type
                     vectors = retval.vectors
-                    ghauri_extractor.vectors = vectors
-                    ghauri_extractor.is_string = retval.is_string
+                    conf.vectors = vectors
+                    conf.is_string = retval.is_string
                     vector = vectors.get("error_vector")
                     if not vector:
                         vector = vectors.get("boolean_vector")
@@ -386,9 +393,7 @@ def perform_injection(
                         vectors=vectors,
                         code=code if code != 200 else None,
                         not_match_string=None,
-                        text_only=is_dynamic
-                        if is_dynamic and not text_only
-                        else text_only,
+                        text_only=conf.text_only,
                     )
     # end of injection
     logger.critical("all tested parameters do not appear to be injectable.")

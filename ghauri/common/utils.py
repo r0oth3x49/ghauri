@@ -51,6 +51,7 @@ from ghauri.common.lib import (
     INJECTABLE_HEADERS_DEFAULT,
     HTTP_STATUS_CODES_REASONS,
 )
+from ghauri.common.config import conf
 from ghauri.common.payloads import PAYLOADS
 from ghauri.logger.colored_logger import logger
 from ghauri.common.prettytable import PrettyTable, from_db_cursor
@@ -698,7 +699,11 @@ def urlencode(
         and injection_type not in ["HEADER", "COOKIE"]
         and not is_multipart
     ):
-        _temp = quote(value, safe=safe)
+        if not conf.skip_urlencodig:
+            _temp = quote(value, safe=safe)
+        if conf.skip_urlencodig:
+            if not conf.is_multipart and not conf.is_json:
+                _temp = value.replace(" ", "+")
     return _temp
 
 
@@ -1009,12 +1014,8 @@ def prepare_attack_request(
     prepared_payload = ""
     key = param.get("key")
     value = param.get("value")
-    is_json = False
-    try:
-        json.loads(text)
-        is_json = True
-    except ValueError:
-        pass
+    is_json = conf.is_json
+    is_multipart = conf.is_multipart
     if not is_json and not key == "#1*":
         text = urlencode(
             value=text,

@@ -24,6 +24,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
 import random
+from ghauri.common.config import conf
 from ghauri.core.extract import ghauri_extractor
 from ghauri.logger.colored_logger import logger
 from ghauri.common.lib import collections
@@ -75,6 +76,7 @@ class GhauriAdvance:
         not_match_string=None,
         code=None,
         text_only=False,
+        dump_type=None,
     ):
         retval = ghauri_extractor.fetch_characters(
             url=url,
@@ -96,6 +98,7 @@ class GhauriAdvance:
             suppress_output=suppress_output,
             query_check=query_check,
             list_of_chars=list_of_chars,
+            dump_type=dump_type,
         )
         return retval
 
@@ -336,10 +339,14 @@ class GhauriAdvance:
                             code=code,
                             text_only=text_only,
                             # list_of_chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789",
+                            dump_type=f"{start}_dbs",
                         )
                         if retval.ok:
                             if retval.result not in _results:
-                                logger.info("retrieved: %s" % (retval.result))
+                                if retval.resumed:
+                                    logger.info("resumed: %s" % (retval.result))
+                                else:
+                                    logger.info("retrieved: %s" % (retval.result))
                                 _results.add(retval.result)
                         if not retval.ok and retval.error == "user_ended":
                             break
@@ -402,7 +409,7 @@ class GhauriAdvance:
             database=database,
             backend=backend,
             payloads=payloads_count,
-            is_string=ghauri_extractor.is_string,
+            is_string=conf.is_string,
         )
         retval = self.__execute_expression(
             url,
@@ -443,7 +450,7 @@ class GhauriAdvance:
                     database=database,
                     backend=backend,
                     payloads=payloads_names,
-                    is_string=ghauri_extractor.is_string,
+                    is_string=conf.is_string,
                 )
                 payload = None
                 guess = self.__execute_expression(
@@ -508,9 +515,13 @@ class GhauriAdvance:
                             code=code,
                             text_only=text_only,
                             # list_of_chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789",
+                            dump_type=f"{start}_{database}_tables",
                         )
                         if retval.ok:
-                            logger.info("retrieved: %s" % (retval.result))
+                            if retval.resumed:
+                                logger.info("resumed: %s" % (retval.result))
+                            else:
+                                logger.info("retrieved: %s" % (retval.result))
                             if retval.result not in _results:
                                 _results.add(retval.result)
                         if not retval.ok and retval.error == "user_ended":
@@ -620,7 +631,7 @@ class GhauriAdvance:
                     backend=backend,
                     payloads=payloads_names,
                     table=table,
-                    is_string=ghauri_extractor.is_string,
+                    is_string=conf.is_string,
                 )
                 payload = None
                 guess = self.__execute_expression(
@@ -684,9 +695,13 @@ class GhauriAdvance:
                             not_match_string=not_match_string,
                             code=code,
                             text_only=text_only,
+                            dump_type=f"{start}_{database}_{table}_columns",
                         )
                         if retval.ok:
-                            logger.info("retrieved: %s" % (retval.result))
+                            if retval.resumed:
+                                logger.info("resumed: %s" % (retval.result))
+                            else:
+                                logger.info("retrieved: %s" % (retval.result))
                             _results.append(retval.result)
                         if not retval.ok and retval.error == "user_ended":
                             break
@@ -890,10 +905,14 @@ class GhauriAdvance:
                                 not_match_string=not_match_string,
                                 code=code,
                                 text_only=text_only,
+                                dump_type=f"{start}_{database}_{table}_{column_name}_dump",
                             )
                             if retval.ok:
                                 if retval.result not in __temp:
-                                    logger.info("retrieved: %s" % (retval.result))
+                                    if retval.resumed:
+                                        logger.info("resumed: %s" % (retval.result))
+                                    else:
+                                        logger.info("retrieved: %s" % (retval.result))
                                     __temp.append(retval.result)
                             if not retval.ok and retval.error == "user_ended":
                                 is_interrupted = True

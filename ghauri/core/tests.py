@@ -24,6 +24,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
 import random
+from ghauri.common.config import conf
 from ghauri.common.colors import nc, mc
 from ghauri.core.request import request
 from ghauri.common.session import session
@@ -1411,9 +1412,17 @@ def check_session(
     not_match_string=None,
     text_only=False,
 ):
-    retval = session.fetch_from_table(
-        session_filepath=session_filepath, table_name="tbl_payload", cursor=False
+    retval = session.fetchall(
+        session_filepath=session_filepath,
+        query="SELECT * FROM tbl_payload WHERE `endpoint`=?",
+        values=(base.path,),
     )
+    if retval:
+        param = json.loads(retval[-1].get("parameter", "{}"))
+        _k = parameter.get("key")
+        __k = param.get("key")
+        if not _k == __k:
+            return None
     Response = collections.namedtuple(
         "Session",
         [
