@@ -272,7 +272,6 @@ class GhauriExtractor:
                     f"error {error}, during operator check phase. Ghauri is going to retry"
                 )
                 retry_on_error += 1
-        logger.debug(_temp)
         if _temp.ok:
             if _temp.msg:
                 logger.warning(_temp.msg)
