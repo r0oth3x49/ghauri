@@ -77,6 +77,7 @@ def basic_check(
     is_json=False,
 ):
     is_dynamic = False
+    is_resumed = False
     param_name = ""
     if is_multipart:
         param_name += "MULTIPART "
@@ -86,7 +87,7 @@ def basic_check(
     param_key = parameter.get("key")
     Response = collections.namedtuple(
         "BasicCheckResponse",
-        ["base", "possible_dbms", "is_connection_tested", "is_dynamic"],
+        ["base", "possible_dbms", "is_connection_tested", "is_dynamic", "is_resumed"],
     )
     _possible_dbms = None
     try:
@@ -100,6 +101,14 @@ def basic_check(
             is_multipart=is_multipart,
             timeout=timeout,
         )
+        retval = session.fetchall(
+            session_filepath=conf.session_filepath,
+            query="SELECT * FROM tbl_payload WHERE `endpoint`=?",
+            values=(base.path,),
+        )
+        if retval:
+            logger.debug("ghauri is going to resume target exploitation.")
+            is_resumed = True
         if not is_resumed:
             logger.info("testing if the target URL content is stable")
             time.sleep(0.5)
@@ -182,6 +191,7 @@ def basic_check(
         possible_dbms=_possible_dbms,
         is_connection_tested=True,
         is_dynamic=is_dynamic,
+        is_resumed=is_resumed,
     )
 
 
@@ -1421,7 +1431,8 @@ def check_session(
         param = json.loads(retval[-1].get("parameter", "{}"))
         _k = parameter.get("key")
         __k = param.get("key")
-        if not _k == __k:
+        if _k != __k:
+            logger.debug(f"parameter '{_k}' is not tested..")
             return None
     Response = collections.namedtuple(
         "Session",
@@ -2123,7 +2134,7 @@ def check_injections(
                             json.dumps(entry.param),
                             entry.injection_type,
                             entry.payload_type,
-                            entry.path,
+                            base.path,
                         ),
                     )
                     if injection_type == "GET":

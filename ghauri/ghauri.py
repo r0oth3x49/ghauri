@@ -195,11 +195,6 @@ def perform_injection(
         )
         logger.end("ending")
         exit(0)
-    retval = session.fetch_from_table(
-        session_filepath=conf.session_filepath, table_name="tbl_payload", cursor=False
-    )
-    if retval:
-        is_resumed = True
     for injection_type in list(injection_points.keys()):
         if custom_injection_in:
             question = "y"
@@ -279,7 +274,6 @@ def perform_injection(
                         parameter=parameter,
                         injection_type=injection_type,
                         is_multipart=is_multipart,
-                        is_resumed=is_resumed,
                         techniques=techniques.upper(),
                         is_json=is_json,
                     )
@@ -289,6 +283,7 @@ def perform_injection(
                     )
                     possible_dbms = retval_check.possible_dbms
                     is_connection_tested = retval_check.is_connection_tested
+                    is_resumed = retval_check.is_resumed
                 if not is_resumed:
                     if custom_injection_in:
                         custom_point = custom_injection_in[-1]
@@ -625,7 +620,7 @@ class Ghauri:
         self.__end(fetched=fetched)
         return response
 
-    def extract_tables(self, database="", start=0, stop=None):
+    def extract_tables(self, database="", start=0, stop=None, dump_requested=False):
         response = target_adv.fetch_tables(
             self.url,
             data=self.data,
@@ -655,10 +650,13 @@ class Ghauri:
         else:
             logger.error("unable to retrieve the table names for any database")
             print("\n")
-        self.__end(fetched=True)
+        if not dump_requested:
+            self.__end(fetched=True)
         return response
 
-    def extract_columns(self, database="", table="", start=0, stop=None):
+    def extract_columns(
+        self, database="", table="", start=0, stop=None, dump_requested=False
+    ):
         response = target_adv.fetch_columns(
             self.url,
             data=self.data,
@@ -686,10 +684,19 @@ class Ghauri:
         fetched = response.ok
         if fetched:
             logger.success("")
-        self.__end(fetched=fetched)
+        if not dump_requested:
+            self.__end(fetched=fetched)
         return response
 
-    def extract_records(self, database="", table="", columns="", start=0, stop=None):
+    def extract_records(
+        self,
+        database="",
+        table="",
+        columns="",
+        start=0,
+        stop=None,
+        dump_requested=False,
+    ):
         response = target_adv.dump_table(
             self.url,
             data=self.data,
@@ -718,7 +725,61 @@ class Ghauri:
         fetched = response.ok
         if fetched:
             logger.success("")
-            self.__end(database=database, table=table, fetched=fetched)
+            if not dump_requested:
+                self.__end(database=database, table=table, fetched=fetched)
         else:
-            self.__end(fetched=fetched)
+            if not dump_requested:
+                self.__end(fetched=fetched)
         return response
+
+    def dump_database(self, database="", start=0, stop=None, dump_requested=False):
+        retval_tables = self.extract_tables(
+            database=database,
+            start=start,
+            stop=stop,
+            dump_requested=dump_requested,
+        )
+        if retval_tables.ok:
+            for table in retval_tables.result:
+                retval_columns = self.extract_columns(
+                    database=database,
+                    table=table,
+                    start=start,
+                    stop=stop,
+                    dump_requested=dump_requested,
+                )
+                if retval_columns.ok:
+                    retval_dump = self.extract_records(
+                        database=database,
+                        table=table,
+                        columns=",".join(list(retval_columns.result)),
+                        start=start,
+                        stop=stop,
+                        dump_requested=dump_requested,
+                    )
+                    if retval_dump.ok:
+                        self.__end(database=database, table=table, fetched=False)
+        self.__end(fetched=True)
+
+    def dump_table(
+        self, database="", table="", start=0, stop=None, dump_requested=False
+    ):
+        retval_columns = self.extract_columns(
+            database=database,
+            table=table,
+            start=start,
+            stop=stop,
+            dump_requested=dump_requested,
+        )
+        if retval_columns.ok:
+            retval_dump = self.extract_records(
+                database=database,
+                table=table,
+                columns=",".join(list(retval_columns.result)),
+                start=start,
+                stop=stop,
+                dump_requested=dump_requested,
+            )
+            if retval_dump.ok:
+                self.__end(database=database, table=table, fetched=False)
+        self.__end(fetched=True)

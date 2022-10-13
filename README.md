@@ -48,6 +48,9 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - support proxy option `--proxy`.
  - supports parsing request from txt file: switch for that `-r file.txt`
  - supports limiting data extraction for dbs/tables/columns/dump: swicth `--start 1 --stop 2`
+ - added support for resuming of all phases.
+ - added support for skip urlencoding switch: `--skip-urlencode`
+ - added support to verify extracted characters in case of boolean/time based injections.
 
 
 ## **Advanced Usage**
@@ -87,6 +90,7 @@ Request:
   --delay             Delay in seconds between each HTTP request
   --timeout           Seconds to wait before timeout connection (default 30)
   --retries           Retries when the connection related error occurs (default 3)
+  --skip-urlencode    Skip URL encoding of payload data
   --force-ssl         Force usage of SSL/HTTPS
 
 Injection:

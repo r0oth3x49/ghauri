@@ -56,9 +56,6 @@ from ghauri.common.payloads import PAYLOADS
 from ghauri.logger.colored_logger import logger
 from ghauri.common.prettytable import PrettyTable, from_db_cursor
 
-
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
-
 # source: https://stackoverflow.com/questions/4685217/parse-raw-http-headers
 class HTTPRequest(BaseHTTPRequestHandler):
     def __init__(self, request_text):
@@ -255,6 +252,8 @@ def value_cleanup(value, strip_value=None):
     value = re.sub(r"\s+", " ", re.sub(r"(?:(?:[\(]+)|(?:[~]+))", "", value)).strip()
     if strip_value:
         value = re.sub(strip_value, "", value)
+    if not value:
+        value = "<blank_value>"
     return value
 
 
@@ -826,7 +825,6 @@ def prepare_extraction_payloads(
                 for i in payloads
             ]
         elif table and database and not column:  # when just table and database is given
-            print((table, database, column))
             _temp = [
                 i.format(
                     db=to_dbms_encoding(value=database, backend=backend)
@@ -1402,8 +1400,8 @@ def prepare_custom_headers(
     )
     if host:
         custom_headers += f"Host: {host}\n"
-    if USER_AGENT:
-        custom_headers += f"User-agent: {USER_AGENT}\n"
+    if user_agent:
+        custom_headers += f"User-agent: {user_agent}\n"
     if referer:
         custom_headers += f"Referer: {referer}\n"
     if header and ":" in header:
@@ -1445,29 +1443,38 @@ def search_possible_dbms_errors(html):
     return _temp
 
 
+def get_random_user_agent():
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
+    return ua
+
+
 def prepare_request(url, data, custom_headers, use_requests=False):
-    Response = collections.namedtuple("Response", ["raw", "path", "headers", "request"])
+    Response = collections.namedtuple(
+        "Response", ["raw", "path", "headers", "request", "endpoint"]
+    )
     request_type = "GET"
     if url and data:
         request_type = "POST"
     parsed = urlparse(url)
+    endpoint = parsed.path
     path = parsed.path if not parsed.query else f"{parsed.path}?{parsed.query}"
     if not path:
         path = "/"
     if not custom_headers:
-        custom_headers = f"User-agent: {USER_AGENT}"
-    if custom_headers and "user-agent" not in custom_headers.lower():
-        custom_headers += f"\nUser-agent: {USER_AGENT}"
-    if custom_headers and "host" not in custom_headers.lower():
-        custom_headers += f"\nHost: {parsed.netloc}"
-    if custom_headers and "cache-control" not in custom_headers.lower():
-        custom_headers += "\nCache-Control: no-cache"
-    if custom_headers and "accept" not in custom_headers.lower():
-        custom_headers += "\nAccept: */*"
-    if custom_headers and "accept-encoding" not in custom_headers.lower():
-        custom_headers += "\nAccept-Encoding: none"
-    if custom_headers and "connection" not in custom_headers.lower():
-        custom_headers += "Connection: close"
+        ua = get_random_user_agent()
+        custom_headers = f"User-agent: {ua}"
+        if custom_headers and "user-agent" not in custom_headers.lower():
+            custom_headers += f"\nUser-agent: {ua}"
+        if custom_headers and "host" not in custom_headers.lower():
+            custom_headers += f"\nHost: {parsed.netloc}"
+        if custom_headers and "cache-control" not in custom_headers.lower():
+            custom_headers += "\nCache-Control: no-cache"
+        if custom_headers and "accept" not in custom_headers.lower():
+            custom_headers += "\nAccept: */*"
+        if custom_headers and "accept-encoding" not in custom_headers.lower():
+            custom_headers += "\nAccept-Encoding: none"
+        if custom_headers and "connection" not in custom_headers.lower():
+            custom_headers += "\nConnection: close"
     custom_headers = "\n".join([i.strip() for i in custom_headers.split("\n") if i])
     raw = f"{request_type} {path} HTTP/1.1\n"
     raw += f"{custom_headers if custom_headers else ''}\n"
@@ -1494,6 +1501,7 @@ def prepare_request(url, data, custom_headers, use_requests=False):
         path=path,
         headers=custom_headers,
         request={"url": url, "data": data, "headers": header},
+        endpoint=endpoint,
     )
     return resp
 
@@ -1661,7 +1669,6 @@ def prepare_payloads(
             )
             _temp.append(_r)
     if error_based_only:
-        logger.debug("preparing error based payloads")
         entries = payloads.get("error-based", [])
         for entry in entries:
             _ = entry.get("payload")

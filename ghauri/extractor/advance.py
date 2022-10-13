@@ -269,6 +269,15 @@ class GhauriAdvance:
             if total > 0:
                 if not stop:
                     stop = total
+                else:
+                    if stop and stop > 0:
+                        if stop > total:
+                            logger.warning(
+                                f"--stop={stop} is greater then total count setting it to --stop={total}"
+                            )
+                            stop = total
+                    else:
+                        stop = total
                 payloads_names = PAYLOADS_DBS_NAMES.get(backend)
                 payload = None
                 guess = self.__execute_expression(
@@ -445,6 +454,15 @@ class GhauriAdvance:
             if total > 0:
                 if not stop:
                     stop = total
+                else:
+                    if stop and stop > 0:
+                        if stop > total:
+                            logger.warning(
+                                f"--stop={stop} is greater then total count setting it to --stop={total}"
+                            )
+                            stop = total
+                    else:
+                        stop = total
                 payloads_names = PAYLOADS_TBLS_NAMES.get(backend)
                 payloads_names = prepare_extraction_payloads(
                     database=database,
@@ -589,6 +607,8 @@ class GhauriAdvance:
             f"fetching number of columns for table '{mc}{table}{bw}' in database '{mc}{database}{bw}'"
         )
         payloads_count = PAYLOADS_COLS_COUNT.get(backend)
+        if backend == "Microsoft SQL Server":
+            table = table.replace("dbo.", "").replace("sys.", "")
         payloads_count = prepare_extraction_payloads(
             database=database, backend=backend, payloads=payloads_count, table=table
         )
@@ -625,6 +645,15 @@ class GhauriAdvance:
             if total > 0:
                 if not stop:
                     stop = total
+                else:
+                    if stop and stop > 0:
+                        if stop > total:
+                            logger.warning(
+                                f"--stop={stop} is greater then total count setting it to --stop={total}"
+                            )
+                            stop = total
+                    else:
+                        stop = total
                 payloads_names = PAYLOADS_COLS_NAMES.get(backend)
                 payloads_names = prepare_extraction_payloads(
                     database=database,
@@ -815,6 +844,15 @@ class GhauriAdvance:
             if total > 0:
                 if not stop:
                     stop = total
+                else:
+                    if stop and stop > 0:
+                        if stop > total:
+                            logger.warning(
+                                f"--stop={stop} is greater then total count setting it to --stop={total}"
+                            )
+                            stop = total
+                    else:
+                        stop = total
                 payloads_names = PAYLOADS_RECS_DUMP.get(backend)
                 payloads_names = prepare_extraction_payloads(
                     database=database,
@@ -874,6 +912,7 @@ class GhauriAdvance:
                     stop = total + 1 if stop == total else stop + 1
                 while start < stop:
                     __temp = []
+                    is_user_ended = False
                     is_interrupted = False
                     for column_name in __columns:
                         payloads = prepare_query_payload(
@@ -915,7 +954,7 @@ class GhauriAdvance:
                                         logger.info("retrieved: %s" % (retval.result))
                                     __temp.append(retval.result)
                             if not retval.ok and retval.error == "user_ended":
-                                is_interrupted = True
+                                is_user_ended = True
                                 break
                         except KeyboardInterrupt:
                             quest = logger.read_input(
@@ -926,6 +965,8 @@ class GhauriAdvance:
                             if quest == "n":
                                 is_interrupted = True
                                 break
+                    if is_user_ended:
+                        break
                     if __temp:
                         if len(__temp) == len(__columns):
                             _results.append(__temp)

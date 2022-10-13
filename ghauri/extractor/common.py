@@ -38,7 +38,7 @@ from ghauri.common.payloads import (
     PAYLOADS_RECS_COUNT,
 )
 
-from ghauri.common.lib import COMMON_STATEMENT, collections
+from ghauri.common.lib import collections
 
 
 class GhauriCommon:
@@ -70,51 +70,38 @@ class GhauriCommon:
             "Response",
             ["ok", "error", "result", "payload"],
         )
-        retval = session.fetchall(
-            session_filepath=conf.session_filepath,
-            query="SELECT * FROM tbl_common WHERE `type`=?",
-            values=("banner",),
+        retval = ghauri_extractor.fetch_characters(
+            url=url,
+            data=data,
+            vector=vector,
+            parameter=parameter,
+            headers=headers,
+            base=base,
+            injection_type=injection_type,
+            payloads=PAYLOADS_BANNER.get(backend),
+            backend=backend,
+            proxy=proxy,
+            is_multipart=is_multipart,
+            timeout=timeout,
+            delay=delay,
+            timesec=timesec,
+            attack01=attack,
+            match_string=match_string,
+            not_match_string=not_match_string,
+            code=code,
+            text_only=text_only,
+            dump_type="banner",
         )
-        if retval:
-            retval = retval.pop()
-            retval = Response(ok=True, error="", result=retval.get("name"), payload="")
-            logger.info("resumed: '%s'" % (retval.result))
-            logger.success(f"banner: '{retval.result}'")
-        if not retval:
-            retval = ghauri_extractor.fetch_characters(
-                url=url,
-                data=data,
-                vector=vector,
-                parameter=parameter,
-                headers=headers,
-                base=base,
-                injection_type=injection_type,
-                payloads=PAYLOADS_BANNER.get(backend),
-                backend=backend,
-                proxy=proxy,
-                is_multipart=is_multipart,
-                timeout=timeout,
-                delay=delay,
-                timesec=timesec,
-                attack01=attack,
-                match_string=match_string,
-                not_match_string=not_match_string,
-                code=code,
-                text_only=text_only,
-                dump_type="banner",
-            )
-            if retval.ok:
-                logger.info("retrieved: '%s'" % (retval.result))
-                logger.success(f"banner: '{retval.result}'")
-                session.dump(
-                    session_filepath=conf.session_filepath,
-                    query=COMMON_STATEMENT,
-                    values=(retval.result, "banner"),
-                )
+        if retval.ok:
+            if retval.resumed:
+                logger.info("resumed: '%s'" % (retval.result))
             else:
-                error = retval.error
-                message = f"Ghauri detected an error during data extraction..{error}"
-                logger.warning(f"{message}")
+                logger.info("retrieved: '%s'" % (retval.result))
+            logger.success(f"banner: '{retval.result}'")
+        else:
+            error = retval.error
+            message = f"Ghauri detected an error during banner extraction..{error}"
+            logger.warning(f"{message}")
         return retval
 
     def fetch_current_user(
@@ -143,51 +130,40 @@ class GhauriCommon:
             "Response",
             ["ok", "error", "result", "payload"],
         )
-        retval = session.fetchall(
-            session_filepath=conf.session_filepath,
-            query="SELECT * FROM tbl_common WHERE `type`=?",
-            values=("current_user",),
+        retval = ghauri_extractor.fetch_characters(
+            url=url,
+            data=data,
+            vector=vector,
+            parameter=parameter,
+            headers=headers,
+            base=base,
+            injection_type=injection_type,
+            payloads=PAYLOADS_CURRENT_USER.get(backend),
+            backend=backend,
+            proxy=proxy,
+            is_multipart=is_multipart,
+            timeout=timeout,
+            delay=delay,
+            timesec=timesec,
+            attack01=attack,
+            match_string=match_string,
+            not_match_string=not_match_string,
+            code=code,
+            text_only=text_only,
+            dump_type="current_user",
         )
-        if retval:
-            retval = retval.pop()
-            retval = Response(ok=True, error="", result=retval.get("name"), payload="")
-            logger.info("resumed: '%s'" % (retval.result))
-            logger.success(f"current user: '{retval.result}'")
-        if not retval:
-            retval = ghauri_extractor.fetch_characters(
-                url=url,
-                data=data,
-                vector=vector,
-                parameter=parameter,
-                headers=headers,
-                base=base,
-                injection_type=injection_type,
-                payloads=PAYLOADS_CURRENT_USER.get(backend),
-                backend=backend,
-                proxy=proxy,
-                is_multipart=is_multipart,
-                timeout=timeout,
-                delay=delay,
-                timesec=timesec,
-                attack01=attack,
-                match_string=match_string,
-                not_match_string=not_match_string,
-                code=code,
-                text_only=text_only,
-                dump_type="current_user",
-            )
-            if retval.ok:
-                logger.info("retrieved: '%s'" % (retval.result))
-                logger.success(f"current user: '{retval.result}'")
-                session.dump(
-                    session_filepath=conf.session_filepath,
-                    query=COMMON_STATEMENT,
-                    values=(retval.result, "current_user"),
-                )
+        if retval.ok:
+            if retval.resumed:
+                logger.info("resumed: '%s'" % (retval.result))
             else:
-                error = retval.error
-                message = f"Ghauri detected an error during data extraction..{error}"
-                logger.warning(f"{message}")
+                logger.info("retrieved: '%s'" % (retval.result))
+            logger.success(f"current user: '{retval.result}'")
+        else:
+            error = retval.error
+            message = (
+                f"Ghauri detected an error during current user extraction..{error}"
+            )
+            logger.warning(f"{message}")
         return retval
 
     def fetch_current_database(
@@ -216,51 +192,40 @@ class GhauriCommon:
             "Response",
             ["ok", "error", "result", "payload"],
         )
-        retval = session.fetchall(
-            session_filepath=conf.session_filepath,
-            query="SELECT * FROM tbl_common WHERE `type`=?",
-            values=("current_db",),
+        retval = ghauri_extractor.fetch_characters(
+            url=url,
+            data=data,
+            vector=vector,
+            parameter=parameter,
+            headers=headers,
+            base=base,
+            injection_type=injection_type,
+            payloads=PAYLOADS_CURRENT_DATABASE.get(backend),
+            backend=backend,
+            proxy=proxy,
+            is_multipart=is_multipart,
+            timeout=timeout,
+            delay=delay,
+            timesec=timesec,
+            attack01=attack,
+            match_string=match_string,
+            not_match_string=not_match_string,
+            code=code,
+            text_only=text_only,
+            dump_type="current_db",
         )
-        if retval:
-            retval = retval.pop()
-            retval = Response(ok=True, error="", result=retval.get("name"), payload="")
-            logger.info("resumed: '%s'" % (retval.result))
-            logger.success(f"current database: '{retval.result}'")
-        if not retval:
-            retval = ghauri_extractor.fetch_characters(
-                url=url,
-                data=data,
-                vector=vector,
-                parameter=parameter,
-                headers=headers,
-                base=base,
-                injection_type=injection_type,
-                payloads=PAYLOADS_CURRENT_DATABASE.get(backend),
-                backend=backend,
-                proxy=proxy,
-                is_multipart=is_multipart,
-                timeout=timeout,
-                delay=delay,
-                timesec=timesec,
-                attack01=attack,
-                match_string=match_string,
-                not_match_string=not_match_string,
-                code=code,
-                text_only=text_only,
-                dump_type="current_db",
-            )
-            if retval.ok:
-                logger.info("retrieved: '%s'" % (retval.result))
-                logger.success(f"current database: '{retval.result}'")
-                session.dump(
-                    session_filepath=conf.session_filepath,
-                    query=COMMON_STATEMENT,
-                    values=(retval.result, "current_db"),
-                )
+        if retval.ok:
+            if retval.resumed:
+                logger.info("resumed: '%s'" % (retval.result))
             else:
-                error = retval.error
-                message = f"Ghauri detected an error during data extraction..{error}"
-                logger.warning(f"{message}")
+                logger.info("retrieved: '%s'" % (retval.result))
+            logger.success(f"current database: '{retval.result}'")
+        else:
+            error = retval.error
+            message = (
+                f"Ghauri detected an error during current database extraction..{error}"
+            )
+            logger.warning(f"{message}")
         return retval
 
 

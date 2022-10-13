@@ -471,6 +471,22 @@ def main():
                 start=args.limitstart,
                 stop=args.limitstop,
             )
+        if args.db and args.dump and not args.tbl and not args.cols:
+            target.dump_database(
+                database=args.db,
+                start=args.limitstart,
+                stop=args.limitstop,
+                dump_requested=True,
+            )
+
+        if args.db and args.tbl and args.dump and not args.cols:
+            target.dump_table(
+                database=args.db,
+                table=args.tbl,
+                start=args.limitstart,
+                stop=args.limitstop,
+                dump_requested=True,
+            )
 
 
 if __name__ == "__main__":

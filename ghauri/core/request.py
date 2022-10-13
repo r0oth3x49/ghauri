@@ -102,7 +102,7 @@ class HTTPRequestHandler:
             url=url, data=data, custom_headers=headers, use_requests=use_requests
         )
         raw = req.raw
-        path = req.path
+        endpoint = req.endpoint
         custom_headers = req.headers
         request_url = req.request.get("url")
         logger.traffic_out(f"HTTP request:\n{raw}")
@@ -243,7 +243,7 @@ class HTTPRequestHandler:
             url=parsed_response.url,
             data=data,
             text=parsed_response.text,
-            path=path,
+            path=endpoint,
             method=method,
             reason=parsed_response.reason,
             headers=parsed_response.headers,

@@ -239,8 +239,6 @@ HTTP_STATUS_CODES_REASONS = {
 
 SESSION_STATEMENETS = """
 DROP TABLE IF EXISTS tbl_payload;
-DROP TABLE IF EXISTS tbl_common;
-DROP TABLE IF EXISTS tbl_dbs;
 DROP TABLE IF EXISTS storage;
 CREATE TABLE tbl_payload (
  id integer PRIMARY KEY AUTOINCREMENT,
@@ -254,15 +252,6 @@ CREATE TABLE tbl_payload (
  payload_type text NOT NULL,
  endpoint text NOT NULL
 );
-CREATE TABLE tbl_common (
- id integer PRIMARY KEY AUTOINCREMENT,
- name text,
- type text
-);
-CREATE TABLE tbl_dbs (
- id integer PRIMARY KEY AUTOINCREMENT,
- name text
-);
 CREATE TABLE storage (
  id integer PRIMARY KEY AUTOINCREMENT,
  value text,
@@ -275,16 +264,6 @@ PAYLOAD_STATEMENT = """
 INSERT 
     INTO tbl_payload (`title`, `attempts`, `payload`, `vector`, `backend`, `parameter`, `injection_type`, `payload_type`, `endpoint`)
 VALUES  (?, ?, ?, ?, ?, ?, ?, ?, ?);
-"""
-COMMON_STATEMENT = """
-INSERT 
-    INTO tbl_common (`name`, `type`)
-VALUES  (?, ?);
-"""
-DBS_STATEMENT = """
-INSERT 
-    INTO tbl_dbs (`name`)
-VALUES  (?, ?);
 """
 
 STORAGE = """

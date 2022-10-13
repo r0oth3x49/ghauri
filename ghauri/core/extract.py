@@ -148,7 +148,9 @@ class GhauriExtractor:
                     user_input="C",
                 )
                 if choice == "q":
-                    break
+                    logger.error("user quit")
+                    logger.end("ending")
+                    exit(0)
                 if choice == "c":
                     http_firewall_code_counter = 0
             if retry_on_error >= retry:
@@ -159,7 +161,9 @@ class GhauriExtractor:
                     user_input="C",
                 )
                 if choice == "q":
-                    break
+                    logger.error("user quit")
+                    logger.end("ending")
+                    exit(0)
                 if choice == "c":
                     retry_on_error = 0
             if delay > 0:
@@ -333,7 +337,9 @@ class GhauriExtractor:
                         user_input="C",
                     )
                     if choice == "q":
-                        break
+                        logger.error("user quit")
+                        logger.end("ending")
+                        exit(0)
                     if choice == "c":
                         http_firewall_code_counter = 0
                 if retry_on_error >= retry:
@@ -344,7 +350,9 @@ class GhauriExtractor:
                         user_input="C",
                     )
                     if choice == "q":
-                        break
+                        logger.error("user quit")
+                        logger.end("ending")
+                        exit(0)
                     if choice == "c":
                         retry_on_error = 0
                 if delay > 0:
@@ -502,7 +510,9 @@ class GhauriExtractor:
                         user_input="C",
                     )
                     if choice == "q":
-                        break
+                        logger.error("user quit")
+                        logger.end("ending")
+                        exit(0)
                     if choice == "c":
                         http_firewall_code_counter = 0
                 if retry_on_error >= retry:
@@ -513,7 +523,9 @@ class GhauriExtractor:
                         user_input="C",
                     )
                     if choice == "q":
-                        break
+                        logger.error("user quit")
+                        logger.end("ending")
+                        exit(0)
                     if choice == "c":
                         retry_on_error = 0
                 if delay > 0:
@@ -679,7 +691,9 @@ class GhauriExtractor:
                     user_input="C",
                 )
                 if choice == "q":
-                    break
+                    logger.error("user quit")
+                    logger.end("ending")
+                    exit(0)
                 if choice == "c":
                     http_firewall_code_counter = 0
             if retry_on_error >= retry:
@@ -690,7 +704,9 @@ class GhauriExtractor:
                     user_input="C",
                 )
                 if choice == "q":
-                    break
+                    logger.error("user quit")
+                    logger.end("ending")
+                    exit(0)
                 if choice == "c":
                     retry_on_error = 0
             if delay > 0:
@@ -842,7 +858,9 @@ class GhauriExtractor:
                     user_input="C",
                 )
                 if choice == "q":
-                    break
+                    logger.error("user quit")
+                    logger.end("ending")
+                    exit(0)
                 if choice == "c":
                     http_firewall_code_counter = 0
             if retry_on_error >= retry:
@@ -853,7 +871,9 @@ class GhauriExtractor:
                     user_input="C",
                 )
                 if choice == "q":
-                    break
+                    logger.error("user quit")
+                    logger.end("ending")
+                    exit(0)
                 if choice == "c":
                     retry_on_error = 0
             ascii_char = list_of_chars[start]
@@ -1006,7 +1026,7 @@ class GhauriExtractor:
                         )
                     except KeyboardInterrupt as error:
                         logger.error(
-                            "user interrupted during number of characters in length query retrieval.."
+                            "user aborted during number of characters in length query retrieval."
                         )
                         logger.end("ending")
                         exit(0)
@@ -1255,7 +1275,9 @@ class GhauriExtractor:
                         user_input="C",
                     )
                     if choice == "q":
-                        break
+                        logger.error("user quit")
+                        logger.end("ending")
+                        exit(0)
                     if choice == "c":
                         http_firewall_code_counter = 0
                 if retry_on_error >= retry:
@@ -1266,7 +1288,9 @@ class GhauriExtractor:
                         user_input="C",
                     )
                     if choice == "q":
-                        break
+                        logger.error("user quit")
+                        logger.end("ending")
+                        exit(0)
                     if choice == "c":
                         retry_on_error = 0
                 entry = payloads[start]
@@ -1301,7 +1325,14 @@ class GhauriExtractor:
                         user_input="C",
                     )
                     if quest and quest == "e":
-                        break
+                        _temp = PayloadResponse(
+                            ok=False,
+                            error="user_ended",
+                            result="",
+                            payload="",
+                            resumed=is_resumed,
+                        )
+                        return _temp
                     if quest and quest == "q":
                         logger.error("user quit")
                         logger.end("ending")
@@ -1359,27 +1390,27 @@ class GhauriExtractor:
                                 logger.warning(
                                     "it was not possible to count the number of entries for the SQL query provided. Ghauri will assume that it returns only one entry"
                                 )
-                        try:
-                            if dump_type:
-                                session.dump(
-                                    session_filepath=conf.session_filepath,
-                                    query=STORAGE,
-                                    values=(
-                                        retval,
-                                        len(retval),
-                                        dump_type,
-                                    ),
-                                )
-                        except Exception as error:
-                            logger.warning(error)
-                        _temp = PayloadResponse(
-                            ok=True,
-                            error="",
-                            result=retval,
-                            payload=entry,
-                            resumed=is_resumed,
-                        )
-                        break
+                    try:
+                        if dump_type:
+                            session.dump(
+                                session_filepath=conf.session_filepath,
+                                query=STORAGE,
+                                values=(
+                                    retval,
+                                    len(retval),
+                                    dump_type,
+                                ),
+                            )
+                    except Exception as error:
+                        logger.warning(error)
+                    _temp = PayloadResponse(
+                        ok=True,
+                        error="",
+                        result=retval,
+                        payload=entry,
+                        resumed=is_resumed,
+                    )
+                    break
         return _temp
 
     def fetch_characters(
@@ -1415,7 +1446,9 @@ class GhauriExtractor:
         _temp = PayloadResponse(
             ok=False, error="", result="", payload="", resumed=False
         )
-        error_based_in_vectors = bool("error_vector" in self.vectors)
+        other_vectors = bool(
+            "boolean_vector" in conf.vectors or "time_vector" in conf.vectors
+        )
         retval_error = self.fetch_using_error_based_vector(
             url,
             data,
@@ -1443,10 +1476,20 @@ class GhauriExtractor:
                 resumed=retval_error.resumed,
             )
             return _temp_error
-        if not retval_error.ok and error_based_in_vectors:
-            logger.debug(
-                "ghauri is going to use other injected vectors payloads if any."
-            )
+        if not retval_error.ok:
+            if retval_error.error == "user_ended":
+                _temp_error = PayloadResponse(
+                    ok=retval_error.ok,
+                    error=retval_error.error,
+                    result=retval_error.result,
+                    payload=retval_error.payload,
+                    resumed=retval_error.resumed,
+                )
+                return _temp_error
+            if other_vectors:
+                logger.debug(
+                    "ghauri is going to use other injected vectors payloads if any."
+                )
         if not list_of_chars:
             list_of_chars = "._-1234567890aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ@+!#$%^&*()+"
         data_extraction_payloads = DATA_EXTRACTION_PAYLOADS.get(backend)
@@ -1458,6 +1501,7 @@ class GhauriExtractor:
         user_aborted = False
         change_algo_on_invalid_character = False
         invalid_character_detection_counter = 0
+        bool_invalid_character_counter = 0
         is_change_algo_notified = False
         binary_search = False
         in_based_search = False
@@ -1607,6 +1651,37 @@ class GhauriExtractor:
                                             text_only=text_only,
                                             vector_type=vector_type,
                                         )
+                                        if retval:
+                                            is_valid = self.validate_character(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                base=base,
+                                                injection_type=injection_type,
+                                                proxy=proxy,
+                                                is_multipart=is_multipart,
+                                                timeout=timeout,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                identified_character=retval,
+                                                vector_type=vector_type,
+                                                offset=pos,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                            )
+                                            if not is_valid:
+                                                logger.warning(
+                                                    "invalid character detected, retrying."
+                                                )
+                                                bool_invalid_character_counter += 1
+                                                binary_search = False
+                                                in_based_search = True
+                                                linear_search = False
+                                            if is_valid:
+                                                pos += 1
+                                                chars += retval
                                     elif in_based_search:
                                         retval = self._search_using_in_operator(
                                             url=url,
@@ -1635,6 +1710,37 @@ class GhauriExtractor:
                                             chars=chars,
                                             vector_type=vector_type,
                                         )
+                                        if retval:
+                                            is_valid = self.validate_character(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                base=base,
+                                                injection_type=injection_type,
+                                                proxy=proxy,
+                                                is_multipart=is_multipart,
+                                                timeout=timeout,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                identified_character=retval,
+                                                vector_type=vector_type,
+                                                offset=pos,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                            )
+                                            if not is_valid:
+                                                logger.warning(
+                                                    "invalid character detected, retrying."
+                                                )
+                                                bool_invalid_character_counter += 1
+                                                binary_search = False
+                                                in_based_search = False
+                                                linear_search = True
+                                            if is_valid:
+                                                pos += 1
+                                                chars += retval
                                     else:
                                         retval = self._linear_search(
                                             url=url,
@@ -1661,10 +1767,44 @@ class GhauriExtractor:
                                             vector_type=vector_type,
                                             base=base,
                                         )
-                                    pos += 1
-                                    chars += retval
+                                        if retval:
+                                            is_valid = self.validate_character(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                base=base,
+                                                injection_type=injection_type,
+                                                proxy=proxy,
+                                                is_multipart=is_multipart,
+                                                timeout=timeout,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                identified_character=retval,
+                                                vector_type=vector_type,
+                                                offset=pos,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                            )
+                                            if not is_valid:
+                                                logger.warning(
+                                                    "invalid character detected, retrying."
+                                                )
+                                                bool_invalid_character_counter += 1
+                                                binary_search = True
+                                                in_based_search = True
+                                                linear_search = False
+                                            if is_valid:
+                                                pos += 1
+                                                chars += retval
                                     try:
-                                        if dump_type:
+                                        if bool_invalid_character_counter >= 3:
+                                            logger.debug(
+                                                "boolean based technique(s) is not usable to data extraction switching to other if any.."
+                                            )
+                                            break
+                                        if dump_type and chars:
                                             session.dump(
                                                 session_filepath=conf.session_filepath,
                                                 query=STORAGE_UPDATE,
