@@ -47,6 +47,16 @@ class ColoredFormatter(logging.Formatter):
     def format(self, record):
         message = record.getMessage()
         spaces = ""
+        leading_spaces_count = len(message) - len(message.lstrip())
+        if message.startswith("\n"):
+            spaces = "\n" * leading_spaces_count
+            message = message.lstrip()
+        if message.startswith("\t"):
+            spaces = "\t" * leading_spaces_count
+            message = message.lstrip()
+        if message.startswith(" "):
+            spaces = " " * leading_spaces_count
+            message = message.lstrip()
         levelname = record.levelname
         uses_time = self.usesTime()
         if not uses_time:

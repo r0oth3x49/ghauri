@@ -466,20 +466,18 @@ class Ghauri:
 
     def __end(self, database="", table="", fetched=True):
         new_line = ""
-        # if database and table:
-        #     filepath = os.path.join(self._filepath, "dump")
-        #     filepath = os.path.join(filepath, database)
-        #     filepath = os.path.join(filepath, f"{table}.csv")
-        #     message = (
-        #         f"{new_line}table '{database}.{table}' dumped to CSV file '{filepath}'"
-        #     )
-        #     logger.info(message)
-        #     new_line = ""
+        if database and table:
+            filepath = os.path.join(conf.filepaths.filepath, "dump")
+            filepath = os.path.join(filepath, database)
+            filepath = os.path.join(filepath, f"{table}.csv")
+            message = f"\ntable '{database}.{table}' dumped to CSV file '{filepath}'"
+            logger.info(message)
+            new_line = ""
         if fetched:
             logger.info(
                 f"{new_line}fetched data logged to text files under '{self._filepath}'"
             )
-        logger.end("ending")
+            logger.end("ending")
 
     def extract_banner(self):
         response = target.fetch_banner(
@@ -724,8 +722,8 @@ class Ghauri:
         )
         fetched = response.ok
         if fetched:
-            logger.success("")
             if not dump_requested:
+                logger.success("")
                 self.__end(database=database, table=table, fetched=fetched)
         else:
             if not dump_requested:

@@ -126,7 +126,9 @@ class SessionFactory:
                 pass
         return _temp
 
-    def dump_to_csv(self, cursor, filepath="", database="", table=""):
+    def dump_to_csv(
+        self, results, field_names=None, filepath="", database="", table=""
+    ):
         ok = False
         filepath = os.path.dirname(filepath)
         dump = os.path.join(filepath, "dump")
@@ -139,8 +141,9 @@ class SessionFactory:
             filepath = os.path.join(dbfilepath, f"{table}.csv")
             with open(filepath, "w", encoding="utf-8") as fd:
                 csv_writer = csv.writer(fd, delimiter=",")
-                csv_writer.writerow([i[0] for i in cursor.description])
-                csv_writer.writerows(cursor)
+                if field_names:
+                    csv_writer.writerow([i.strip() for i in field_names])
+                csv_writer.writerows(results)
                 ok = True
         return ok
 

@@ -25,6 +25,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 import random
 from ghauri.common.config import conf
+from ghauri.common.session import session
 from ghauri.core.extract import ghauri_extractor
 from ghauri.logger.colored_logger import logger
 from ghauri.common.lib import collections
@@ -595,7 +596,7 @@ class GhauriAdvance:
         if start == 0 and backend == "Oracle":
             start = 1
         logger.info(
-            f"fetching columns for table '{mc}{table}{nc}' in database '{mc}{database}{nc}'"
+            f"fetching columns for table '{mc}{table}{bw}' in database '{mc}{database}{bw}'"
         )
         Response = collections.namedtuple(
             "Response",
@@ -986,6 +987,16 @@ class GhauriAdvance:
                     logger.success(f"Table: {table}")
                     logger.success(f"[{ret.entries} entries]")
                     logger.success(f"{ret.data}")
+                    try:
+                        session.dump_to_csv(
+                            _results,
+                            field_names=__columns,
+                            filepath=conf.session_filepath,
+                            database=database,
+                            table=table,
+                        )
+                    except Exception as error:
+                        logger.debug(error)
         return _temp
 
 
