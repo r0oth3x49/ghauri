@@ -40,6 +40,18 @@ class GhauriConfigs:
         filepaths=None,
         proxy=None,
         text_only=False,
+        string=None,
+        not_string=None,
+        code=None,
+        match_ratio=None,
+        retry=3,
+        base=None,
+        attack01=None,
+        delay=0,
+        timesec=5,
+        timeout=30,
+        backend=None,
+        batch=False,
     ):
         self.vectors = vectors
         self.is_string = is_string
@@ -50,6 +62,16 @@ class GhauriConfigs:
         self._session_filepath = None
         self.proxy = proxy
         self.text_only = text_only
+        self.string = string
+        self.not_string = not_string
+        self.code = code
+        self.match_ratio = match_ratio
+        self.retry = retry
+        self.base = base
+        self.attack01 = attack01
+        self.backend = backend
+        self.batch = batch
+        self.http_codes = {}
 
     @property
     def session_filepath(self):

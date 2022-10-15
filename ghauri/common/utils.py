@@ -324,7 +324,7 @@ def replace_with(string, character, replace_with, right=True):
 def get_boolean_ratio(w1, w2):
     ratio = 0
     try:
-        ratio = round(SequenceMatcher(None, w1, w2).ratio(), 2)
+        ratio = round(SequenceMatcher(None, w1, w2).quick_ratio(), 3)
     except:
         w1 = w1 + " " * (len(w2) - len(w1))
         w2 = w2 + " " * (len(w1) - len(w2))
@@ -459,6 +459,14 @@ def check_page_difference(w1, w2, match_string=None):
     return _temp
 
 
+def extract_page_content(response):
+    response = response or ""
+    regex = r"(?si)<(abbr|acronym|b|blockquote|br|center|cite|code|dt|em|font|h\d|i|li|p|pre|q|strong|sub|sup|td|th|title|tt|u)(?!\w).*?>(?P<result>[^<]+)"
+    ok = [mobj.group("result").strip() for mobj in re.finditer(regex, response) if mobj]
+    ok = [i for i in ok if i and i != ""]
+    return ok
+
+
 def check_boolean_responses(
     base,
     attack_true,
@@ -524,6 +532,14 @@ def check_boolean_responses(
         w2 = attack_false.filtered_text
     ratio_true = get_boolean_ratio(w0, w1)
     ratio_false = get_boolean_ratio(w0, w2)
+    logger.debug(f"ratio false payload attack: {ratio_false}")
+    logger.debug(f"ratio true payload attack: {ratio_true}")
+    if not conf.match_ratio:
+        if ratio_false >= 0.02 and ratio_false <= 0.98:
+            conf.match_ratio = ratio_false
+            logger.debug(
+                f"setting match ratio for current parameter to {conf.match_ratio}"
+            )
     if code:
         if code == sct or code == scf:
             is_vulner = True
@@ -592,40 +608,6 @@ def check_boolean_responses(
         )
         is_vulner = False
         case = ""
-        if w0set == w1set != w2set:
-            candidates = w1set - w2set - w0set
-            if candidates:
-                candidates = sorted(candidates, key=len)
-                for candidate in candidates:
-                    mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
-                    if (
-                        mobj
-                        and " " in candidate
-                        and candidate.strip()
-                        and len(candidate) > 10
-                    ):
-                        difference = candidate
-                        string = difference
-                        is_vulner = True
-                        case = "Page Ratio"
-                        break
-        if w0set == w2set != w1set:
-            candidates = w2set - w1set - w0set
-            if candidates:
-                candidates = sorted(candidates, key=len)
-                for candidate in candidates:
-                    mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
-                    if (
-                        mobj
-                        and " " in candidate
-                        and candidate.strip()
-                        and len(candidate) > 10
-                    ):
-                        difference = candidate
-                        string = difference
-                        is_vulner = True
-                        case = "Page Ratio"
-                        break
         if not difference and not is_vulner:
             # special case when the above page ratio mechanism fails.
             ok = check_page_difference(w1, w2)
@@ -635,6 +617,53 @@ def check_boolean_responses(
             if difference:
                 string = ok.differences.get("string")
                 not_string = ok.differences.get("not_string")
+                logger.debug(f'injectable with --string="{difference}".')
+        if not difference and not is_vulner:
+            if w0set == w1set != w2set:
+                candidates = w1set - w2set - w0set
+                if candidates:
+                    candidates = sorted(candidates, key=len)
+                    for candidate in candidates:
+                        mobj = re.match(r"\A[\w.,! ]+\Z", candidate)
+                        if (
+                            mobj
+                            and " " in candidate
+                            and candidate.strip()
+                            and len(candidate) > 10
+                        ):
+                            difference = candidate
+                            string = difference
+                            is_vulner = True
+                            case = "Page Ratio"
+                            break
+            if ratio_true != ratio_false:
+                tset = set(extract_page_content(attack_true.text))
+                tset |= set(__ for _ in tset for __ in _.split())
+                fset = eset = set(extract_page_content(attack_false.text))
+                fset |= set(__ for _ in fset for __ in _.split())
+                eset |= set(__ for _ in eset for __ in _.split())
+                ok = tset - fset - eset
+                candidates = [
+                    _.strip()
+                    if _.strip() in attack_true.text
+                    and _.strip() not in attack_false.text
+                    else None
+                    for _ in ok
+                ]
+                candidates = [i for i in candidates if i]
+                if candidates:
+                    candidates = sorted(candidates, key=len)
+                    for candidate in candidates:
+                        ok = re.match(r"\A\w{2,}\Z", candidate)
+                        if ok:
+                            difference = candidate
+                            string = conf.string = candidate
+                            is_vulner = True
+                            break
+            if difference and is_vulner:
+                string = difference
+                not_string = ""
+                case = "Page Ratio"
                 logger.debug(f'injectable with --string="{difference}".')
     if is_vulner:
         logger.debug(f"injectable with cases: '{case}'.")
@@ -748,7 +777,10 @@ def to_dbms_encoding(
     value, backend=None, is_string=False, payload=None, to_str=False, to_char=False
 ):
     if backend == "MySQL":
-        return f"0x{binascii.hexlify(value.encode()).decode()}"
+        if to_str:
+            return value
+        else:
+            return f"0x{binascii.hexlify(value.encode()).decode()}"
     if backend == "PostgreSQL":
         return f"({'||'.join([f'CHR({ord(i)})' for i in value.strip()])})"
     if backend == "Microsoft SQL Server":

