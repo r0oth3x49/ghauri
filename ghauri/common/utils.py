@@ -548,7 +548,7 @@ def check_boolean_responses(
         else:
             is_vulner = False
     elif match_string:
-        mobj = re.search(r"(?is)(?:%s)" % (match_string), w1)
+        mobj = re.search(r"(?is)(?:%s)" % (re.escape(match_string)), w1)
         if mobj:
             is_vulner = True
             not_string = not_match_string
@@ -564,7 +564,7 @@ def check_boolean_responses(
                 string = difference
                 _cases.append("Page Content")
     elif not_match_string:
-        mobj = re.search(r"(?is)(?:%s)" % (not_match_string), w2)
+        mobj = re.search(r"(?is)(?:%s)" % (re.escape(not_match_string)), w2)
         if mobj:
             is_vulner = True
             string = match_string
