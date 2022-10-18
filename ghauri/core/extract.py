@@ -363,6 +363,10 @@ class GhauriExtractor:
                     position=offset,
                     char=ord(identified_character),
                 )
+                if vector_type == "time_vector":
+                    condition = replace_with(
+                        string=condition, character="=", replace_with="!="
+                    )
                 expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                     "[SLEEPTIME]", f"{timesec}"
                 )
@@ -409,7 +413,8 @@ class GhauriExtractor:
                             logger.debug("character is valid.")
                     if vector_type == "time_vector":
                         response_time = attack.response_time
-                        if response_time >= sleep_time:
+                        vulnerable = bool(response_time >= sleep_time)
+                        if not vulnerable:
                             logger.debug("character is valid.")
                             is_valid = True
                     break
@@ -1490,10 +1495,10 @@ class GhauriExtractor:
                     resumed=retval_error.resumed,
                 )
                 return _temp_error
-            if other_vectors:
-                logger.debug(
-                    "ghauri is going to use other injected vectors payloads if any."
-                )
+            # if other_vectors:
+            #     logger.debug(
+            #         "ghauri is going to use other injected vectors payloads if any."
+            #     )
         if not list_of_chars:
             list_of_chars = "._-1234567890aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ@+!#$%^&*()+"
         data_extraction_payloads = DATA_EXTRACTION_PAYLOADS.get(backend)
@@ -1530,7 +1535,7 @@ class GhauriExtractor:
                 last_row_id = retval_session.get("id")
                 if len(_v) == length:
                     _temp = PayloadResponse(
-                        ok=True, error="", result=_v, payload="", resumed=True
+                        ok=True, error="", result=_v, payload="", resumed=is_resumed
                     )
                     return _temp
         for vector_type, vector in conf.vectors.items():
@@ -1623,6 +1628,7 @@ class GhauriExtractor:
                         total_length = length + 1
                         # for pos in range(1, length + 1):
                         while pos < total_length:
+                            start_pos = pos
                             if attack01 and vector_type == "boolean_vector":
                                 # extract characters using binary search algorithm
                                 try:
@@ -1823,7 +1829,7 @@ class GhauriExtractor:
                                     try:
                                         if bool_invalid_character_counter >= 3:
                                             logger.debug(
-                                                "boolean based technique(s) is not usable to data extraction switching to other if any.."
+                                                "it seems the current payload is filtered out by some sort of WAF/IDS."
                                             )
                                             break
                                         if dump_type and chars:
@@ -1843,6 +1849,8 @@ class GhauriExtractor:
                                     is_char_found = True
                                     is_extracted = True
                                     is_done_with_vector = True
+                                    if chars and len(chars) > 0:
+                                        logger.info(f"retrieved: '{chars}'")
                                     _temp = PayloadResponse(
                                         ok=False,
                                         error="user_ended",
@@ -2026,7 +2034,7 @@ class GhauriExtractor:
                                     try:
                                         if invalid_character_detection_counter >= 3:
                                             logger.debug(
-                                                "time based technique(s) is not usable to data extraction switching to other if any.."
+                                                "it seems the current payload is filtered out by some sort of WAF/IDS."
                                             )
                                             break
                                         if dump_type and chars:
@@ -2053,6 +2061,7 @@ class GhauriExtractor:
                                         error="user_ended",
                                         result=chars,
                                         payload=entry,
+                                        resumed=is_resumed,
                                     )
                                     break
                         if len(chars) == length:

@@ -817,6 +817,9 @@ def confirm_timebased_sqli(
             if delay > 0:
                 time.sleep(delay)
             sleep_time = sleep_times.pop()
+            # in case of very slow internet users we will consider timesec value for testing and it should be >= 10 otherwise with good internet we are good to consider random sleep value
+            if timesec >= 10:
+                sleep_time += timesec
             string = payload_detected.string
             expression = string.replace("[SLEEPTIME]", "%s" % (sleep_time))
             decoded_expression = urldecode(expression)
@@ -933,7 +936,8 @@ def check_timebased_sqli(
     payloads_response_delay = [stack_queries_payloads, time_based_payloads]
     param_key = parameter.get("key")
     param_value = parameter.get("value")
-    sleep_time = random.randint(5, 9)
+    # in case of very slow internet users we will consider timesec value for testing and it should be >= 10 otherwise with good internet we are good to consider random sleep value
+    sleep_time = timesec if timesec >= 10 else random.randint(5, 9)
     injection_type = injection_type.upper()
     is_injected = False
     requests_counter = 1
@@ -943,6 +947,7 @@ def check_timebased_sqli(
     terminate_on_web_firewall = False
     http_firewall_code_counter = 0
     error_msg = None
+    _out = []
     for payloads_delay in payloads_response_delay:
         for entry in payloads_delay:
             backend = entry.dbms
@@ -1109,6 +1114,9 @@ def check_timebased_sqli(
                             continue
                     logger.notice(message)
                     _url = attack.request_url if injection_type == "GET" else attack.url
+                    payload_type = f"{entry.type}"
+                    if payload_type == "time-based":
+                        payload_type += " blind"
                     _temp = Response(
                         url=_url,
                         data=attack.data,
@@ -1128,7 +1136,7 @@ def check_timebased_sqli(
                         prepared_vector=f"{_payload.prefix}{entry.vector}{_payload.suffix}",
                         number_of_requests=requests_counter,
                         backend=backend,
-                        payload_type="time-based blind",
+                        payload_type=payload_type,
                         payload_raw=_payload,
                         with_status_code=with_status_code,
                         is_different_status_code_injectable=is_different_status_code_injectable,

@@ -1661,7 +1661,7 @@ def prepare_payloads(
                 __temp.append(_p)
             _r = Response(
                 dbms=backend,
-                type="error-based",
+                type="stacked-queries",
                 title=title,
                 payloads=__temp,
                 vector=vector,
