@@ -371,14 +371,11 @@ def get_page_ratio_difference(response, response_01):
                 " ",
                 re.sub(r"[^a-zA-Z0-9\.\s]+", " ", response_01[j1:j2]).lstrip().rstrip(),
             )
-            if len(new) >= 2 and len(old) >= 2:
+            if len(new) >= 2 and len(old) >= 2 and len(new) <= 20 and len(old) <= 20:
                 # logger.debug(
                 #     "{:7}   response[{}:{}] --> response_01[{}:{}] {!r:>8} --> {!r}".format(
                 #         tag, i1, i2, j1, j2, new, old
                 #     )
-                # )
-                # logger.debug(
-                #     "{:7} page difference: {!r:>8} --> {!r}".format(tag, new, old)
                 # )
                 _temp.append(
                     {
@@ -657,14 +654,17 @@ def check_boolean_responses(
                         ok = re.match(r"\A\w{2,}\Z", candidate)
                         if ok:
                             difference = candidate
-                            string = conf.string = candidate
                             is_vulner = True
                             break
-            if difference and is_vulner:
-                string = difference
-                not_string = ""
-                case = "Page Ratio"
-                logger.debug(f'injectable with --string="{difference}".')
+        if difference and is_vulner:
+            string = difference
+            not_string = ""
+            if not conf.string:
+                conf.string = string
+            if not conf.not_string:
+                conf.not_string = not_string
+            case = "Page Ratio"
+            logger.debug(f'injectable with --string="{difference}".')
     if is_vulner:
         logger.debug(f"injectable with cases: '{case}'.")
         _temp = BooleanInjectionResponse(
@@ -1252,7 +1252,8 @@ def fetch_payloads_by_suffix_prefix(payloads, prefix=None, suffix=None):
             if prefix.startswith(" "):
                 prefix = " "
             if _pref and prefix and _pref[0] != prefix[0]:
-                logger.debug(f"skipping payload '{entry.raw}'")
+                pass
+                # logger.debug(f"skipping payload '{entry.raw}'")
             if _pref and prefix and _pref[0] == prefix[0]:
                 _temp.append(entry)
     # we should try all the suffix for now

@@ -215,39 +215,52 @@ def extended_dbms_check(
     match_string=None,
     not_match_string=None,
     text_only=False,
+    possible_dbms=None,
 ):
     _temp = ""
-    inj = FingerPrintDBMS(
-        base,
-        parameter,
-        url=url,
-        data=data,
-        headers=headers,
-        injection_type=injection_type,
-        proxy=proxy,
-        batch=batch,
-        is_multipart=is_multipart,
-        timeout=timeout,
-        delay=delay,
-        timesec=timesec,
-        vector=vector,
-        attack=attack,
-        code=code,
-        match_string=match_string,
-        not_match_string=not_match_string,
-        text_only=text_only,
-    )
-    response = ""
-    if backend == "MySQL":
-        response = inj.check_mysql()
-    if backend == "Oracle":
-        response = inj.check_oracle()
-    if backend == "Microsoft SQL Server":
-        response = inj.check_mssql()
-    if backend == "PostgreSQL":
-        response = inj.check_postgre()
-    if response:
-        _temp = response
+    if not possible_dbms:
+        inj = FingerPrintDBMS(
+            base,
+            parameter,
+            url=url,
+            data=data,
+            headers=headers,
+            injection_type=injection_type,
+            proxy=proxy,
+            batch=batch,
+            is_multipart=is_multipart,
+            timeout=timeout,
+            delay=delay,
+            timesec=timesec,
+            vector=vector,
+            attack=attack,
+            code=code,
+            match_string=match_string,
+            not_match_string=not_match_string,
+            text_only=text_only,
+        )
+        response = ""
+        if backend == "MySQL":
+            response = inj.check_mysql()
+        if backend == "Oracle":
+            response = inj.check_oracle()
+        if backend == "Microsoft SQL Server":
+            response = inj.check_mssql()
+        if backend == "PostgreSQL":
+            response = inj.check_postgre()
+        if not response:
+            response = inj.check_oracle()
+        if not response:
+            response = inj.check_postgre()
+        if not response:
+            response = inj.check_mssql()
+        if response:
+            _temp = response
+    else:
+        _temp = possible_dbms
+        logger.info(f"testing {possible_dbms}")
+        logger.info(f"confirming {possible_dbms}")
+        logger.notice(f"the back-end DBMS is {possible_dbms}")
     return _temp
 
 
@@ -1447,6 +1460,7 @@ def check_session(
     match_string=None,
     not_match_string=None,
     text_only=False,
+    possible_dbms=None,
 ):
     retval = session.fetchall(
         session_filepath=session_filepath,
@@ -1518,6 +1532,8 @@ def check_session(
             title = entry.get("title")
             vector = entry.get("vector")
             backend = entry.get("backend")
+            if not possible_dbms:
+                possible_dbms = backend
             if payload_type == "boolean-based blind":
                 vectors.update({"boolean_vector": vector})
                 logger.debug(
@@ -1781,6 +1797,7 @@ def check_session(
         error_based_in_vectors = bool("error_vector" in vectors)
         if boolean_vector and not error_based_in_vectors:
             attack = attack_false
+            conf.attack01 = attack_false
             match_string = match_string
             backend = extended_dbms_check(
                 base,
@@ -1801,7 +1818,18 @@ def check_session(
                 match_string=match_string,
                 not_match_string=not_match_string,
                 text_only=text_only,
+                possible_dbms=possible_dbms,
             )
+            if not backend:
+                session.execute_query(
+                    session_filepath=session_filepath,
+                    query="DELETE FROM tbl_payload; DELETE FROM storage;",
+                )
+                logger.warning("ghauri could not determine the backend DBMS")
+                logger.warning(
+                    "false positive or unexploitable injection point detected"
+                )
+                return None
         else:
             logger.info(f"testing {backend}")
             logger.info(f"confirming {backend}")
@@ -1889,6 +1917,7 @@ def check_injections(
         match_string=string,
         not_match_string=not_string,
         text_only=text_only,
+        possible_dbms=possible_dbms,
     )
     if retval_session and retval_session.vulnerable:
         return Ghauri(
@@ -2211,6 +2240,7 @@ def check_injections(
                     match_string = boolean.string
                 if boolean and "error-based" not in priority_keys:
                     attack = boolean.attacks[-1]
+                    conf.attack01 = attack
                     boolean_vector = boolean.prepared_vector
                     backend = extended_dbms_check(
                         base,
@@ -2231,7 +2261,18 @@ def check_injections(
                         match_string=string,
                         not_match_string=not_string,
                         text_only=text_only,
+                        possible_dbms=possible_dbms,
                     )
+                    if not backend:
+                        session.execute_query(
+                            session_filepath=session_filepath,
+                            query="DELETE FROM tbl_payload; DELETE FROM storage;",
+                        )
+                        logger.warning("ghauri could not determine the backend DBMS")
+                        logger.warning(
+                            "false positive or unexploitable injection point detected"
+                        )
+                        return None
                 else:
                     logger.info(f"testing {backend}")
                     logger.info(f"confirming {backend}")

@@ -72,6 +72,9 @@ class GhauriConfigs:
         self.backend = backend
         self.batch = batch
         self.http_codes = {}
+        self.timeout = timeout
+        self.delay = delay
+        self.timesec = timesec
 
     @property
     def session_filepath(self):

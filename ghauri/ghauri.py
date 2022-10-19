@@ -278,6 +278,7 @@ def perform_injection(
                         is_json=is_json,
                     )
                     base = retval_check.base
+                    conf.base = base
                     conf.text_only = is_dynamic = (
                         retval_check.is_dynamic if not text_only else text_only
                     )

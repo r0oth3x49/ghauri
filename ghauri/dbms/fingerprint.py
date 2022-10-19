@@ -24,6 +24,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
 import random
+from ghauri.common.config import conf
 from ghauri.core.inject import inject_expression
 from ghauri.logger.colored_logger import logger
 from ghauri.common.colors import nc, mc
@@ -66,26 +67,26 @@ class FingerPrintDBMS:
         not_match_string=None,
         text_only=False,
     ):
-        self.base = base
+        self.base = conf.base
         self.parameter = parameter
         self.url = url
         self.data = data
         self.headers = headers
         self.injection_type = injection_type
-        self.proxy = proxy
-        self.batch = batch
-        self.is_multipart = is_multipart
-        self.timeout = timeout
-        self.delay = delay
-        self.timesec = timesec
+        self.proxy = conf.proxy
+        self.batch = conf.batch
+        self.is_multipart = conf.is_multipart
+        self.timeout = conf.timeout
+        self.delay = conf.delay
+        self.timesec = conf.timesec
         self.vector = vector
-        self.attack01 = attack
+        self.attack01 = conf.attack01
         self._attacks = attacks
         self._case = case
         self.code = code
-        self.match_string = match_string
-        self.not_match_string = not_match_string
-        self.text_only = text_only
+        self.match_string = conf.string
+        self.not_match_string = conf.not_string
+        self.text_only = conf.text_only
 
     def check_boolean_expression(self, expression, expected=True):
         expression = self.vector.replace("[INFERENCE]", expression)
@@ -133,17 +134,17 @@ class FingerPrintDBMS:
                     t0, f0 = self._attacks[0].status_code, self._attacks[-1].status_code
                     t1, f1 = attack.status_code, attack01.status_code
                     r0, r1 = self._attacks[0].redirected, attack.redirected
-                    logger.debug(
-                        (
-                            "matching responses of detedted payloads",
-                            t0,
-                            f0,
-                            t1,
-                            f1,
-                            r0,
-                            r1,
-                        )
-                    )
+                    # logger.debug(
+                    #     (
+                    #         "matching responses of detedted payloads",
+                    #         t0,
+                    #         f0,
+                    #         t1,
+                    #         f1,
+                    #         r0,
+                    #         r1,
+                    #     )
+                    # )
                     is_ok = bool(t0 == t1 and f0 == f1 and r0 == r1)
                 if is_ok:
                     message = f"heuristic (extended) test shows that the back-end DBMS could be '{mc}MySQL{nc}'"
@@ -200,7 +201,7 @@ class FingerPrintDBMS:
                     warnMsg = "the back-end DBMS is not MySQL"
                     logger.warning(warnMsg)
                     ok = False
-                    return _temp
+                    return ""
                 ok = True
             else:
                 warnMsg = "the back-end DBMS is not MySQL"
@@ -242,17 +243,17 @@ class FingerPrintDBMS:
                     t0, f0 = self._attacks[0].status_code, self._attacks[-1].status_code
                     t1, f1 = attack.status_code, attack01.status_code
                     r0, r1 = self._attacks[0].redirected, attack.redirected
-                    logger.debug(
-                        (
-                            "matching responses of detedted payloads",
-                            t0,
-                            f0,
-                            t1,
-                            f1,
-                            r0,
-                            r1,
-                        )
-                    )
+                    # logger.debug(
+                    #     (
+                    #         "matching responses of detedted payloads",
+                    #         t0,
+                    #         f0,
+                    #         t1,
+                    #         f1,
+                    #         r0,
+                    #         r1,
+                    #     )
+                    # )
                     is_ok = bool(t0 == t1 and f0 == f1 and r0 == r1)
                 if is_ok:
                     message = f"heuristic (extended) test shows that the back-end DBMS could be '{mc}Microsoft SQL Server{nc}'"
@@ -311,6 +312,7 @@ class FingerPrintDBMS:
                 warnMsg = "the back-end DBMS is not Microsoft SQL Server"
                 logger.warning(warnMsg)
                 ok = False
+                return ""
             if ok:
                 logger.notice("the back-end DBMS is Microsoft SQL Server")
                 logger.success(f"back-end DBMS: Microsoft SQL Server{db_version}")
@@ -343,17 +345,17 @@ class FingerPrintDBMS:
                     t0, f0 = self._attacks[0].status_code, self._attacks[-1].status_code
                     t1, f1 = attack.status_code, attack01.status_code
                     r0, r1 = self._attacks[0].redirected, attack.redirected
-                    logger.debug(
-                        (
-                            "matching responses of detedted payloads",
-                            t0,
-                            f0,
-                            t1,
-                            f1,
-                            r0,
-                            r1,
-                        )
-                    )
+                    # logger.debug(
+                    #     (
+                    #         "matching responses of detedted payloads",
+                    #         t0,
+                    #         f0,
+                    #         t1,
+                    #         f1,
+                    #         r0,
+                    #         r1,
+                    #     )
+                    # )
                     is_ok = bool(t0 == t1 and f0 == f1 and r0 == r1)
                 if is_ok:
                     message = f"heuristic (extended) test shows that the back-end DBMS could be '{mc}PostgreSQL{nc}'"
@@ -394,7 +396,7 @@ class FingerPrintDBMS:
                     warnMsg = "the back-end DBMS is not PostgreSQL"
                     logger.warning(warnMsg)
                     ok = False
-                    return _temp
+                    return ""
                 ok = True
             else:
                 warnMsg = "the back-end DBMS is not PostgreSQL"
@@ -431,17 +433,17 @@ class FingerPrintDBMS:
                     t0, f0 = self._attacks[0].status_code, self._attacks[-1].status_code
                     t1, f1 = attack.status_code, attack01.status_code
                     r0, r1 = self._attacks[0].redirected, attack.redirected
-                    logger.debug(
-                        (
-                            "matching responses of detedted payloads",
-                            t0,
-                            f0,
-                            t1,
-                            f1,
-                            r0,
-                            r1,
-                        )
-                    )
+                    # logger.debug(
+                    #     (
+                    #         "matching responses of detedted payloads",
+                    #         t0,
+                    #         f0,
+                    #         t1,
+                    #         f1,
+                    #         r0,
+                    #         r1,
+                    #     )
+                    # )
                     is_ok = bool(t0 == t1 and f0 == f1 and r0 == r1)
                 if is_ok:
                     message = f"heuristic (extended) test shows that the back-end DBMS could be '{mc}Oracle{nc}'"
@@ -488,6 +490,7 @@ class FingerPrintDBMS:
                 warnMsg = "the back-end DBMS is not Oracle"
                 logger.warning(warnMsg)
                 ok = False
+                return ""
             if ok:
                 logger.notice("the back-end DBMS is Oracle")
             if ok:

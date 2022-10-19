@@ -500,7 +500,8 @@ class GhauriExtractor:
             for i in range(0, len(lst), n):
                 yield lst[i : i + n]
 
-        list_split_by = 26
+        gen = list(range(minimum, maximum + 1))
+        list_split_by = 26 if len(gen) >= 26 else len(gen)
         while not is_found:
             sorted_ascii_list = list(
                 chunks(
@@ -1142,7 +1143,9 @@ class GhauriExtractor:
             is_length_found = False
             for entry in payloads:
                 chars = ""
-                for pos in range(1, noc + 1):
+                pos = 1
+                total_number_of_characters = noc + 1
+                while pos < total_number_of_characters:
                     if attack01 and vector_type == "boolean_vector":
                         try:
                             retval = self._binary_search(
@@ -1173,8 +1176,39 @@ class GhauriExtractor:
                                 text_only=text_only,
                                 vector_type=vector_type,
                             )
-                            chars += retval
-                            logger.debug(f"character found: '{str(chars)}'")
+                            if retval:
+                                is_valid = self.validate_character(
+                                    url=url,
+                                    data=data,
+                                    vector=vector,
+                                    parameter=parameter,
+                                    headers=headers,
+                                    base=base,
+                                    injection_type=injection_type,
+                                    proxy=proxy,
+                                    is_multipart=is_multipart,
+                                    timeout=timeout,
+                                    delay=delay,
+                                    timesec=timesec,
+                                    identified_character=retval,
+                                    vector_type=vector_type,
+                                    offset=pos,
+                                    expression_payload=value,
+                                    queryable=entry,
+                                    code=code,
+                                    match_string=match_string,
+                                    not_match_string=not_match_string,
+                                    attack01=attack01,
+                                )
+                                if not is_valid:
+                                    logger.warning(
+                                        "invalid character detected, retrying."
+                                    )
+                                    break
+                            if is_valid:
+                                pos += 1
+                                chars += retval
+                                logger.debug(f"character found: {chars}")
                         except KeyboardInterrupt:
                             is_length_found = True
                             length = 0

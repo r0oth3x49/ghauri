@@ -70,7 +70,7 @@ class GhauriCommon:
             "Response",
             ["ok", "error", "result", "payload"],
         )
-        retval = ghauri_extractor.fetch_characters(
+        guess = ghauri_extractor.fetch_characters(
             url=url,
             data=data,
             vector=vector,
@@ -89,19 +89,46 @@ class GhauriCommon:
             match_string=match_string,
             not_match_string=not_match_string,
             code=code,
+            query_check=True,
             text_only=text_only,
-            dump_type="banner",
         )
-        if retval.ok:
-            if retval.resumed:
-                logger.info("resumed: '%s'" % (retval.result))
+        if guess.ok:
+            logger.debug(f"working payload found: '{guess.payload}'")
+            retval = ghauri_extractor.fetch_characters(
+                url=url,
+                data=data,
+                vector=vector,
+                parameter=parameter,
+                headers=headers,
+                base=base,
+                injection_type=injection_type,
+                payloads=[guess.payload],
+                backend=backend,
+                proxy=proxy,
+                is_multipart=is_multipart,
+                timeout=timeout,
+                delay=delay,
+                timesec=timesec,
+                attack01=attack,
+                match_string=match_string,
+                not_match_string=not_match_string,
+                code=code,
+                query_check=query_check,
+                text_only=text_only,
+                dump_type="banner",
+            )
+            if retval.ok:
+                if retval.resumed:
+                    logger.info("resumed: '%s'" % (retval.result))
+                else:
+                    logger.info("retrieved: '%s'" % (retval.result))
+                logger.success(f"banner: '{retval.result}'")
             else:
-                logger.info("retrieved: '%s'" % (retval.result))
-            logger.success(f"banner: '{retval.result}'")
+                error = retval.error
+                message = f"Ghauri detected an error during banner extraction..{error}"
+                logger.warning(f"{message}")
         else:
-            error = retval.error
-            message = f"Ghauri detected an error during banner extraction..{error}"
-            logger.warning(f"{message}")
+            retval = guess
         return retval
 
     def fetch_current_user(
@@ -130,7 +157,7 @@ class GhauriCommon:
             "Response",
             ["ok", "error", "result", "payload"],
         )
-        retval = ghauri_extractor.fetch_characters(
+        guess = ghauri_extractor.fetch_characters(
             url=url,
             data=data,
             vector=vector,
@@ -149,21 +176,47 @@ class GhauriCommon:
             match_string=match_string,
             not_match_string=not_match_string,
             code=code,
+            query_check=True,
             text_only=text_only,
-            dump_type="current_user",
         )
-        if retval.ok:
-            if retval.resumed:
-                logger.info("resumed: '%s'" % (retval.result))
-            else:
-                logger.info("retrieved: '%s'" % (retval.result))
-            logger.success(f"current user: '{retval.result}'")
-        else:
-            error = retval.error
-            message = (
-                f"Ghauri detected an error during current user extraction..{error}"
+        if guess.ok:
+            logger.debug(f"working payload found: '{guess.payload}'")
+            retval = ghauri_extractor.fetch_characters(
+                url=url,
+                data=data,
+                vector=vector,
+                parameter=parameter,
+                headers=headers,
+                base=base,
+                injection_type=injection_type,
+                payloads=[guess.payload],
+                backend=backend,
+                proxy=proxy,
+                is_multipart=is_multipart,
+                timeout=timeout,
+                delay=delay,
+                timesec=timesec,
+                attack01=attack,
+                match_string=match_string,
+                not_match_string=not_match_string,
+                code=code,
+                text_only=text_only,
+                dump_type="current_user",
             )
-            logger.warning(f"{message}")
+            if retval.ok:
+                if retval.resumed:
+                    logger.info("resumed: '%s'" % (retval.result))
+                else:
+                    logger.info("retrieved: '%s'" % (retval.result))
+                logger.success(f"current user: '{retval.result}'")
+            else:
+                error = retval.error
+                message = (
+                    f"Ghauri detected an error during current user extraction..{error}"
+                )
+                logger.warning(f"{message}")
+        else:
+            retval = guess
         return retval
 
     def fetch_current_database(
@@ -192,7 +245,7 @@ class GhauriCommon:
             "Response",
             ["ok", "error", "result", "payload"],
         )
-        retval = ghauri_extractor.fetch_characters(
+        guess = ghauri_extractor.fetch_characters(
             url=url,
             data=data,
             vector=vector,
@@ -212,20 +265,44 @@ class GhauriCommon:
             not_match_string=not_match_string,
             code=code,
             text_only=text_only,
-            dump_type="current_db",
+            query_check=True,
         )
-        if retval.ok:
-            if retval.resumed:
-                logger.info("resumed: '%s'" % (retval.result))
-            else:
-                logger.info("retrieved: '%s'" % (retval.result))
-            logger.success(f"current database: '{retval.result}'")
-        else:
-            error = retval.error
-            message = (
-                f"Ghauri detected an error during current database extraction..{error}"
+        if guess.ok:
+            logger.debug(f"working payload found: '{guess.payload}'")
+            retval = ghauri_extractor.fetch_characters(
+                url=url,
+                data=data,
+                vector=vector,
+                parameter=parameter,
+                headers=headers,
+                base=base,
+                injection_type=injection_type,
+                payloads=[guess.payload],
+                backend=backend,
+                proxy=proxy,
+                is_multipart=is_multipart,
+                timeout=timeout,
+                delay=delay,
+                timesec=timesec,
+                attack01=attack,
+                match_string=match_string,
+                not_match_string=not_match_string,
+                code=code,
+                text_only=text_only,
+                dump_type="current_db",
             )
-            logger.warning(f"{message}")
+            if retval.ok:
+                if retval.resumed:
+                    logger.info("resumed: '%s'" % (retval.result))
+                else:
+                    logger.info("retrieved: '%s'" % (retval.result))
+                logger.success(f"current database: '{retval.result}'")
+            else:
+                error = retval.error
+                message = f"Ghauri detected an error during current database extraction..{error}"
+                logger.warning(f"{message}")
+        else:
+            retval = guess
         return retval
 
 
