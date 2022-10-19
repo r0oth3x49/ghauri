@@ -125,8 +125,10 @@ class GhauriCommon:
                 logger.success(f"banner: '{retval.result}'")
             else:
                 error = retval.error
-                message = f"Ghauri detected an error during banner extraction..{error}"
+                message = f"Ghauri detected an error during banner extraction ({error})"
                 logger.warning(f"{message}")
+                logger.end("ending")
+                exit(0)
         else:
             retval = guess
         return retval
@@ -213,9 +215,11 @@ class GhauriCommon:
             else:
                 error = retval.error
                 message = (
-                    f"Ghauri detected an error during current user extraction..{error}"
+                    f"Ghauri detected an error during current user extraction ({error})"
                 )
                 logger.warning(f"{message}")
+                logger.end("ending")
+                exit(0)
         else:
             retval = guess
         return retval
@@ -301,8 +305,10 @@ class GhauriCommon:
                 logger.success(f"current database: '{retval.result}'")
             else:
                 error = retval.error
-                message = f"Ghauri detected an error during current database extraction..{error}"
+                message = f"Ghauri detected an error during current database extraction ({error})"
                 logger.warning(f"{message}")
+                logger.end("ending")
+                exit(0)
         else:
             retval = guess
         return retval
