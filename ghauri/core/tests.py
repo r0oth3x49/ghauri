@@ -282,6 +282,7 @@ def confirm_booleanbased_sqli(
     match_string=None,
     not_match_string=None,
     text_only=False,
+    confirmation=False,
 ):
     _temp = []
     Response = collections.namedtuple("Response", ["vulnerable", "tests_performed"])
@@ -309,7 +310,7 @@ def confirm_booleanbased_sqli(
             "false": {"payload": "3*2*0=6", "response": False},
         },
     ]
-    if response_time > 8:
+    if response_time > 8 or confirmation:
         test_payloads = test_payloads[0:3]
     for entry in test_payloads:
         if delay > 0:
@@ -356,9 +357,9 @@ def confirm_booleanbased_sqli(
                 attack,
                 attack01,
                 code=code,
-                match_string=match_string,
-                not_match_string=not_match_string,
-                text_only=text_only,
+                match_string=conf.string,
+                not_match_string=conf.not_string,
+                text_only=conf.text_only,
             )
             confirm_response_type = boolean_confirm_retval.vulnerable
             case = boolean_confirm_retval.case
@@ -647,8 +648,15 @@ def check_booleanbased_sqli(
                         match_string=match_string,
                         not_match_string=not_match_string,
                         text_only=text_only,
+                        confirmation=True,
                     )
                     if not _.vulnerable:
+                        logger.debug(
+                            "false positive or unexploitable payload detected, reseting match_ratio, string and not_string to null."
+                        )
+                        conf.match_ratio = None
+                        conf.string = None
+                        conf.not_string = None
                         continue
                 _it = injection_type
                 if param_key == "#1*":
