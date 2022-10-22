@@ -418,10 +418,21 @@ def check_page_difference(w1, w2, match_string=None):
             if mobj and " " in candidate and candidate.strip() and len(candidate) > 10:
                 difference = candidate
                 diffs = differences[index]
-                is_vulner = True
-                case = "Page Ratio"
-                suggestion = candidate
-                break
+                if match_string:
+                    if match_string == difference:
+                        is_vulner = True
+                        case = "Page Ratio"
+                        suggestion = candidate
+                        break
+                    else:
+                        is_vulner = False
+                        case = ""
+                        suggestion = None
+                else:
+                    is_vulner = True
+                    case = "Page Ratio"
+                    suggestion = candidate
+                    break
         if not suggestion and not is_vulner:
             for index, candidate in enumerate(candidates):
                 candidate = re.sub(r"\d+\.\d+", "", candidate)
@@ -429,9 +440,19 @@ def check_page_difference(w1, w2, match_string=None):
                 if mobj and len(candidate) >= 4:
                     difference = candidate
                     diffs = differences[index]
-                    is_vulner = True
-                    case = "Page Ratio"
-                    break
+                    if match_string:
+                        if match_string == difference:
+                            is_vulner = True
+                            case = "Page Ratio"
+                            break
+                        else:
+                            difference = None
+                            is_vulner = False
+                            case = ""
+                    else:
+                        is_vulner = True
+                        case = "Page Ratio"
+                        break
     if difference:
         if len(difference) > 30:
             difference = difference[0:30]
@@ -614,7 +635,6 @@ def check_boolean_responses(
             if difference:
                 string = ok.differences.get("string")
                 not_string = ok.differences.get("not_string")
-                logger.debug(f'injectable with --string="{difference}".')
         if not difference and not is_vulner:
             if w0set == w1set != w2set:
                 candidates = w1set - w2set - w0set
@@ -666,6 +686,10 @@ def check_boolean_responses(
             case = "Page Ratio"
             logger.debug(f'injectable with --string="{difference}".')
     if is_vulner:
+        if not status_code:
+            status_code = attack_true.status_code
+        if not content_length:
+            content_length = attack_true.content_length
         logger.debug(f"injectable with cases: '{case}'.")
         _temp = BooleanInjectionResponse(
             vulnerable=is_vulner,
@@ -676,6 +700,7 @@ def check_boolean_responses(
             status_code=status_code,
             content_length=content_length,
         )
+    # logger.debug(f"Check: {_temp}")
     return _temp
 
 

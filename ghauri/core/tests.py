@@ -395,11 +395,13 @@ def confirm_booleanbased_sqli(
         except Exception as error:
             logger.critical(f"error {error}, during time-based confirmation phase.")
             break
-    if len(_temp) >= 8:
+    attempts_count = len(_temp)
+    total_attempts_to_vulnerable = len(test_payloads) - 2
+    if attempts_count >= total_attempts_to_vulnerable:
         vulnerable = check_booleanbased_tests(_temp)
     else:
         if response_time > 8:
-            if len(_temp) >= 4:
+            if attempts_count >= total_attempts_to_vulnerable:
                 vulnerable = check_booleanbased_tests(_temp)
             else:
                 vulnerable = False

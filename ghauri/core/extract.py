@@ -1660,7 +1660,6 @@ class GhauriExtractor:
                         chars = start_chars
                         pos = start_pos
                         total_length = length + 1
-                        # for pos in range(1, length + 1):
                         while pos < total_length:
                             start_pos = pos
                             if attack01 and vector_type == "boolean_vector":

