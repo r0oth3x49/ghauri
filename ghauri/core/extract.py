@@ -1235,6 +1235,7 @@ class GhauriExtractor:
                                 list_of_chars="2013456789",
                                 vector_type=vector_type,
                             )
+                            pos += 1
                             chars += retval
                             logger.debug(f"character found: '{str(chars)}'")
                         except KeyboardInterrupt:
