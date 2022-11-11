@@ -91,7 +91,6 @@ class GhauriCommon:
             code=code,
             query_check=True,
             text_only=text_only,
-            dump_type="banner",
         )
         if guess.ok:
             logger.debug(f"working payload found: '{guess.payload}'")
@@ -180,7 +179,6 @@ class GhauriCommon:
             code=code,
             query_check=True,
             text_only=text_only,
-            dump_type="current_user",
         )
         if guess.ok:
             logger.debug(f"working payload found: '{guess.payload}'")
@@ -271,7 +269,6 @@ class GhauriCommon:
             code=code,
             text_only=text_only,
             query_check=True,
-            dump_type="current_db",
         )
         if guess.ok:
             logger.debug(f"working payload found: '{guess.payload}'")

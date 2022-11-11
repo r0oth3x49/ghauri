@@ -52,6 +52,7 @@ class GhauriConfigs:
         timeout=30,
         backend=None,
         batch=False,
+        continue_on_http_error=False,
     ):
         self.vectors = vectors
         self.is_string = is_string
@@ -75,6 +76,7 @@ class GhauriConfigs:
         self.timeout = timeout
         self.delay = delay
         self.timesec = timesec
+        self.continue_on_http_error = continue_on_http_error
 
     @property
     def session_filepath(self):

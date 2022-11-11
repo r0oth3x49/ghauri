@@ -251,7 +251,10 @@ def perform_injection(
             for parameter in parameters:
                 param_name = parameter.get("key")
                 param_value = parameter.get("value")
-                if custom_injection_in and "*" not in param_value:
+                is_custom_injection_marker_found = bool(
+                    "*" in param_name or "*" in param_value
+                )
+                if custom_injection_in and not is_custom_injection_marker_found:
                     logger.debug(
                         f"skipping '{injection_type}' parameter '{param_name}'..."
                     )

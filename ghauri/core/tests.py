@@ -489,7 +489,7 @@ def check_booleanbased_sqli(
         total_payloads = len(payloads)
         logger.info(f"testing '{entry.title}'")
         while index_of_payload < total_payloads:
-            if http_firewall_code_counter > 2:
+            if http_firewall_code_counter > 2 and not conf.continue_on_http_error:
                 message = f"{error_msg} - {http_firewall_code_counter} time(s)"
                 logger.warning(f"HTTP error code detected during run:")
                 choice = logger.read_input(
@@ -501,6 +501,7 @@ def check_booleanbased_sqli(
                     terminate_on_web_firewall = True
                     break
                 if choice == "y":
+                    conf.continue_on_http_error = True
                     http_firewall_code_counter = 0
             if retry_on_error >= retry:
                 logger.warning(f"Ghauri detected connection errors multiple times")
@@ -986,7 +987,7 @@ def check_timebased_sqli(
             total_payloads = len(payloads)
             logger.info(f"testing '{entry.title}'")
             while index_of_payload < total_payloads:
-                if http_firewall_code_counter > 2:
+                if http_firewall_code_counter > 2 and not conf.continue_on_http_error:
                     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
                     logger.warning(f"HTTP error code detected during run:")
                     choice = logger.read_input(
@@ -998,6 +999,7 @@ def check_timebased_sqli(
                         terminate_on_web_firewall = True
                         break
                     if choice == "y":
+                        conf.continue_on_http_error = True
                         http_firewall_code_counter = 0
                 if retry_on_error >= retry:
                     logger.warning(f"Ghauri detected connection errors multiple times")
@@ -1245,7 +1247,7 @@ def check_errorbased_sqli(
         total_payloads = len(payloads)
         logger.info(f"testing '{entry.title}'")
         while index_of_payload < total_payloads:
-            if http_firewall_code_counter > 2:
+            if http_firewall_code_counter > 2 and not conf.continue_on_http_error:
                 message = f"{error_msg} - {http_firewall_code_counter} time(s)"
                 logger.warning(f"HTTP error code detected during run:")
                 choice = logger.read_input(
@@ -1257,6 +1259,7 @@ def check_errorbased_sqli(
                     terminate_on_web_firewall = True
                     break
                 if choice == "y":
+                    conf.continue_on_http_error = True
                     http_firewall_code_counter = 0
             if retry_on_error >= retry:
                 logger.warning(f"Ghauri detected connection errors multiple times")

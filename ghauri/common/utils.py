@@ -1093,7 +1093,12 @@ def prepare_attack_request(
             injection_type=injection_type,
             is_multipart=is_multipart,
         )
-    if key == "#1*" and injection_type == "GET":
+    key_to_split_by = urldecode(key)
+    if injection_type in ["GET", "POST", "COOKIE", "HEADER"] and "*" in key_to_split_by:
+        init, last = text.split(key_to_split_by)
+        key_new = key_to_split_by.replace("*", "")
+        prepared_payload = f"{init}{key_new}{payload}{last}"
+    elif key == "#1*" and injection_type == "GET":
         init, last = text.split(value)
         prepared_payload = f"{init}{payload}{last}"
     else:
@@ -1433,9 +1438,12 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
         _injection_points.update({"GET": params})
     for _type, _params in _injection_points.items():
         for entry in _params:
+            key = entry.get("key")
             value = entry.get("value")
             # logger.debug(f"type: {_type}, param: {entry}")
             if value and "*" in value:
+                custom_injection_in.append(_type)
+            if key and "*" in key:
                 custom_injection_in.append(_type)
     _temp = InjectionPoints(
         custom_injection_in=custom_injection_in,
