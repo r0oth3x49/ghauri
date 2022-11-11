@@ -93,6 +93,8 @@ class SessionFactory:
         user = expanduser("~")
         _t = target
         target = urlparse(target).netloc
+        if target and ":" in target:
+            target, port = [i.strip() for i in target.split(":")]
         filepath = os.path.join(user, ".ghauri")
         filepath = os.path.join(filepath, target)
         if flush_session:
