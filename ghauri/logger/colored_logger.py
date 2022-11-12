@@ -106,7 +106,7 @@ class ColoredFormatter(logging.Formatter):
             message = colorize(f"{spaces}{message}", normal=True)
         if not formatted_message:
             formatted_message = (
-                f"{spaces}{start}{asctime}{end} {start}{levelname}{end} {message}"
+                f"{start}{asctime}{end} {start}{levelname}{end} {message}"
             )
         return formatted_message
 

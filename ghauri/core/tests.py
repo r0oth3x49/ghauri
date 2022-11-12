@@ -216,9 +216,15 @@ def extended_dbms_check(
     not_match_string=None,
     text_only=False,
     possible_dbms=None,
+    dbms=None,
 ):
     _temp = ""
-    if not possible_dbms:
+    if possible_dbms or dbms:
+        _temp = possible_dbms or dbms
+        logger.info(f"testing {_temp}")
+        logger.info(f"confirming {_temp}")
+        logger.notice(f"the back-end DBMS is {_temp}")
+    else:
         inj = FingerPrintDBMS(
             base,
             parameter,
@@ -256,11 +262,6 @@ def extended_dbms_check(
             response = inj.check_mssql()
         if response:
             _temp = response
-    else:
-        _temp = possible_dbms
-        logger.info(f"testing {possible_dbms}")
-        logger.info(f"confirming {possible_dbms}")
-        logger.notice(f"the back-end DBMS is {possible_dbms}")
     return _temp
 
 
@@ -464,6 +465,11 @@ def check_booleanbased_sqli(
         ],
     )
     blind_payloads = fetch_db_specific_payload(booleanbased_only=True)
+    if dbms:
+        dbms_specific_boolean_payloads = fetch_db_specific_payload(
+            booleanbased_only=True, dbms=dbms
+        )
+        blind_payloads.extend(dbms_specific_boolean_payloads)
     param_key = parameter.get("key")
     param_value = parameter.get("value")
     is_injected = False
@@ -524,9 +530,13 @@ def check_booleanbased_sqli(
                 "[RANDNUM]=[RANDNUM]",
                 "{:05}={:04}".format(random_boolean, random_boolean),
             )
+            expression = expression.replace("[ORIGVALUE]", param_value.replace("*", ""))
             expression01 = string.replace(
                 "[RANDNUM]=[RANDNUM]",
                 "{:05}={:04}".format(random_boolean, random_boolean - 68),
+            )
+            expression01 = expression01.replace(
+                "[ORIGVALUE]", param_value.replace("*", "")
             )
             logger.payload(f"{expression}")
             try:
@@ -671,7 +681,7 @@ def check_booleanbased_sqli(
                 else:
                     message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 logger.notice(message)
-                if not possible_dbms:
+                if not possible_dbms and not dbms:
                     inj = FingerPrintDBMS(
                         base,
                         parameter,
@@ -719,6 +729,8 @@ def check_booleanbased_sqli(
                             skipp_all_other_dbms = False
                 if possible_dbms and not backend:
                     backend = possible_dbms
+                if dbms and not backend:
+                    backend = dbms
                 _url = attack.request_url if injection_type == "GET" else attack.url
                 _temp = Response(
                     url=_url,
@@ -1474,6 +1486,7 @@ def check_session(
     not_match_string=None,
     text_only=False,
     possible_dbms=None,
+    dbms=None,
 ):
     retval = session.fetchall(
         session_filepath=session_filepath,
@@ -1558,9 +1571,15 @@ def check_session(
                     "[INFERENCE]",
                     "{:05}={:05}".format(random_boolean, random_boolean),
                 )
+                expression = expression.replace(
+                    "[ORIGVALUE]", param_value.replace("*", "")
+                )
                 expression01 = vector.replace(
                     "[INFERENCE]",
                     "{:05}={:05}".format(random_boolean, random_boolean01),
+                )
+                expression01 = expression01.replace(
+                    "[ORIGVALUE]", param_value.replace("*", "")
                 )
                 try:
                     attack = inject_expression(
@@ -1832,6 +1851,7 @@ def check_session(
                 not_match_string=not_match_string,
                 text_only=text_only,
                 possible_dbms=possible_dbms,
+                dbms=dbms,
             )
             if not backend:
                 session.execute_query(
@@ -1931,6 +1951,7 @@ def check_injections(
         not_match_string=not_string,
         text_only=text_only,
         possible_dbms=possible_dbms,
+        dbms=dbms,
     )
     if retval_session and retval_session.vulnerable:
         return Ghauri(
@@ -2275,6 +2296,7 @@ def check_injections(
                         not_match_string=not_string,
                         text_only=text_only,
                         possible_dbms=possible_dbms,
+                        dbms=dbms,
                     )
                     if not backend:
                         session.execute_query(
