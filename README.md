@@ -138,7 +138,7 @@ Enumeration:
   --stop              Retrive entries till offset for dbs/tables/columns/dump
 
 Example:
-  ghauri http://www.site.com/vuln.php?id=1 --dbs
+  ghauri -u http://www.site.com/vuln.php?id=1 --dbs
 </code></pre>
 
 
