@@ -1086,6 +1086,13 @@ def prepare_attack_request(
             injection_type=injection_type,
             is_multipart=is_multipart,
         )
+        value = urlencode(
+            value=value,
+            safe="/=*?&:;,+",
+            decode_first=True,
+            injection_type=injection_type,
+            is_multipart=is_multipart,
+        )
     if encode and not is_json:
         payload = urlencode(
             value=payload,
@@ -1094,7 +1101,11 @@ def prepare_attack_request(
             is_multipart=is_multipart,
         )
     key_to_split_by = urldecode(key)
-    if injection_type in ["GET", "POST", "COOKIE", "HEADER"] and "*" in key_to_split_by:
+    if (
+        injection_type in ["GET", "POST", "COOKIE", "HEADER"]
+        and "*" in key_to_split_by
+        and key_to_split_by != "#1*"
+    ):
         init, last = text.split(key_to_split_by)
         key_new = key_to_split_by.replace("*", "")
         prepared_payload = f"{init}{key_new}{payload}{last}"
@@ -1104,7 +1115,7 @@ def prepare_attack_request(
     else:
         key = re.escape(key)
         value = re.escape(value)
-        REGEX_GET_POST_COOKIE_INJECTION = r"(?is)(?:((?:\?| |&)%s)(=)(%s))" % (
+        REGEX_GET_POST_COOKIE_INJECTION = r"(?is)(?:((?:\?| |&)?%s)(=)(%s))" % (
             f"{'' if injection_type == 'GET' else '?'}{key}",
             value,
         )
@@ -1210,6 +1221,7 @@ def prepare_attack_request(
                 prepared_payload = re.sub(
                     REGEX_MULTIPART_INJECTION, "\\1\\2\\3%s\\4" % (payload), text
                 )
+    logger.debug(f"prepared payload: {prepared_payload}")
     return prepared_payload
 
 
@@ -1443,14 +1455,15 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
             # logger.debug(f"type: {_type}, param: {entry}")
             if value and "*" in value:
                 custom_injection_in.append(_type)
-            if key and "*" in key:
+            if key and "*" in key and key != "#1*":
                 custom_injection_in.append(_type)
     _temp = InjectionPoints(
-        custom_injection_in=custom_injection_in,
+        custom_injection_in=list(set(custom_injection_in)),
         injection_points=_injection_points,
         is_multipart=is_multipart,
         is_json=is_json,
     )
+    logger.debug(_temp)
     return _temp
 
 
