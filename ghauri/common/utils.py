@@ -372,11 +372,11 @@ def get_page_ratio_difference(response, response_01):
                 re.sub(r"[^a-zA-Z0-9\.\s]+", " ", response_01[j1:j2]).lstrip().rstrip(),
             )
             if len(new) >= 2 and len(old) >= 2 and len(new) <= 20 and len(old) <= 20:
-                # logger.debug(
-                #     "{:7}   response[{}:{}] --> response_01[{}:{}] {!r:>8} --> {!r}".format(
-                #         tag, i1, i2, j1, j2, new, old
-                #     )
-                # )
+                logger.debug(
+                    "{:7}   string[{}:{}] --> not_string[{}:{}] {!r:>8} --> {!r}".format(
+                        tag, i1, i2, j1, j2, new, old
+                    )
+                )
                 _temp.append(
                     {
                         "string": f"{response[i1:i2]}",
@@ -1312,23 +1312,23 @@ def fetch_payloads_by_suffix_prefix(payloads, prefix=None, suffix=None):
         #     f" both prefix and suffix are found for injection.. '{prefix}', '{suffix}'"
         # )
         # logger.debug("checking payloads for provided prefix and suffix..")
-        for entry in payloads:
-            _pref = entry.prefix
-            prefix = urldecode(prefix)
-            if _pref and prefix and prefix[0] == _pref[0]:
-                _temp.append(entry)
-        if not _temp:
-            payload = payloads[-1].raw
-            if prefix and prefix[-1] in [")", "'", '"']:
-                prefix += " "
-            _temp = [
-                Payload(
-                    prefix=prefix,
-                    suffix=suffix,
-                    string=f"{prefix}{payload}{suffix}",
-                    raw=payload,
-                )
-            ]
+        # for entry in payloads:
+        #     _pref = entry.prefix
+        #     prefix = urldecode(prefix)
+        #     if _pref and prefix and prefix[0] == _pref[0]:
+        #         _temp.append(entry)
+        # if not _temp:
+        payload = payloads[-1].raw
+        if prefix and prefix[-1] in [")", "'", '"']:
+            prefix += " "
+        _temp = [
+            Payload(
+                prefix=prefix,
+                suffix=suffix,
+                string=f"{prefix}{payload}{suffix}",
+                raw=payload,
+            )
+        ]
     return _temp
 
 

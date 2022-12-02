@@ -254,6 +254,8 @@ def extended_dbms_check(
             response = inj.check_mssql()
         if backend == "PostgreSQL":
             response = inj.check_postgre()
+        if backend == "Microsoft Access":
+            response = inj.check_access()
         if not response:
             response = inj.check_oracle()
         if not response:
@@ -709,6 +711,8 @@ def check_booleanbased_sqli(
                         response_dbms = inj.check_mssql(heuristic_backend_check=True)
                     if not response_dbms:
                         response_dbms = inj.check_postgre(heuristic_backend_check=True)
+                    if not response_dbms:
+                        response_dbms = inj.check_access(heuristic_backend_check=True)
                     if response_dbms:
                         backend = response_dbms
                     if not response_dbms:
@@ -1558,8 +1562,8 @@ def check_session(
             title = entry.get("title")
             vector = entry.get("vector")
             backend = entry.get("backend")
-            if not possible_dbms:
-                possible_dbms = backend
+            # if not possible_dbms:
+            #     possible_dbms = backend
             if payload_type == "boolean-based blind":
                 vectors.update({"boolean_vector": vector})
                 logger.debug(
