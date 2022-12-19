@@ -287,7 +287,7 @@ def main():
         "Enumeration",
         description=(
             "These options can be used to enumerate the back-end database"
-            "\nmanagment system information, structure and data contained in the\ntables."
+            "\nmanagement system information, structure and data contained in the\ntables."
         ),
     )
     enumeration.add_argument(
@@ -364,7 +364,7 @@ def main():
         "--start",
         dest="limitstart",
         type=int,
-        help="Retrive entries from offset for dbs/tables/columns/dump",
+        help="Retrieve entries from offset for dbs/tables/columns/dump",
         default=0,
         metavar="",
     )
@@ -372,7 +372,7 @@ def main():
         "--stop",
         dest="limitstop",
         type=int,
-        help="Retrive entries till offset for dbs/tables/columns/dump",
+        help="Retrieve entries till offset for dbs/tables/columns/dump",
         default=None,
         metavar="",
     )
