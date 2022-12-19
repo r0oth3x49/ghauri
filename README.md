@@ -37,7 +37,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - Support SQL injection for following DBMS.
    - MySQL
    - Microsoft SQL Server
-   - Postgre
+   - Postgres
    - Oracle
  - Supports following injection types.
    - GET/POST Based injections
@@ -47,7 +47,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
    - JSON based injections
  - support proxy option `--proxy`.
  - supports parsing request from txt file: switch for that `-r file.txt`
- - supports limiting data extraction for dbs/tables/columns/dump: swicth `--start 1 --stop 2`
+ - supports limiting data extraction for dbs/tables/columns/dump: switch `--start 1 --stop 2`
  - added support for resuming of all phases.
  - added support for skip urlencoding switch: `--skip-urlencode`
  - added support to verify extracted characters in case of boolean/time based injections.
@@ -120,7 +120,7 @@ Techniques:
 
 Enumeration:
   These options can be used to enumerate the back-end database
-  managment system information, structure and data contained in the
+  management system information, structure and data contained in the
   tables.
 
   -b, --banner        Retrieve DBMS banner
@@ -134,8 +134,8 @@ Enumeration:
   -D DB               DBMS database to enumerate
   -T TBL              DBMS database tables(s) to enumerate
   -C COLS             DBMS database table column(s) to enumerate
-  --start             Retrive entries from offset for dbs/tables/columns/dump
-  --stop              Retrive entries till offset for dbs/tables/columns/dump
+  --start             Retrieve entries from offset for dbs/tables/columns/dump
+  --stop              Retrieve entries till offset for dbs/tables/columns/dump
 
 Example:
   ghauri http://www.site.com/vuln.php?id=1 --dbs
