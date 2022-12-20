@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/badge/release-v1.0.9-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.0.9)
+[![GitHub release](https://img.shields.io/badge/release-v1.1-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.1)
 [![GitHub stars](https://img.shields.io/github/stars/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/network)
 [![GitHub issues](https://img.shields.io/github/issues/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/issues)
@@ -37,8 +37,9 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - Support SQL injection for following DBMS.
    - MySQL
    - Microsoft SQL Server
-   - Postgre
+   - Postgres
    - Oracle
+   - Microsoft Access (only supports fingerprint for now in case of boolean based blind)
  - Supports following injection types.
    - GET/POST Based injections
    - Headers Based injections
@@ -47,16 +48,17 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
    - JSON based injections
  - support proxy option `--proxy`.
  - supports parsing request from txt file: switch for that `-r file.txt`
- - supports limiting data extraction for dbs/tables/columns/dump: swicth `--start 1 --stop 2`
+ - supports limiting data extraction for dbs/tables/columns/dump: switch `--start 1 --stop 2`
  - added support for resuming of all phases.
  - added support for skip urlencoding switch: `--skip-urlencode`
  - added support to verify extracted characters in case of boolean/time based injections.
+ - added support for handling redirects on user demand.
 
 
 ## **Advanced Usage**
 
 <pre><code>
-Author: Nasir khan (<a href="http://r0oth3x49.herokuapp.com/">r0ot h3x49</a>)
+Author: Nasir khan (r0ot h3x49)
 
 usage: ghauri -u URL [OPTIONS]
 
@@ -120,7 +122,7 @@ Techniques:
 
 Enumeration:
   These options can be used to enumerate the back-end database
-  managment system information, structure and data contained in the
+  management system information, structure and data contained in the
   tables.
 
   -b, --banner        Retrieve DBMS banner
