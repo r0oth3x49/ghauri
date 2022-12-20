@@ -49,6 +49,7 @@ from ghauri.common.utils import (
     SmartRedirectHandler,
 )
 from ghauri.logger.colored_logger import logger
+from ghauri.common.config import conf
 
 
 class HTTPRequestHandler:
@@ -123,10 +124,14 @@ class HTTPRequestHandler:
                     handlers = []
                     if proxy:
                         handlers.append(proxy)
-                    if not follow_redirects:
+                    if conf.follow_redirects == None:
                         handlers.append(SmartRedirectHandler())
+                    if not conf.follow_redirects:
+                        if len(handlers) == 1:
+                            handlers.append(SmartRedirectHandler())
+                        if not handlers:
+                            handlers.append(SmartRedirectHandler())
                     opener = build_opener(*handlers)
-                    # opener.addheaders = custom_headers
                     request = Request(url=url, headers=custom_headers)
                     response = opener.open(request, timeout=timeout)
                 else:
@@ -180,8 +185,13 @@ class HTTPRequestHandler:
                     handlers = []
                     if proxy:
                         handlers.append(proxy)
-                    if not follow_redirects:
+                    if conf.follow_redirects == None:
                         handlers.append(SmartRedirectHandler())
+                    if not conf.follow_redirects:
+                        if len(handlers) == 1:
+                            handlers.append(SmartRedirectHandler())
+                        if not handlers:
+                            handlers.append(SmartRedirectHandler())
                     opener = build_opener(*handlers)
                     request = Request(url=url, data=post_data, headers=custom_headers)
                     response = opener.open(request, timeout=timeout)

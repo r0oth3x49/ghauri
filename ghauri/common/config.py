@@ -36,7 +36,7 @@ class GhauriConfigs:
         is_string=False,
         is_json=False,
         is_multipart=False,
-        skip_urlencodig=False,
+        skip_urlencoding=False,
         filepaths=None,
         proxy=None,
         text_only=False,
@@ -53,12 +53,13 @@ class GhauriConfigs:
         backend=None,
         batch=False,
         continue_on_http_error=False,
+        follow_redirects=None,
     ):
         self.vectors = vectors
         self.is_string = is_string
         self.is_json = is_json
         self.is_multipart = is_multipart
-        self.skip_urlencodig = skip_urlencodig
+        self.skip_urlencoding = skip_urlencoding
         self.filepaths = filepaths
         self._session_filepath = None
         self.proxy = proxy
@@ -77,6 +78,7 @@ class GhauriConfigs:
         self.delay = delay
         self.timesec = timesec
         self.continue_on_http_error = continue_on_http_error
+        self.follow_redirects = follow_redirects
 
     @property
     def session_filepath(self):

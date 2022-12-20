@@ -374,6 +374,15 @@ def perform_injection(
                         vector = vectors.get("boolean_vector")
                     if not vector:
                         vector = vectors.get("time_vector")
+                    if backend == "Microsoft Access":
+                        logger.warning(
+                            "ghauri currently only supports DBMS fingerprint payloads for Microsoft Access, exfiltration will be added soon"
+                        )
+                        logger.info(
+                            f"fetched data logged to text files under '{filepaths.filepath}'"
+                        )
+                        logger.end("ending")
+                        exit(1)
                     return GhauriResponse(
                         url=url,
                         data=data,

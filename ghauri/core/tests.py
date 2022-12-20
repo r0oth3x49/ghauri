@@ -159,6 +159,10 @@ def basic_check(
             html = attack.filtered_text
             retval = search_possible_dbms_errors(html=attack.text)
             if retval.possible_dbms:
+                if attack.status_code in [302, 301, 303, 307]:
+                    logger.debug(
+                        f"SQL error detected in {attack.status_code} redirect response page."
+                    )
                 _possible_dbms = retval.possible_dbms
                 possible_dbms = f"{mc}{_possible_dbms}{nc}"
                 _it = injection_type
@@ -469,7 +473,7 @@ def check_booleanbased_sqli(
     blind_payloads = fetch_db_specific_payload(booleanbased_only=True)
     if dbms:
         dbms_specific_boolean_payloads = fetch_db_specific_payload(
-            booleanbased_only=True, dbms=dbms
+            booleanbased_only=True, dbms=dbms or possible_dbms
         )
         blind_payloads.extend(dbms_specific_boolean_payloads)
     param_key = parameter.get("key")
@@ -495,6 +499,10 @@ def check_booleanbased_sqli(
             payloads=entry.payloads, prefix=prefix, suffix=suffix
         )
         total_payloads = len(payloads)
+        if possible_dbms or dbms:
+            if entry.dbms and entry.dbms not in [possible_dbms, dbms]:
+                logger.debug(f"skipping '{entry.title}'")
+                continue
         logger.info(f"testing '{entry.title}'")
         while index_of_payload < total_payloads:
             if http_firewall_code_counter > 2 and not conf.continue_on_http_error:
@@ -933,6 +941,7 @@ def check_timebased_sqli(
     retry=3,
     techniques="T",
     code=None,
+    possible_dbms=None,
 ):
     Response = collections.namedtuple(
         "SQLi",
@@ -1001,6 +1010,10 @@ def check_timebased_sqli(
                 payloads=entry.payloads, prefix=prefix, suffix=suffix
             )
             total_payloads = len(payloads)
+            if possible_dbms or dbms:
+                if entry.dbms and entry.dbms not in [possible_dbms, dbms]:
+                    logger.debug(f"skipping '{entry.title}'")
+                    continue
             logger.info(f"testing '{entry.title}'")
             while index_of_payload < total_payloads:
                 if http_firewall_code_counter > 2 and not conf.continue_on_http_error:
@@ -2046,8 +2059,6 @@ def check_injections(
             if number_of_requests_performed == 4:
                 number_of_requests_performed += bsqli.number_of_requests
     if "T" in techniques or "S" in techniques:
-        if not dbms and possible_dbms:
-            dbms = possible_dbms
         tsqli = check_timebased_sqli(
             base,
             parameter,
@@ -2067,6 +2078,7 @@ def check_injections(
             is_json=is_json,
             retry=retries,
             techniques=techniques,
+            possible_dbms=possible_dbms,
         )
         if tsqli and isinstance(tsqli, str) and tsqli == "next parameter":
             return None

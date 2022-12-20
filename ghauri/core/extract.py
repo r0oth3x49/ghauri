@@ -67,11 +67,11 @@ class GhauriExtractor:
     """aa"""
 
     def __init__(
-        self, vectors="", is_string=False, skip_urlencodig=False, filepaths=None
+        self, vectors="", is_string=False, skip_urlencoding=False, filepaths=None
     ):
         self.vectors = vectors
         self.is_string = is_string
-        self.skip_urlencodig = skip_urlencodig
+        self.skip_urlencoding = skip_urlencoding
         self.filepaths = filepaths
 
     def _check_operator(

@@ -155,9 +155,20 @@ class HTTPRequest(BaseHTTPRequestHandler):
 
 class SmartRedirectHandler(HTTPRedirectHandler):
     def http_error_302(self, req, fp, code, msg, headers):
-        infourl = addinfourl(fp, headers, req.get_full_url())
-        infourl.status = code
-        infourl.code = code
+        infourl = addinfourl(fp, headers, req.get_full_url(), code=code)
+        redirect_url = headers.get("Location")
+        if not urlparse(redirect_url).netloc:
+            redirect_url = urljoin(req.get_full_url(), redirect_url)
+        if conf.follow_redirects == None:
+            choice = logger.read_input(
+                f"got a {code} redirect to '{redirect_url}'. Do you want to follow? [Y/n] ",
+                batch=False,
+                user_input="Y",
+            )
+            if choice and choice == "y":
+                conf.follow_redirects = True
+            if choice and choice == "n":
+                conf.follow_redirects = False
         return infourl
 
     http_error_301 = http_error_303 = http_error_307 = http_error_302
@@ -676,6 +687,14 @@ def check_boolean_responses(
                             difference = candidate
                             is_vulner = True
                             break
+                # in case when ratio true/false payload is not equal but no suggested --string or --not-string is found.
+                if (
+                    not difference
+                    and conf.match_ratio
+                    and conf.match_ratio != ratio_true
+                ):
+                    is_vulner = True
+                    case = "Match Ratio"
         if difference and is_vulner:
             string = difference
             not_string = ""
@@ -752,9 +771,9 @@ def urlencode(
         and injection_type not in ["HEADER", "COOKIE"]
         and not is_multipart
     ):
-        if not conf.skip_urlencodig:
+        if not conf.skip_urlencoding:
             _temp = quote(value, safe=safe)
-        if conf.skip_urlencodig:
+        if conf.skip_urlencoding:
             if not conf.is_multipart and not conf.is_json:
                 _temp = value.replace(" ", "+")
     return _temp
@@ -1221,7 +1240,7 @@ def prepare_attack_request(
                 prepared_payload = re.sub(
                     REGEX_MULTIPART_INJECTION, "\\1\\2\\3%s\\4" % (payload), text
                 )
-    logger.debug(f"prepared payload: {prepared_payload}")
+    # logger.debug(f"prepared payload: {prepared_payload}")
     return prepared_payload
 
 
@@ -1284,9 +1303,20 @@ def extract_multipart_formdata(data):
 
 def fetch_payloads_by_suffix_prefix(payloads, prefix=None, suffix=None):
     _temp = []
-    if not prefix and not suffix:
-        _temp = payloads
+    # logger.debug(f"prefix=({prefix}), suffix=({suffix})")
     Payload = collections.namedtuple("Payload", ["prefix", "suffix", "string", "raw"])
+    if prefix == "" and suffix == "":
+        payload = payloads[-1].raw
+        _temp = [
+            Payload(
+                prefix=prefix,
+                suffix=suffix,
+                string=f"{prefix}{payload}{suffix}",
+                raw=payload,
+            )
+        ]
+    if prefix == None and suffix == None:
+        _temp = payloads
     if prefix and not suffix:
         for entry in payloads:
             prefix = urldecode(prefix)
@@ -1298,15 +1328,15 @@ def fetch_payloads_by_suffix_prefix(payloads, prefix=None, suffix=None):
                 # logger.debug(f"skipping payload '{entry.raw}'")
             if _pref and prefix and _pref[0] == prefix[0]:
                 _temp.append(entry)
-    # we should try all the suffix for now
-    # if suffix and not prefix:
-    #     for entry in payloads:
-    #         suffix = urldecode(suffix)
-    #         _suff = entry.suffix
-    #         if _suff != suffix:
-    #             logger.debug(f"skipping payload '{entry.raw}'")
-    #         if _suff == suffix:
-    #             _temp.append(entry)
+    # we should try all the prefix for now
+    if suffix and not prefix:
+        for entry in payloads:
+            suffix = urldecode(suffix)
+            _suff = entry.suffix
+            # if suffix not in _suff:
+            # logger.debug(f"skipping payload '{entry.raw}'")
+            if suffix in _suff:
+                _temp.append(entry)
     if prefix and suffix:
         # logger.debug(
         #     f" both prefix and suffix are found for injection.. '{prefix}', '{suffix}'"
@@ -1320,7 +1350,8 @@ def fetch_payloads_by_suffix_prefix(payloads, prefix=None, suffix=None):
         # if not _temp:
         payload = payloads[-1].raw
         if prefix and prefix[-1] in [")", "'", '"']:
-            prefix += " "
+            if not prefix.endswith(" "):
+                prefix += " "
         _temp = [
             Payload(
                 prefix=prefix,
