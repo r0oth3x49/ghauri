@@ -136,8 +136,8 @@ Enumeration:
   -D DB               DBMS database to enumerate
   -T TBL              DBMS database tables(s) to enumerate
   -C COLS             DBMS database table column(s) to enumerate
-  --start             Retrive entries from offset for dbs/tables/columns/dump
-  --stop              Retrive entries till offset for dbs/tables/columns/dump
+  --start             Retrieve entries from offset for dbs/tables/columns/dump
+  --stop              Retrieve entries till offset for dbs/tables/columns/dump
 
 Example:
   ghauri http://www.site.com/vuln.php?id=1 --dbs
