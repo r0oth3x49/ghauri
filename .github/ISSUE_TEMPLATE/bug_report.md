@@ -2,7 +2,7 @@
 name: Bug report
 about: Create a report to help us improve
 title: ''
-labels: ''
+labels: bug
 assignees: ''
 
 ---
@@ -26,6 +26,8 @@ If applicable, add screenshots to help explain your problem.
 **Desktop (please complete the following information):**
  - OS: [e.g. Ubuntu/Windows/MacOS]
  - Ghauri version which is causing the error (should be latest) [e.g. 1.0.1]
+ - Type of SQL injection which cause the error: [e.g. boolean/time/error based]
+ - Phase where error occur: [e.g. detection/(db(s)/banner/user/table/column/data) exfiltration phase]
 
 **Additional context**
 Add any other context about the problem here.
