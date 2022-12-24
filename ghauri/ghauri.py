@@ -84,6 +84,7 @@ def perform_injection(
     not_string=None,
     text_only=False,
     skip_urlencoding=False,
+    threads=None,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -101,6 +102,8 @@ def perform_injection(
         conf.proxy = proxy = prepare_proxy(proxy)
     verbose_level = verbose_levels.get(verbosity, logging.INFO)
     set_level(verbose_level, "")
+    if threads and threads > 1:
+        conf.threads = threads
     GhauriResponse = collections.namedtuple(
         "GhauriResponse",
         [

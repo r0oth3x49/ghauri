@@ -52,6 +52,8 @@ import collections
 from os.path import expanduser
 from io import BytesIO, StringIO
 from difflib import SequenceMatcher
+import concurrent.futures as futures
+from threading import Lock
 from colorama import init, Fore, Back, Style
 from urllib.error import HTTPError, URLError
 from http.server import BaseHTTPRequestHandler

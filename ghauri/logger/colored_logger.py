@@ -35,6 +35,7 @@ from ghauri.common.colors import (
     RESET,
 )
 from ghauri.common.lib import os, sys, time, logging, collections
+from ghauri.common.config import conf
 
 log = logging.getLogger("ghauri-logs")
 
@@ -216,10 +217,18 @@ class ColoredLogger:
         levelname = colorize("INFO", color="green", normal=True)
         message = f"{start}{asctime}{end} {start}{levelname}{end} {message}"
         if not done:
-            sys.stdout.write("\r\r\r\033[2K\033[1G\r")
-            sys.stdout.flush()
-            sys.stdout.write("\r\r\r\033[2K\033[1G\r{}\r".format(message))
-            sys.stdout.flush()
+            if not conf.threads:
+                sys.stdout.write("\r\r\r\033[2K\033[1G\r")
+                sys.stdout.flush()
+                sys.stdout.write("\r\r\r\033[2K\033[1G\r{}\r".format(message))
+                sys.stdout.flush()
+            if conf.threads:
+                with conf.lock:
+                    print(
+                        message,
+                        end="\r" * len(message),
+                        flush=True,
+                    )
         if done:
             sys.stdout.write("\033[2K\033[1G\r\r{}\r\n".format(message))
             sys.stdout.flush()

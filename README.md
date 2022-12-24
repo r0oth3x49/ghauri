@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/badge/release-v1.1-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.1)
+[![GitHub release](https://img.shields.io/badge/release-v1.1.1-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.1.1)
 [![GitHub stars](https://img.shields.io/github/stars/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/network)
 [![GitHub issues](https://img.shields.io/github/issues/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/issues)
@@ -58,7 +58,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
 ## **Advanced Usage**
 
 <pre><code>
-Author: Nasir khan (r0ot h3x49)
+Author: Nasir khan (<a href="https://pk.linkedin.com/in/r0oth3x49">r0ot h3x49</a>)
 
 usage: ghauri -u URL [OPTIONS]
 
@@ -94,6 +94,11 @@ Request:
   --retries           Retries when the connection related error occurs (default 3)
   --skip-urlencode    Skip URL encoding of payload data
   --force-ssl         Force usage of SSL/HTTPS
+
+Optimization:
+  These options can be used to optimize the performance of ghauri
+
+  --threads THREADS   Max number of concurrent HTTP(s) requests (default 1)
 
 Injection:
   These options can be used to specify which parameters to test for,

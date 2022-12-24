@@ -188,6 +188,17 @@ def main():
         action="store_true",
         help="Force usage of SSL/HTTPS",
     )
+    optimization = parser.add_argument_group(
+        "Optimization",
+        description="These options can be used to optimize the performance of ghauri",
+    )
+    optimization.add_argument(
+        "--threads",
+        dest="threads",
+        type=int,
+        help="Max number of concurrent HTTP(s) requests (default 1)",
+        default=1,
+    )
     injection = parser.add_argument_group(
         "Injection",
         description="These options can be used to specify which parameters to test for, \nprovide custom injection payloads and optional tampering scripts",
@@ -418,6 +429,7 @@ def main():
         not_string=args.not_string,
         text_only=args.text_only,
         skip_urlencoding=args.skip_urlencoding,
+        threads=args.threads,
     )
     if resp.is_injected:
         target = ghauri.Ghauri(

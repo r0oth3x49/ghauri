@@ -37,6 +37,7 @@ from ghauri.common.lib import (
     unquote,
     STORAGE,
     STORAGE_UPDATE,
+    futures,
 )
 from ghauri.common.payloads import (
     NUMBER_OF_CHARACTERS_PAYLOADS,
@@ -321,6 +322,8 @@ class GhauriExtractor:
         text_only=False,
         retry=3,
         code=None,
+        *args,
+        **kwargs,
     ):
         #  we will validate character indendified in case of boolean based blind sqli only for now..
         is_valid = False
@@ -482,6 +485,8 @@ class GhauriExtractor:
         chars="",
         vector_type=None,
         retry=3,
+        *args,
+        **kwargs,
     ):
         if not minimum:
             minimum = 32
@@ -492,7 +497,8 @@ class GhauriExtractor:
         http_firewall_code_counter = 0
         error_msg = None
         retry_on_error = 0
-        logger.progress(f"retrieved: {chars}")
+        if not conf.threads:
+            logger.progress(f"retrieved: {chars}")
         sleep_time = timesec
 
         def chunks(lst, n):
@@ -596,6 +602,17 @@ class GhauriExtractor:
                             if len(characters_list) == 1:
                                 character = characters_list.pop()
                                 character = chr(int(character))
+                                if conf.threads:
+                                    conf._thread_chars_query.update({offset: character})
+                                    chars = "".join(
+                                        [
+                                            str(i)
+                                            for i in collections.OrderedDict(
+                                                conf._thread_chars_query.items()
+                                            ).values()
+                                        ]
+                                    )
+                                    logger.progress(f"retrieved: {chars}")
                                 is_found = True
                             break
                         else:
@@ -677,6 +694,8 @@ class GhauriExtractor:
         chars="",
         vector_type=None,
         retry=3,
+        *args,
+        **kwargs,
     ):
         # need to implement retry mechanism in case of http connection related errors..
         if not minimum:
@@ -689,7 +708,8 @@ class GhauriExtractor:
         http_firewall_code_counter = 0
         error_msg = None
         retry_on_error = 0
-        logger.progress(f"retrieved: {chars}")
+        if not conf.threads:
+            logger.progress(f"retrieved: {chars}")
         sleep_time = timesec
         while not is_found:
             if http_firewall_code_counter > 2:
@@ -725,7 +745,19 @@ class GhauriExtractor:
             if (minimum == ascii_char) & (maximum == ascii_char):
                 is_found = True
                 character = str(chr(ascii_char))
-                logger.progress(f"retrieved: {chars}{character}")
+                if not conf.threads:
+                    logger.progress(f"retrieved: {chars}{character}")
+                if conf.threads:
+                    conf._thread_chars_query.update({offset: character})
+                    chars = "".join(
+                        [
+                            str(i)
+                            for i in collections.OrderedDict(
+                                conf._thread_chars_query.items()
+                            ).values()
+                        ]
+                    )
+                    logger.progress(f"retrieved: {chars}")
                 break
             condition = expression_payload.format(
                 query=queryable, position=offset, char=ascii_char
@@ -789,6 +821,8 @@ class GhauriExtractor:
                         minimum = minimum
                         maximum = ascii_char
             except KeyboardInterrupt as error:
+                if conf.threads:
+                    raise error
                 logger.warning("user aborted during data extraction phase")
                 quest = logger.read_input(
                     "how do you want to proceed? [(C)continue/(e)nd this phase/(q)uit] ",
@@ -849,6 +883,8 @@ class GhauriExtractor:
         vector_type=None,
         retry=3,
         base=None,
+        *args,
+        **kwargs,
     ):
         # need to implement retry mechanism in case of http connection related errors..
         character = ""
@@ -1661,211 +1697,103 @@ class GhauriExtractor:
                         chars = start_chars
                         pos = start_pos
                         total_length = length + 1
-                        while pos < total_length:
-                            start_pos = pos
-                            if attack01 and vector_type == "boolean_vector":
-                                # extract characters using binary search algorithm
-                                try:
-                                    if binary_search:
-                                        retval = self._binary_search(
-                                            url=url,
-                                            data=data,
-                                            vector=vector,
-                                            parameter=parameter,
-                                            headers=headers,
-                                            base=base,
-                                            injection_type=injection_type,
-                                            delay=delay,
-                                            timesec=timesec,
-                                            timeout=timeout,
-                                            proxy=proxy,
-                                            attack01=attack01,
-                                            code=code,
-                                            match_string=match_string,
-                                            not_match_string=not_match_string,
-                                            is_multipart=is_multipart,
-                                            suppress_output=suppress_output,
-                                            query_check=query_check,
-                                            minimum=32,
-                                            maximum=127,
-                                            offset=pos,
-                                            expression_payload=value,
-                                            queryable=entry,
-                                            chars=chars,
-                                            text_only=text_only,
-                                            vector_type=vector_type,
-                                        )
-                                        if retval:
-                                            is_valid = self.validate_character(
-                                                url=url,
-                                                data=data,
-                                                vector=vector,
-                                                parameter=parameter,
-                                                headers=headers,
-                                                base=base,
-                                                injection_type=injection_type,
-                                                proxy=proxy,
-                                                is_multipart=is_multipart,
-                                                timeout=timeout,
-                                                delay=delay,
-                                                timesec=timesec,
-                                                identified_character=retval,
-                                                vector_type=vector_type,
-                                                offset=pos,
-                                                expression_payload=value,
-                                                queryable=entry,
-                                                code=code,
-                                                match_string=match_string,
-                                                not_match_string=not_match_string,
-                                                attack01=attack01,
-                                            )
-                                            if not is_valid:
-                                                logger.warning(
-                                                    "invalid character detected, retrying."
-                                                )
-                                                bool_invalid_character_counter += 1
-                                                binary_search = False
-                                                in_based_search = True
-                                                linear_search = False
-                                            if is_valid:
-                                                pos += 1
-                                                chars += retval
-                                    elif in_based_search:
-                                        retval = self._search_using_in_operator(
-                                            url=url,
-                                            data=data,
-                                            vector=vector,
-                                            parameter=parameter,
-                                            headers=headers,
-                                            base=base,
-                                            injection_type=injection_type,
-                                            delay=delay,
-                                            timesec=timesec,
-                                            timeout=timeout,
-                                            proxy=proxy,
-                                            attack01=attack01,
-                                            match_string=match_string,
-                                            not_match_string=not_match_string,
-                                            text_only=text_only,
-                                            is_multipart=is_multipart,
-                                            suppress_output=suppress_output,
-                                            query_check=query_check,
-                                            minimum=32,
-                                            maximum=127,
-                                            offset=pos,
-                                            expression_payload=value,
-                                            queryable=entry,
-                                            chars=chars,
-                                            vector_type=vector_type,
-                                        )
-                                        if retval:
-                                            is_valid = self.validate_character(
-                                                url=url,
-                                                data=data,
-                                                vector=vector,
-                                                parameter=parameter,
-                                                headers=headers,
-                                                base=base,
-                                                injection_type=injection_type,
-                                                proxy=proxy,
-                                                is_multipart=is_multipart,
-                                                timeout=timeout,
-                                                delay=delay,
-                                                timesec=timesec,
-                                                identified_character=retval,
-                                                vector_type=vector_type,
-                                                offset=pos,
-                                                expression_payload=value,
-                                                queryable=entry,
-                                                code=code,
-                                                match_string=match_string,
-                                                not_match_string=not_match_string,
-                                                attack01=attack01,
-                                            )
-                                            if not is_valid:
-                                                logger.warning(
-                                                    "invalid character detected, retrying."
-                                                )
-                                                bool_invalid_character_counter += 1
-                                                binary_search = False
-                                                in_based_search = False
-                                                linear_search = True
-                                            if is_valid:
-                                                pos += 1
-                                                chars += retval
-                                    else:
-                                        retval = self._linear_search(
-                                            url=url,
-                                            data=data,
-                                            vector=vector,
-                                            parameter=parameter,
-                                            headers=headers,
-                                            injection_type=injection_type,
-                                            proxy=proxy,
-                                            attack01=attack01,
-                                            is_multipart=is_multipart,
-                                            timeout=timeout,
-                                            match_string=match_string,
-                                            not_match_string=not_match_string,
-                                            text_only=text_only,
-                                            delay=delay,
-                                            timesec=timesec,
-                                            suppress_output=suppress_output,
-                                            expression_payload=value,
-                                            queryable=entry,
-                                            chars=chars,
-                                            offset=pos,
-                                            list_of_chars=list_of_chars,
-                                            vector_type=vector_type,
-                                            base=base,
-                                        )
-                                        if retval:
-                                            is_valid = self.validate_character(
-                                                url=url,
-                                                data=data,
-                                                vector=vector,
-                                                parameter=parameter,
-                                                headers=headers,
-                                                base=base,
-                                                injection_type=injection_type,
-                                                proxy=proxy,
-                                                is_multipart=is_multipart,
-                                                timeout=timeout,
-                                                delay=delay,
-                                                timesec=timesec,
-                                                identified_character=retval,
-                                                vector_type=vector_type,
-                                                offset=pos,
-                                                expression_payload=value,
-                                                queryable=entry,
-                                                code=code,
-                                                match_string=match_string,
-                                                not_match_string=not_match_string,
-                                                attack01=attack01,
-                                            )
-                                            if not is_valid:
-                                                logger.warning(
-                                                    "invalid character detected, retrying."
-                                                )
-                                                bool_invalid_character_counter += 1
-                                                binary_search = (
-                                                    retval_check.binary_search
-                                                )
-                                                in_based_search = (
-                                                    retval_check.in_based_search
-                                                )
-                                                linear_search = (
-                                                    retval_check.linear_search
-                                                )
-                                            if is_valid:
-                                                pos += 1
-                                                chars += retval
+                        if conf.threads and not binary_search and not in_based_search:
+                            logger.warning(
+                                "ghauri will use a fallback leaner search to guess character(s), adjusting threads to 1"
+                            )
+                            conf.threads = None
+                        if conf.threads and vector_type == "boolean_vector":
+                            if not conf.thread_warning:
+                                logger.warning(
+                                    "it is recommended not to use threads for data exfiltration, it could cause harm to backend DBMS or result in incorrect character(s) guessing."
+                                )
+                                conf.thread_warning = True
+                            [
+                                conf._thread_chars_query.update({offset: "_"})
+                                for offset in range(pos, total_length)
+                            ]
+                            if conf.threads > conf._max_threads:
+                                conf.threads = 4
+                                if not conf.max_threads_warning:
+                                    logger.warning(
+                                        "ghauri recommends using threads upto 4. adjusting total number of threads to 4.."
+                                    )
+                                    conf.max_threads_warning = True
+                            with futures.ThreadPoolExecutor(
+                                max_workers=conf.threads
+                            ) as ex:
+                                exfiltration_func = None
+                                # we will only use IN and > for exfitration of data using threads
+                                # using linear search might cause issues with backend dbms as the complexity of this technique is high
+                                if binary_search:
+                                    exfiltration_func = self._binary_search
+                                if in_based_search:
+                                    exfiltration_func = self._search_using_in_operator
+                                # if linear_search:
+                                #     exfiltration_func = self._linear_search
+                                exec_map = {
+                                    ex.submit(
+                                        exfiltration_func,
+                                        url=url,
+                                        data=data,
+                                        vector=vector,
+                                        parameter=parameter,
+                                        headers=headers,
+                                        base=base,
+                                        injection_type=injection_type,
+                                        delay=delay,
+                                        timesec=timesec,
+                                        timeout=timeout,
+                                        proxy=proxy,
+                                        attack01=attack01,
+                                        code=code,
+                                        match_string=match_string,
+                                        not_match_string=not_match_string,
+                                        is_multipart=is_multipart,
+                                        suppress_output=suppress_output,
+                                        query_check=query_check,
+                                        minimum=32,
+                                        maximum=127,
+                                        offset=offset,
+                                        expression_payload=value,
+                                        queryable=entry,
+                                        chars=chars,
+                                        text_only=text_only,
+                                        vector_type=vector_type,
+                                    ): offset
+                                    for offset in range(pos, total_length)
+                                }
+                                for future in futures.as_completed(exec_map):
+                                    offset = exec_map[future]
+                                    logger.progress("retrieved: {}".format(chars))
                                     try:
-                                        if bool_invalid_character_counter >= 3:
-                                            logger.debug(
-                                                "it seems the current payload is filtered out by some sort of WAF/IDS."
+                                        character = future.result()
+                                    except Exception as exc:
+                                        logger.error(
+                                            f"    * generated an exception: '{exc}' on offset '{offset}'"
+                                        )
+                                    except KeyboardInterrupt as error:
+                                        raise error
+                                    else:
+                                        if (
+                                            character
+                                            and character != ""
+                                            and character is not None
+                                        ):
+                                            conf._thread_chars_query.update(
+                                                {offset: character}
                                             )
-                                            break
+                                chars = "".join(
+                                    [
+                                        str(i)
+                                        for i in collections.OrderedDict(
+                                            conf._thread_chars_query.items()
+                                        ).values()
+                                    ]
+                                )
+                                conf._thread_chars_query = {}
+                                with conf.lock:
+                                    try:
                                         if dump_type and chars:
                                             session.dump(
                                                 session_filepath=conf.session_filepath,
@@ -1878,226 +1806,455 @@ class GhauriExtractor:
                                             )
                                     except Exception as error:
                                         logger.warning(error)
-                                    logger.debug(f"character(s) found: '{str(chars)}'")
-                                except KeyboardInterrupt:
-                                    is_char_found = True
-                                    is_extracted = True
-                                    is_done_with_vector = True
-                                    if chars and len(chars) > 0:
-                                        logger.info(f"retrieved: '{chars}'")
-                                    _temp = PayloadResponse(
-                                        ok=False,
-                                        error="user_ended",
-                                        result=chars,
-                                        payload=entry,
-                                        resumed=False,
-                                    )
-                                    break
-                            if vector_type == "time_vector":
-                                try:
-                                    if binary_search:
-                                        retval = self._binary_search(
-                                            url=url,
-                                            data=data,
-                                            vector=vector,
-                                            parameter=parameter,
-                                            headers=headers,
-                                            base=base,
-                                            injection_type=injection_type,
-                                            delay=delay,
-                                            timesec=timesec,
-                                            timeout=timeout,
-                                            proxy=proxy,
-                                            is_multipart=is_multipart,
-                                            suppress_output=suppress_output,
-                                            query_check=query_check,
-                                            minimum=32,
-                                            maximum=127,
-                                            offset=pos,
-                                            expression_payload=value,
-                                            queryable=entry,
-                                            chars=chars,
-                                            vector_type=vector_type,
-                                        )
-                                        if retval:
-                                            is_valid = self.validate_character(
-                                                url=url,
-                                                data=data,
-                                                vector=vector,
-                                                parameter=parameter,
-                                                headers=headers,
-                                                base=base,
-                                                injection_type=injection_type,
-                                                proxy=proxy,
-                                                is_multipart=is_multipart,
-                                                timeout=timeout,
-                                                delay=delay,
-                                                timesec=timesec,
-                                                identified_character=retval,
-                                                vector_type=vector_type,
-                                                offset=pos,
-                                                expression_payload=value,
-                                                queryable=entry,
-                                            )
-                                            if not is_valid:
-                                                logger.warning(
-                                                    "invalid character detected, retrying."
-                                                )
-                                                invalid_character_detection_counter += 1
-                                                binary_search = False
-                                                in_based_search = True
-                                                linear_search = False
-                                            if is_valid:
-                                                pos += 1
-                                                chars += retval
-                                    elif in_based_search:
-                                        retval = self._search_using_in_operator(
-                                            url=url,
-                                            data=data,
-                                            vector=vector,
-                                            parameter=parameter,
-                                            headers=headers,
-                                            base=base,
-                                            injection_type=injection_type,
-                                            delay=delay,
-                                            timesec=timesec,
-                                            timeout=timeout,
-                                            proxy=proxy,
-                                            is_multipart=is_multipart,
-                                            suppress_output=suppress_output,
-                                            query_check=query_check,
-                                            minimum=32,
-                                            maximum=127,
-                                            offset=pos,
-                                            expression_payload=value,
-                                            queryable=entry,
-                                            chars=chars,
-                                            vector_type=vector_type,
-                                        )
-                                        if retval:
-                                            is_valid = self.validate_character(
-                                                url=url,
-                                                data=data,
-                                                vector=vector,
-                                                parameter=parameter,
-                                                headers=headers,
-                                                base=base,
-                                                injection_type=injection_type,
-                                                proxy=proxy,
-                                                is_multipart=is_multipart,
-                                                timeout=timeout,
-                                                delay=delay,
-                                                timesec=timesec,
-                                                identified_character=retval,
-                                                vector_type=vector_type,
-                                                offset=pos,
-                                                expression_payload=value,
-                                                queryable=entry,
-                                            )
-                                            if not is_valid:
-                                                logger.warning(
-                                                    "invalid character detected, retrying.."
-                                                )
-                                                invalid_character_detection_counter += 1
-                                                binary_search = False
-                                                in_based_search = False
-                                                linear_search = True
-                                            if is_valid:
-                                                pos += 1
-                                                chars += retval
-                                    else:
-                                        retval = self._linear_search(
-                                            url=url,
-                                            data=data,
-                                            vector=vector,
-                                            parameter=parameter,
-                                            headers=headers,
-                                            injection_type=injection_type,
-                                            proxy=proxy,
-                                            is_multipart=is_multipart,
-                                            timeout=timeout,
-                                            delay=delay,
-                                            timesec=timesec,
-                                            suppress_output=suppress_output,
-                                            expression_payload=value,
-                                            queryable=entry,
-                                            chars=chars,
-                                            offset=pos,
-                                            list_of_chars=list_of_chars,
-                                            vector_type=vector_type,
-                                        )
-                                        if retval:
-                                            is_valid = self.validate_character(
-                                                url=url,
-                                                data=data,
-                                                vector=vector,
-                                                parameter=parameter,
-                                                headers=headers,
-                                                base=base,
-                                                injection_type=injection_type,
-                                                proxy=proxy,
-                                                is_multipart=is_multipart,
-                                                timeout=timeout,
-                                                delay=delay,
-                                                timesec=timesec,
-                                                identified_character=retval,
-                                                vector_type=vector_type,
-                                                offset=pos,
-                                                expression_payload=value,
-                                                queryable=entry,
-                                            )
-                                            if not is_valid:
-                                                logger.warning(
-                                                    "invalid character detected, retrying.."
-                                                )
-                                                invalid_character_detection_counter += 1
-                                                binary_search = (
-                                                    retval_check.binary_search
-                                                )
-                                                in_based_search = (
-                                                    retval_check.in_based_search
-                                                )
-                                                linear_search = (
-                                                    retval_check.linear_search
-                                                )
-                                            if is_valid:
-                                                pos += 1
-                                                chars += retval
-                                        chars += retval
-                                        pos += 1
+                                    logger.debug(f"character(s) found: '{chars}'")
+                        else:
+                            while pos < total_length:
+                                start_pos = pos
+                                if attack01 and vector_type == "boolean_vector":
+                                    # extract characters using binary search algorithm
                                     try:
-                                        if invalid_character_detection_counter >= 3:
-                                            logger.debug(
-                                                "it seems the current payload is filtered out by some sort of WAF/IDS."
+                                        if binary_search:
+                                            retval = self._binary_search(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                base=base,
+                                                injection_type=injection_type,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                timeout=timeout,
+                                                proxy=proxy,
+                                                attack01=attack01,
+                                                code=code,
+                                                match_string=match_string,
+                                                not_match_string=not_match_string,
+                                                is_multipart=is_multipart,
+                                                suppress_output=suppress_output,
+                                                query_check=query_check,
+                                                minimum=32,
+                                                maximum=127,
+                                                offset=pos,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                                chars=chars,
+                                                text_only=text_only,
+                                                vector_type=vector_type,
                                             )
-                                            break
-                                        if dump_type and chars:
-                                            session.dump(
-                                                session_filepath=conf.session_filepath,
-                                                query=STORAGE_UPDATE,
-                                                values=(
-                                                    chars,
-                                                    last_row_id,
-                                                    dump_type,
-                                                ),
+                                            if retval:
+                                                is_valid = self.validate_character(
+                                                    url=url,
+                                                    data=data,
+                                                    vector=vector,
+                                                    parameter=parameter,
+                                                    headers=headers,
+                                                    base=base,
+                                                    injection_type=injection_type,
+                                                    proxy=proxy,
+                                                    is_multipart=is_multipart,
+                                                    timeout=timeout,
+                                                    delay=delay,
+                                                    timesec=timesec,
+                                                    identified_character=retval,
+                                                    vector_type=vector_type,
+                                                    offset=pos,
+                                                    expression_payload=value,
+                                                    queryable=entry,
+                                                    code=code,
+                                                    match_string=match_string,
+                                                    not_match_string=not_match_string,
+                                                    attack01=attack01,
+                                                )
+                                                if not is_valid:
+                                                    logger.warning(
+                                                        "invalid character detected, retrying."
+                                                    )
+                                                    bool_invalid_character_counter += 1
+                                                    binary_search = False
+                                                    in_based_search = True
+                                                    linear_search = False
+                                                if is_valid:
+                                                    pos += 1
+                                                    chars += retval
+                                        elif in_based_search:
+                                            retval = self._search_using_in_operator(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                base=base,
+                                                injection_type=injection_type,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                timeout=timeout,
+                                                proxy=proxy,
+                                                attack01=attack01,
+                                                match_string=match_string,
+                                                not_match_string=not_match_string,
+                                                text_only=text_only,
+                                                is_multipart=is_multipart,
+                                                suppress_output=suppress_output,
+                                                query_check=query_check,
+                                                minimum=32,
+                                                maximum=127,
+                                                offset=pos,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                                chars=chars,
+                                                vector_type=vector_type,
                                             )
-                                    except Exception as error:
-                                        logger.warning(error)
-                                    logger.debug(f"character(s) found: '{str(chars)}'")
-                                except KeyboardInterrupt:
-                                    is_char_found = True
-                                    is_extracted = True
-                                    is_done_with_vector = True
-                                    if chars and len(chars) > 0:
-                                        logger.info(f"retrieved: '{chars}'")
-                                    _temp = PayloadResponse(
-                                        ok=False,
-                                        error="user_ended",
-                                        result=chars,
-                                        payload=entry,
-                                        resumed=is_resumed,
-                                    )
-                                    break
+                                            if retval:
+                                                is_valid = self.validate_character(
+                                                    url=url,
+                                                    data=data,
+                                                    vector=vector,
+                                                    parameter=parameter,
+                                                    headers=headers,
+                                                    base=base,
+                                                    injection_type=injection_type,
+                                                    proxy=proxy,
+                                                    is_multipart=is_multipart,
+                                                    timeout=timeout,
+                                                    delay=delay,
+                                                    timesec=timesec,
+                                                    identified_character=retval,
+                                                    vector_type=vector_type,
+                                                    offset=pos,
+                                                    expression_payload=value,
+                                                    queryable=entry,
+                                                    code=code,
+                                                    match_string=match_string,
+                                                    not_match_string=not_match_string,
+                                                    attack01=attack01,
+                                                )
+                                                if not is_valid:
+                                                    logger.warning(
+                                                        "invalid character detected, retrying."
+                                                    )
+                                                    bool_invalid_character_counter += 1
+                                                    binary_search = False
+                                                    in_based_search = False
+                                                    linear_search = True
+                                                if is_valid:
+                                                    pos += 1
+                                                    chars += retval
+                                        else:
+                                            retval = self._linear_search(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                injection_type=injection_type,
+                                                proxy=proxy,
+                                                attack01=attack01,
+                                                is_multipart=is_multipart,
+                                                timeout=timeout,
+                                                match_string=match_string,
+                                                not_match_string=not_match_string,
+                                                text_only=text_only,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                suppress_output=suppress_output,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                                chars=chars,
+                                                offset=pos,
+                                                list_of_chars=list_of_chars,
+                                                vector_type=vector_type,
+                                                base=base,
+                                            )
+                                            if retval:
+                                                is_valid = self.validate_character(
+                                                    url=url,
+                                                    data=data,
+                                                    vector=vector,
+                                                    parameter=parameter,
+                                                    headers=headers,
+                                                    base=base,
+                                                    injection_type=injection_type,
+                                                    proxy=proxy,
+                                                    is_multipart=is_multipart,
+                                                    timeout=timeout,
+                                                    delay=delay,
+                                                    timesec=timesec,
+                                                    identified_character=retval,
+                                                    vector_type=vector_type,
+                                                    offset=pos,
+                                                    expression_payload=value,
+                                                    queryable=entry,
+                                                    code=code,
+                                                    match_string=match_string,
+                                                    not_match_string=not_match_string,
+                                                    attack01=attack01,
+                                                )
+                                                if not is_valid:
+                                                    logger.warning(
+                                                        "invalid character detected, retrying."
+                                                    )
+                                                    bool_invalid_character_counter += 1
+                                                    binary_search = (
+                                                        retval_check.binary_search
+                                                    )
+                                                    in_based_search = (
+                                                        retval_check.in_based_search
+                                                    )
+                                                    linear_search = (
+                                                        retval_check.linear_search
+                                                    )
+                                                if is_valid:
+                                                    pos += 1
+                                                    chars += retval
+                                        try:
+                                            if bool_invalid_character_counter >= 3:
+                                                logger.debug(
+                                                    "it seems the current payload is filtered out by some sort of WAF/IDS."
+                                                )
+                                                break
+                                            if dump_type and chars:
+                                                session.dump(
+                                                    session_filepath=conf.session_filepath,
+                                                    query=STORAGE_UPDATE,
+                                                    values=(
+                                                        chars,
+                                                        last_row_id,
+                                                        dump_type,
+                                                    ),
+                                                )
+                                        except Exception as error:
+                                            logger.warning(error)
+                                        logger.debug(
+                                            f"character(s) found: '{str(chars)}'"
+                                        )
+                                    except KeyboardInterrupt:
+                                        is_char_found = True
+                                        is_extracted = True
+                                        is_done_with_vector = True
+                                        if chars and len(chars) > 0:
+                                            logger.info(f"retrieved: '{chars}'")
+                                        _temp = PayloadResponse(
+                                            ok=False,
+                                            error="user_ended",
+                                            result=chars,
+                                            payload=entry,
+                                            resumed=False,
+                                        )
+                                        break
+                                if vector_type == "time_vector":
+                                    try:
+                                        if binary_search:
+                                            retval = self._binary_search(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                base=base,
+                                                injection_type=injection_type,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                timeout=timeout,
+                                                proxy=proxy,
+                                                is_multipart=is_multipart,
+                                                suppress_output=suppress_output,
+                                                query_check=query_check,
+                                                minimum=32,
+                                                maximum=127,
+                                                offset=pos,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                                chars=chars,
+                                                vector_type=vector_type,
+                                            )
+                                            if retval:
+                                                is_valid = self.validate_character(
+                                                    url=url,
+                                                    data=data,
+                                                    vector=vector,
+                                                    parameter=parameter,
+                                                    headers=headers,
+                                                    base=base,
+                                                    injection_type=injection_type,
+                                                    proxy=proxy,
+                                                    is_multipart=is_multipart,
+                                                    timeout=timeout,
+                                                    delay=delay,
+                                                    timesec=timesec,
+                                                    identified_character=retval,
+                                                    vector_type=vector_type,
+                                                    offset=pos,
+                                                    expression_payload=value,
+                                                    queryable=entry,
+                                                )
+                                                if not is_valid:
+                                                    logger.warning(
+                                                        "invalid character detected, retrying."
+                                                    )
+                                                    invalid_character_detection_counter += (
+                                                        1
+                                                    )
+                                                    binary_search = False
+                                                    in_based_search = True
+                                                    linear_search = False
+                                                if is_valid:
+                                                    pos += 1
+                                                    chars += retval
+                                        elif in_based_search:
+                                            retval = self._search_using_in_operator(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                base=base,
+                                                injection_type=injection_type,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                timeout=timeout,
+                                                proxy=proxy,
+                                                is_multipart=is_multipart,
+                                                suppress_output=suppress_output,
+                                                query_check=query_check,
+                                                minimum=32,
+                                                maximum=127,
+                                                offset=pos,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                                chars=chars,
+                                                vector_type=vector_type,
+                                            )
+                                            if retval:
+                                                is_valid = self.validate_character(
+                                                    url=url,
+                                                    data=data,
+                                                    vector=vector,
+                                                    parameter=parameter,
+                                                    headers=headers,
+                                                    base=base,
+                                                    injection_type=injection_type,
+                                                    proxy=proxy,
+                                                    is_multipart=is_multipart,
+                                                    timeout=timeout,
+                                                    delay=delay,
+                                                    timesec=timesec,
+                                                    identified_character=retval,
+                                                    vector_type=vector_type,
+                                                    offset=pos,
+                                                    expression_payload=value,
+                                                    queryable=entry,
+                                                )
+                                                if not is_valid:
+                                                    logger.warning(
+                                                        "invalid character detected, retrying.."
+                                                    )
+                                                    invalid_character_detection_counter += (
+                                                        1
+                                                    )
+                                                    binary_search = False
+                                                    in_based_search = False
+                                                    linear_search = True
+                                                if is_valid:
+                                                    pos += 1
+                                                    chars += retval
+                                        else:
+                                            retval = self._linear_search(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                injection_type=injection_type,
+                                                proxy=proxy,
+                                                is_multipart=is_multipart,
+                                                timeout=timeout,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                suppress_output=suppress_output,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                                chars=chars,
+                                                offset=pos,
+                                                list_of_chars=list_of_chars,
+                                                vector_type=vector_type,
+                                            )
+                                            if retval:
+                                                is_valid = self.validate_character(
+                                                    url=url,
+                                                    data=data,
+                                                    vector=vector,
+                                                    parameter=parameter,
+                                                    headers=headers,
+                                                    base=base,
+                                                    injection_type=injection_type,
+                                                    proxy=proxy,
+                                                    is_multipart=is_multipart,
+                                                    timeout=timeout,
+                                                    delay=delay,
+                                                    timesec=timesec,
+                                                    identified_character=retval,
+                                                    vector_type=vector_type,
+                                                    offset=pos,
+                                                    expression_payload=value,
+                                                    queryable=entry,
+                                                )
+                                                if not is_valid:
+                                                    logger.warning(
+                                                        "invalid character detected, retrying.."
+                                                    )
+                                                    invalid_character_detection_counter += (
+                                                        1
+                                                    )
+                                                    binary_search = (
+                                                        retval_check.binary_search
+                                                    )
+                                                    in_based_search = (
+                                                        retval_check.in_based_search
+                                                    )
+                                                    linear_search = (
+                                                        retval_check.linear_search
+                                                    )
+                                                if is_valid:
+                                                    pos += 1
+                                                    chars += retval
+                                            chars += retval
+                                            pos += 1
+                                        try:
+                                            if invalid_character_detection_counter >= 3:
+                                                logger.debug(
+                                                    "it seems the current payload is filtered out by some sort of WAF/IDS."
+                                                )
+                                                break
+                                            if dump_type and chars:
+                                                session.dump(
+                                                    session_filepath=conf.session_filepath,
+                                                    query=STORAGE_UPDATE,
+                                                    values=(
+                                                        chars,
+                                                        last_row_id,
+                                                        dump_type,
+                                                    ),
+                                                )
+                                        except Exception as error:
+                                            logger.warning(error)
+                                        logger.debug(
+                                            f"character(s) found: '{str(chars)}'"
+                                        )
+                                    except KeyboardInterrupt:
+                                        is_char_found = True
+                                        is_extracted = True
+                                        is_done_with_vector = True
+                                        if chars and len(chars) > 0:
+                                            logger.info(f"retrieved: '{chars}'")
+                                        _temp = PayloadResponse(
+                                            ok=False,
+                                            error="user_ended",
+                                            result=chars,
+                                            payload=entry,
+                                            resumed=is_resumed,
+                                        )
+                                        break
                         if len(chars) == length:
                             is_char_found = True
                             _temp = PayloadResponse(

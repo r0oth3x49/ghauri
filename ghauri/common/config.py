@@ -24,6 +24,8 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
 
+from ghauri.common.lib import Lock
+
 
 class GhauriConfigs:
     """
@@ -54,6 +56,7 @@ class GhauriConfigs:
         batch=False,
         continue_on_http_error=False,
         follow_redirects=None,
+        threads=None,
     ):
         self.vectors = vectors
         self.is_string = is_string
@@ -79,6 +82,12 @@ class GhauriConfigs:
         self.timesec = timesec
         self.continue_on_http_error = continue_on_http_error
         self.follow_redirects = follow_redirects
+        self.threads = threads
+        self._max_threads = 4
+        self._thread_chars_query = {}
+        self.lock = Lock()
+        self.thread_warning = False
+        self.max_threads_warning = False
 
     @property
     def session_filepath(self):
