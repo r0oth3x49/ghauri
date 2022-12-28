@@ -55,6 +55,8 @@ def inject_expression(
     #     if injection_type.upper() not in ["HEADER"]
     #     else expression
     # )
+    if conf.timeout and conf.timeout > 30:
+        timeout = conf.timeout
     if injection_type in ["HEADER", "COOKIE"]:
         attack_headers = prepare_attack_request(
             headers,

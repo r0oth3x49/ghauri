@@ -105,6 +105,7 @@ class GhauriExtractor:
         linear_search = False
         retry_on_error = 0
         http_firewall_code_counter = 0
+        timesec = timesec if conf.timesec <= timesec else conf.timesec
         error_msg = None
         _temp = GuessUsing(
             ok=False,
@@ -373,7 +374,7 @@ class GhauriExtractor:
                 expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                     "[SLEEPTIME]", f"{timesec}"
                 )
-                sleep_time = timesec
+                sleep_time = timesec if conf.timesec <= timesec else conf.timesec
                 logger.payload(f"{expression}")
                 try:
                     attack = inject_expression(
@@ -499,7 +500,17 @@ class GhauriExtractor:
         retry_on_error = 0
         if not conf.threads:
             logger.progress(f"retrieved: {chars}")
-        sleep_time = timesec
+        if conf.threads:
+            chars = "".join(
+                [
+                    str(i)
+                    for i in collections.OrderedDict(
+                        sorted(conf._thread_chars_query.items())
+                    ).values()
+                ]
+            )
+            logger.progress(f"retrieved: {chars}")
+        sleep_time = timesec if conf.timesec <= timesec else conf.timesec
 
         def chunks(lst, n):
             """Yield successive n-sized chunks from lst."""
@@ -710,7 +721,17 @@ class GhauriExtractor:
         retry_on_error = 0
         if not conf.threads:
             logger.progress(f"retrieved: {chars}")
-        sleep_time = timesec
+        if conf.threads:
+            chars = "".join(
+                [
+                    str(i)
+                    for i in collections.OrderedDict(
+                        sorted(conf._thread_chars_query.items())
+                    ).values()
+                ]
+            )
+            logger.progress(f"retrieved: {chars}")
+        sleep_time = timesec if conf.timesec <= timesec else conf.timesec
         while not is_found:
             if http_firewall_code_counter > 2:
                 message = f"{error_msg} - {http_firewall_code_counter} time(s)"
@@ -739,6 +760,12 @@ class GhauriExtractor:
                     exit(0)
                 if choice == "c":
                     retry_on_error = 0
+            if conf._readtimout_counter >= 3:
+                logger.warning(
+                    f"Ghauri detected readtimout '{conf._readtimout_counter}' time(s), increasing --timeout to 120 seconds, default was 30 seconds.."
+                )
+                conf.timeout += 90
+                conf._readtimout_counter = 0
             if delay > 0:
                 time.sleep(delay)
             ascii_char = int((minimum + maximum) / 2)
@@ -893,7 +920,7 @@ class GhauriExtractor:
         http_firewall_code_counter = 0
         error_msg = None
         retry_on_error = 0
-        sleep_time = timesec
+        sleep_time = timesec if conf.timesec <= timesec else conf.timesec
         while start < end:
             if http_firewall_code_counter > 2:
                 message = f"{error_msg} - {http_firewall_code_counter} time(s)"
@@ -1050,7 +1077,7 @@ class GhauriExtractor:
                 for i in range(1, 10):
                     if delay > 0:
                         time.sleep(delay)
-                    sleep_time = timesec
+                    sleep_time = timesec if conf.timesec <= timesec else conf.timesec
                     condition = value.format(query=entry, char=i)
                     expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                         "[SLEEPTIME]", f"{sleep_time}"
@@ -1712,11 +1739,19 @@ class GhauriExtractor:
                                 conf._thread_chars_query.update({offset: "_"})
                                 for offset in range(pos, total_length)
                             ]
+                            # dirty hack to add characters at position so that threads won't run forever to figure out characters..
+                            if chars and len(chars) >= 1:
+                                logger.debug("appending characters found already")
+                                for _, ch in enumerate(chars):
+                                    conf._thread_chars_query.update({_ + 1: ch})
+                            conf._thread_chars_query = collections.OrderedDict(
+                                sorted(conf._thread_chars_query.items())
+                            )
                             if conf.threads > conf._max_threads:
                                 conf.threads = 4
                                 if not conf.max_threads_warning:
                                     logger.warning(
-                                        "ghauri recommends using threads upto 4. adjusting total number of threads to 4.."
+                                        "ghauri recommends using threads upto 4. adjusting total number of threads to 4."
                                     )
                                     conf.max_threads_warning = True
                             with futures.ThreadPoolExecutor(
@@ -1763,31 +1798,37 @@ class GhauriExtractor:
                                     ): offset
                                     for offset in range(pos, total_length)
                                 }
-                                for future in futures.as_completed(exec_map):
-                                    offset = exec_map[future]
-                                    logger.progress("retrieved: {}".format(chars))
-                                    try:
-                                        character = future.result()
-                                    except Exception as exc:
-                                        logger.error(
-                                            f"    * generated an exception: '{exc}' on offset '{offset}'"
-                                        )
-                                    except KeyboardInterrupt as error:
-                                        raise error
-                                    else:
-                                        if (
-                                            character
-                                            and character != ""
-                                            and character is not None
-                                        ):
-                                            conf._thread_chars_query.update(
-                                                {offset: character}
+                                try:
+                                    for future in futures.as_completed(exec_map):
+                                        offset = exec_map[future]
+                                        logger.progress("retrieved: {}".format(chars))
+                                        try:
+                                            character = future.result()
+                                        except Exception as exc:
+                                            logger.error(
+                                                f"    * generated an exception: '{exc}' on offset '{offset}'"
                                             )
+                                        except KeyboardInterrupt as error:
+                                            raise error
+                                        else:
+                                            if (
+                                                character
+                                                and character != ""
+                                                and character is not None
+                                            ):
+                                                conf._thread_chars_query.update(
+                                                    {offset: character}
+                                                )
+                                except KeyboardInterrupt as error:
+                                    logger.error(
+                                        "user aborted, terminating threads gracefully"
+                                    )
+                                    raise error
                                 chars = "".join(
                                     [
                                         str(i)
                                         for i in collections.OrderedDict(
-                                            conf._thread_chars_query.items()
+                                            sorted(conf._thread_chars_query.items())
                                         ).values()
                                     ]
                                 )

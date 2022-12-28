@@ -51,7 +51,7 @@ class GhauriConfigs:
         attack01=None,
         delay=0,
         timesec=5,
-        timeout=30,
+        timeout=None,
         backend=None,
         batch=False,
         continue_on_http_error=False,
@@ -88,6 +88,7 @@ class GhauriConfigs:
         self.lock = Lock()
         self.thread_warning = False
         self.max_threads_warning = False
+        self._readtimout_counter = 0
 
     @property
     def session_filepath(self):

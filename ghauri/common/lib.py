@@ -53,6 +53,7 @@ from os.path import expanduser
 from io import BytesIO, StringIO
 from difflib import SequenceMatcher
 import concurrent.futures as futures
+from concurrent.futures import thread
 from threading import Lock
 from colorama import init, Fore, Back, Style
 from urllib.error import HTTPError, URLError
@@ -260,6 +261,8 @@ CREATE TABLE storage (
  length integer,
  type text
 );
+CREATE INDEX idx_type 
+ON storage (type);
 """
 
 PAYLOAD_STATEMENT = """

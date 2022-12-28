@@ -155,7 +155,10 @@ class HTTPRequestHandler:
                 response_time = end_time - start_time
                 parsed_response = parse_http_error(e)
             except (socket.timeout, requests.exceptions.ReadTimeout) as e:
-                logger.warning("read timeout during connection response reading..")
+                logger.debug("read timeout during connection response reading..")
+                conf._readtimout_counter += 1
+                conf.timeout = 25
+                conf.timesec = 10
                 end_time = time.time()
                 response_time = end_time - start_time
                 parsed_response = parse_http_error(e, url=url, is_timeout=True)
@@ -217,7 +220,10 @@ class HTTPRequestHandler:
                 response_time = end_time - start_time
                 parsed_response = parse_http_error(e)
             except (socket.timeout, requests.exceptions.ReadTimeout) as e:
-                logger.warning("read timeout during connection response reading.")
+                logger.debug("read timeout during connection response reading.")
+                conf._readtimout_counter += 1
+                conf.timeout = 25
+                conf.timesec = 10
                 end_time = time.time()
                 response_time = end_time - start_time
                 parsed_response = parse_http_error(e, url=url, is_timeout=True)
