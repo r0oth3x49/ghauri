@@ -1369,7 +1369,6 @@ def fetch_payloads_by_suffix_prefix(payloads, prefix=None, suffix=None):
 
 
 def extract_json_data(data):
-    _temp = []
     if hasattr(data, "items"):
         for key, value in data.items():
             if isinstance(value, dict):
@@ -1379,11 +1378,11 @@ def extract_json_data(data):
                     if isinstance(i, dict):
                         extract_json_data(i)
                     if isinstance(i, str):
-                        _temp.append({"key": key, "value": i})
+                        conf._json_post_data.append({"key": key, "value": i})
             elif isinstance(value, str):
-                _temp.append({"key": key, "value": value})
-    # logger.debug(_temp)
-    return _temp
+                conf._json_post_data.append({"key": key, "value": value})
+    # logger.debug(conf._json_post_data)
+    return conf._json_post_data
 
 
 def check_injection_points_for_level(level, injection_points):

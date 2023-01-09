@@ -89,6 +89,7 @@ class GhauriConfigs:
         self.thread_warning = False
         self.max_threads_warning = False
         self._readtimout_counter = 0
+        self._json_post_data = []
 
     @property
     def session_filepath(self):
