@@ -128,6 +128,20 @@ class FingerPrintDBMS:
                 text_only=self.text_only,
             )
             result = bool_retval.vulnerable
+            if not result:
+                attackt = self.check_boolean_expression(
+                    expression="QUARTER(NULL) IS NULL"
+                )
+                bool_retval = check_boolean_responses(
+                    self.base,
+                    attackt,
+                    attack01,
+                    match_string=self.match_string,
+                    not_match_string=self.not_match_string,
+                    code=self.code,
+                    text_only=self.text_only,
+                )
+                result = bool_retval.vulnerable
             if result:
                 is_ok = False
                 if self._attacks:
@@ -165,6 +179,20 @@ class FingerPrintDBMS:
                 text_only=self.text_only,
             )
             result = bool_retval.vulnerable
+            if not result:
+                attackt = self.check_boolean_expression(
+                    expression="QUARTER(NULL) IS NULL"
+                )
+                bool_retval = check_boolean_responses(
+                    self.base,
+                    attackt,
+                    self.attack01,
+                    match_string=self.match_string,
+                    not_match_string=self.not_match_string,
+                    code=self.code,
+                    text_only=self.text_only,
+                )
+                result = bool_retval.vulnerable
             ok = False
             if result:
                 logger.info(f"confirming MySQL")
