@@ -1124,13 +1124,6 @@ def prepare_attack_request(
             injection_type=injection_type,
             is_multipart=is_multipart,
         )
-    if encode and is_json:
-        payload = urlencode(
-            value=payload,
-            decode_first=True,
-            injection_type=injection_type,
-            is_multipart=is_multipart,
-        )
     key_to_split_by = urldecode(key)
     if (
         injection_type in ["GET", "POST", "COOKIE", "HEADER"]
@@ -1465,6 +1458,8 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
             pass
         if is_json:
             params = extract_json_data(data)
+            if not params:
+                is_json = False
         else:
             MULTIPART_RECOGNITION_REGEX = r"(?i)Content-Disposition:[^;]+;\s*name="
             mobj = re.search(MULTIPART_RECOGNITION_REGEX, data)
@@ -1608,12 +1603,6 @@ def prepare_request(url, data, custom_headers, use_requests=False):
         if sph and len(sph) == 2:
             header.update({sph[0].strip(): sph[1].strip()})
     if not use_requests:
-        # building headers for build_opener addHeaders
-        # _temp = []
-        # for key, value in header.items():
-        #     _temp.append((key, value))
-        # custom_headers = _temp
-        # Request object uses headers in dictionary format..
         custom_headers = header
     else:
         custom_headers = header

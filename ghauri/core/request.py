@@ -54,7 +54,7 @@ from ghauri.common.config import conf
 
 class HTTPRequestHandler:
     """
-    Xpath requests handler
+    Ghauri requests handler
     """
 
     def perform(
@@ -90,9 +90,6 @@ class HTTPRequestHandler:
                 "filtered_text",
             ],
         )
-        # commented out as we have figured out how to use build_opener with multipart/json based post request..
-        # if is_multipart:
-        #     use_requests = True
         if connection_test:
             clean_up = lambda _: _.replace("*", "") if _ and "*" in _ else _
             url = clean_up(url)
@@ -105,6 +102,8 @@ class HTTPRequestHandler:
         raw = req.raw
         endpoint = req.endpoint
         custom_headers = req.headers
+        if conf.is_json:
+            custom_headers.update({"Content-Type": "application/json"})
         request_url = req.request.get("url")
         logger.traffic_out(f"HTTP request:\n{raw}")
         headers = {}
