@@ -254,6 +254,7 @@ def perform_injection(
             for parameter in parameters:
                 param_name = parameter.get("key")
                 param_value = parameter.get("value")
+                is_parameter_tested = False
                 is_custom_injection_marker_found = bool(
                     "*" in param_name or "*" in param_value
                 )
@@ -290,8 +291,8 @@ def perform_injection(
                     )
                     possible_dbms = retval_check.possible_dbms
                     is_connection_tested = retval_check.is_connection_tested
-                    is_resumed = retval_check.is_resumed
-                if not is_resumed:
+                    is_parameter_tested = retval_check.is_parameter_tested
+                if not is_resumed or not is_parameter_tested:
                     if custom_injection_in:
                         custom_point = custom_injection_in[-1]
                         if "HEADER" in custom_point:

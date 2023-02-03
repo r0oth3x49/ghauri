@@ -79,6 +79,7 @@ def basic_check(
     is_dynamic = False
     is_resumed = False
     param_name = ""
+    is_parameter_tested = False
     if is_multipart:
         param_name += "MULTIPART "
     if is_json:
@@ -87,7 +88,14 @@ def basic_check(
     param_key = parameter.get("key")
     Response = collections.namedtuple(
         "BasicCheckResponse",
-        ["base", "possible_dbms", "is_connection_tested", "is_dynamic", "is_resumed"],
+        [
+            "base",
+            "possible_dbms",
+            "is_connection_tested",
+            "is_dynamic",
+            "is_resumed",
+            "is_parameter_tested",
+        ],
     )
     _possible_dbms = None
     try:
@@ -107,7 +115,25 @@ def basic_check(
             values=(base.path,),
         )
         if retval:
-            logger.debug("ghauri is going to resume target exploitation.")
+            json_data_parameters = [
+                json.loads(i.get("parameter", "{}")) for i in retval
+            ]
+            params_tested_already = list(
+                set(
+                    [
+                        i
+                        for i in [
+                            i.get("key", "").lower() for i in json_data_parameters
+                        ]
+                        if i
+                    ]
+                )
+            )
+            param_tobe_tested = parameter.get("key").lower()
+            if param_tobe_tested in params_tested_already:
+                logger.debug(f"parameter '{param_tobe_tested}' is already tested..")
+                is_parameter_tested = True
+                logger.debug("ghauri is going to resume target exploitation.")
             is_resumed = True
         if not is_resumed:
             logger.info("testing if the target URL content is stable")
@@ -196,6 +222,7 @@ def basic_check(
         is_connection_tested=True,
         is_dynamic=is_dynamic,
         is_resumed=is_resumed,
+        is_parameter_tested=is_parameter_tested,
     )
 
 
