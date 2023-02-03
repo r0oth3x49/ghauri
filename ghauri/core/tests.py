@@ -2049,8 +2049,8 @@ def check_injections(
             return None
         is_injected_bool = bool(bsqli and bsqli.injected)
         if is_injected_bool:
-            if is_injected_error:
-                sqlis.append(bsqli)
+            # if is_injected_error:
+            sqlis.append(bsqli)
             priorities.update({"boolean-based": bsqli})
             vectors.update({"boolean_vector": bsqli.prepared_vector})
             prefix = bsqli.prefix if not prefix else prefix
@@ -2084,8 +2084,8 @@ def check_injections(
             return None
         is_injected_time = bool(tsqli and tsqli.injected)
         if is_injected_time:
-            if is_injected_error:
-                sqlis.append(tsqli)
+            # if is_injected_error:
+            sqlis.append(tsqli)
             priorities.update({"time-based": tsqli})
             vectors.update({"time_vector": tsqli.prepared_vector})
             dbms = tsqli.backend if not dbms else dbms
