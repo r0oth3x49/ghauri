@@ -292,6 +292,7 @@ def perform_injection(
                     possible_dbms = retval_check.possible_dbms
                     is_connection_tested = retval_check.is_connection_tested
                     is_parameter_tested = retval_check.is_parameter_tested
+                    is_resumed = retval_check.is_resumed
                 if not is_resumed or not is_parameter_tested:
                     if custom_injection_in:
                         custom_point = custom_injection_in[-1]
