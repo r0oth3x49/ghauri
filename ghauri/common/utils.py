@@ -1306,9 +1306,16 @@ def extract_multipart_formdata(data):
     return _temp
 
 
-def fetch_payloads_by_suffix_prefix(payloads, prefix=None, suffix=None):
+def fetch_payloads_by_suffix_prefix(
+    payloads, prefix=None, suffix=None, is_parameter_replace=False
+):
     _temp = []
     # logger.debug(f"prefix=({prefix}), suffix=({suffix})")
+    if is_parameter_replace:
+        # in case of payload type is parameter replace then we don't need prefix and suffix in that case
+        # we will use the default payload base prefixes and suffixes if any from Ghauri
+        prefix = None
+        suffix = None
     Payload = collections.namedtuple("Payload", ["prefix", "suffix", "string", "raw"])
     if prefix == "" and suffix == "":
         payload = payloads[-1].raw
@@ -1617,7 +1624,9 @@ def prepare_request(url, data, custom_headers, use_requests=False):
 
 
 def prepare_response(resp):
-    raw_response = f"({resp.status_code} {resp.reason}):\n"
+    raw_response = (
+        f"[#{conf.request_counter}]:\nHTTP/1.1 {resp.status_code} {resp.reason}\n"
+    )
     raw_headers = "\n".join([f"{k}: {v}" for k, v in resp.headers.items()])
     raw_response += f"{raw_headers}"
     if hasattr(resp, "url"):

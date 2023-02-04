@@ -137,7 +137,10 @@ def basic_check(
             is_resumed = True
         if not is_resumed:
             logger.info("testing if the target URL content is stable")
-            time.sleep(0.5)
+            try:
+                time.sleep(0.5)
+            except:
+                pass
             resp = request.perform(
                 url=url,
                 data=data,
@@ -507,7 +510,6 @@ def check_booleanbased_sqli(
     param_value = parameter.get("value")
     is_injected = False
     injection_type = injection_type.upper()
-    requests_counter = 1
     end_detection_phase = False
     backend = possible_dbms
     skipp_all_other_dbms = False
@@ -522,8 +524,12 @@ def check_booleanbased_sqli(
             break
         if terminate_on_errors:
             break
+        is_parameter_replace = bool("Parameter replace" in entry.title)
         payloads = fetch_payloads_by_suffix_prefix(
-            payloads=entry.payloads, prefix=prefix, suffix=suffix
+            payloads=entry.payloads,
+            prefix=prefix,
+            suffix=suffix,
+            is_parameter_replace=is_parameter_replace,
         )
         total_payloads = len(payloads)
         if possible_dbms or dbms:
@@ -643,7 +649,6 @@ def check_booleanbased_sqli(
                     f"error {error}, during detection phase. Ghauri is going to retry"
                 )
                 retry_on_error += 1
-            requests_counter += 1
             boolean_retval = check_boolean_responses(
                 base,
                 attack,
@@ -668,10 +673,15 @@ def check_booleanbased_sqli(
                 is_different_status_code_injectable = True
                 with_status_code_msg = f" (with --code={with_status_code})"
             if attack.status_code in [403, 406]:
-                logger.critical(
-                    f"{attack.error_msg} HTTP error codes detected. ghauri is going to retry."
+                logger.debug(
+                    f"{attack.error_msg} HTTP error codes detected. ghauri is going to retry in few seconds.."
                 )
-                time.sleep(0.5)
+                try:
+                    # retry within few seconds
+                    rand_sleep = random.randint(1, 3)
+                    time.sleep(rand_sleep)
+                except:
+                    pass
                 error_msg = attack.error_msg
                 http_firewall_code_counter += 1
                 continue
@@ -771,6 +781,8 @@ def check_booleanbased_sqli(
                 if dbms and not backend:
                     backend = dbms
                 _url = attack.request_url if injection_type == "GET" else attack.url
+                if conf.req_counter_injected < 1:
+                    conf.req_counter_injected = conf.request_counter - 1
                 _temp = Response(
                     url=_url,
                     data=attack.data,
@@ -788,7 +800,7 @@ def check_booleanbased_sqli(
                     injected=is_injected,
                     case=case,
                     prepared_vector=f"{payload.prefix}{entry.vector}{payload.suffix}",
-                    number_of_requests=requests_counter,
+                    number_of_requests=conf.request_counter,
                     backend=backend,
                     payload_type="boolean-based blind",
                     string=match_string,
@@ -1016,7 +1028,6 @@ def check_timebased_sqli(
     sleep_time = timesec if timesec >= 10 else random.randint(5, 9)
     injection_type = injection_type.upper()
     is_injected = False
-    requests_counter = 1
     end_detection_phase = False
     is_different_status_code_injectable = False
     terminate_on_errors = False
@@ -1133,7 +1144,6 @@ def check_timebased_sqli(
                 response_time = attack.response_time
                 if response_time < sleep_time and end_detection_phase:
                     return None
-                requests_counter += 1
                 with_status_code_msg = ""
                 with_status_code = attack.status_code
                 if attack.status_code != base.status_code:
@@ -1198,6 +1208,8 @@ def check_timebased_sqli(
                     payload_type = f"{entry.type}"
                     if payload_type == "time-based":
                         payload_type += " blind"
+                    if conf.req_counter_injected < 1:
+                        conf.req_counter_injected = conf.request_counter - 1
                     _temp = Response(
                         url=_url,
                         data=attack.data,
@@ -1215,7 +1227,7 @@ def check_timebased_sqli(
                         response_time=response_time,
                         injected=is_injected,
                         prepared_vector=f"{_payload.prefix}{entry.vector}{_payload.suffix}",
-                        number_of_requests=requests_counter,
+                        number_of_requests=conf.request_counter,
                         backend=backend,
                         payload_type=payload_type,
                         payload_raw=_payload,
@@ -1278,7 +1290,6 @@ def check_errorbased_sqli(
     sleep_time = random.randint(5, 9)
     injection_type = injection_type.upper()
     is_injected = False
-    requests_counter = 1
     is_string = False
     end_detection_phase = False
     is_different_status_code_injectable = False
@@ -1399,7 +1410,6 @@ def check_errorbased_sqli(
             response_time = attack.response_time
             if mobj and end_detection_phase:
                 return None
-            requests_counter += 1
             with_status_code_msg = ""
             with_status_code = attack.status_code
             if attack.status_code != base.status_code:
@@ -1485,6 +1495,8 @@ def check_errorbased_sqli(
                     message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 logger.notice(message)
                 _url = attack.request_url if injection_type == "GET" else attack.url
+                if conf.req_counter_injected < 1:
+                    conf.req_counter_injected = conf.request_counter - 1
                 _temp = Response(
                     url=_url,
                     data=attack.data,
@@ -1502,7 +1514,7 @@ def check_errorbased_sqli(
                     confirmed=True,
                     injected=is_injected,
                     prepared_vector=f"{_payload.prefix}{entry.vector}{_payload.suffix}",
-                    number_of_requests=requests_counter,
+                    number_of_requests=conf.request_counter,
                     backend=backend,
                     payload_type="error-based",
                     is_string=is_string,
@@ -2045,7 +2057,6 @@ def check_injections(
             vectors.update({"error_vector": esqli.prepared_vector})
             prefix = esqli.prefix if not prefix else prefix
             suffix = esqli.suffix if not suffix else suffix
-            number_of_requests_performed += esqli.number_of_requests
             sqlis.append(esqli)
     if "B" in techniques:
         bsqli = check_booleanbased_sqli(
@@ -2076,15 +2087,11 @@ def check_injections(
             return None
         is_injected_bool = bool(bsqli and bsqli.injected)
         if is_injected_bool:
-            # if is_injected_error:
-            sqlis.append(bsqli)
             priorities.update({"boolean-based": bsqli})
             vectors.update({"boolean_vector": bsqli.prepared_vector})
             prefix = bsqli.prefix if not prefix else prefix
             suffix = bsqli.suffix if not suffix else suffix
             dbms = bsqli.backend if not dbms else dbms
-            if number_of_requests_performed == 4:
-                number_of_requests_performed += bsqli.number_of_requests
     if "T" in techniques or "S" in techniques:
         tsqli = check_timebased_sqli(
             base,
@@ -2111,13 +2118,9 @@ def check_injections(
             return None
         is_injected_time = bool(tsqli and tsqli.injected)
         if is_injected_time:
-            # if is_injected_error:
-            sqlis.append(tsqli)
             priorities.update({"time-based": tsqli})
             vectors.update({"time_vector": tsqli.prepared_vector})
             dbms = tsqli.backend if not dbms else dbms
-            if number_of_requests_performed == 4:
-                number_of_requests_performed += tsqli.number_of_requests
     if "E" in techniques and not possible_dbms:
         esqli = check_errorbased_sqli(
             base,
@@ -2148,13 +2151,24 @@ def check_injections(
             vectors.update({"error_vector": esqli.prepared_vector})
             prefix = esqli.prefix if not prefix else prefix
             suffix = esqli.suffix if not suffix else suffix
-            number_of_requests_performed += esqli.number_of_requests
             sqlis.append(esqli)
     is_injected = bool(is_injected_error or is_injected_bool or is_injected_time)
     is_vulnerable = is_injected_error
     if is_injected:
         priority_keys = list(priorities.keys())
         error_based_in_priority = bool("error-based" in priority_keys)
+        # This check we added because if a target is 1st injected with boolean based and/or time-based and then error based
+        # then we need to dump both of the payloads as in case of error based injection we don't confirm rest of the injections
+        if is_injected_error:
+            ms = f"Ghauri identified that the parameter '{param_name}' is injectable with error-based"
+            if is_injected_bool:
+                ms += ", boolean based"
+                sqlis.append(priorities.get("boolean-based"))
+            if is_injected_time:
+                ms += ", time based"
+                sqlis.append(priorities.get("time-based"))
+            ms += " technique(s)."
+            logger.debug(ms)
         if "error-based" not in priority_keys:
             _it = injection_type
             if param_name == "#1*":
@@ -2236,9 +2250,27 @@ def check_injections(
             else:
                 message = f"\n{_it} parameter '{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
             question = logger.read_input(message, batch=batch, user_input="N")
+            if question == "y":
+                logger.debug("dumping current status of injected paramter to session..")
+                for entry in sqlis:
+                    session.dump(
+                        session_filepath=session_filepath,
+                        query=PAYLOAD_STATEMENT,
+                        values=(
+                            entry.title,
+                            entry.number_of_requests,
+                            entry.payload,
+                            entry.prepared_vector,
+                            entry.backend,
+                            json.dumps(entry.param),
+                            entry.injection_type,
+                            entry.payload_type,
+                            base.path,
+                        ),
+                    )
             if question == "n":
                 message = "Ghauri identified the following injection point(s) with a total of {nor} HTTP(s) requests:\n".format(
-                    nor=number_of_requests_performed
+                    nor=conf.req_counter_injected
                 )
                 message += "---\n"
                 _p = param_name

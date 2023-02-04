@@ -105,7 +105,7 @@ class HTTPRequestHandler:
         if conf.is_json:
             custom_headers.update({"Content-Type": "application/json"})
         request_url = req.request.get("url")
-        logger.traffic_out(f"HTTP request:\n{raw}")
+        logger.traffic_out(f"HTTP request [#{conf.request_counter}]:\n{raw}")
         headers = {}
         method = ""
         if proxy:
@@ -271,8 +271,8 @@ class HTTPRequestHandler:
             filtered_text=parsed_response.filtered_text,
         )
         raw_response = prepare_response(http_response)
-        # logger.debug(f"response time: {response_time}")
-        logger.traffic_in(f"HTTP Response {raw_response}\n")
+        logger.traffic_in(f"HTTP response {raw_response}\n")
+        conf.request_counter += 1
         return http_response
 
 
