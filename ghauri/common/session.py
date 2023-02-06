@@ -36,6 +36,7 @@ from ghauri.common.lib import (
     SESSION_STATEMENETS,
 )
 from ghauri.logger.colored_logger import logger
+from ghauri.common.utils import Struct
 
 
 class SessionFactory:
@@ -48,14 +49,18 @@ class SessionFactory:
             _temp[col[0]] = row[idx]
         return _temp
 
-    def fetchall(self, session_filepath="", query="", values=None):
+    def fetchall(self, session_filepath="", query="", values=None, to_object=False):
         conn = sqlite3.connect(session_filepath)
         conn.row_factory = self._dict_factory
         if values:
             cursor = conn.execute(query, values)
         else:
             cursor = conn.execute(query)
-        return cursor.fetchall()
+        if to_object:
+            cursor_response = [Struct(**resp) for resp in cursor.fetchall()]
+        else:
+            cursor_response = cursor.fetchall()
+        return cursor_response
 
     def fetch_cursor(self, session_filepath="", query=""):
         conn = sqlite3.connect(session_filepath)

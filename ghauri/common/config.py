@@ -92,6 +92,7 @@ class GhauriConfigs:
         self._json_post_data = []
         self.request_counter = 1
         self.req_counter_injected = 0
+        self.params_count = 0
 
     @property
     def session_filepath(self):

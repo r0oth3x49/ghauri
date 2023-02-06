@@ -56,6 +56,12 @@ from ghauri.common.payloads import PAYLOADS
 from ghauri.logger.colored_logger import logger
 from ghauri.common.prettytable import PrettyTable, from_db_cursor
 
+
+class Struct:
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
+
+
 # source: https://stackoverflow.com/questions/4685217/parse-raw-http-headers
 class HTTPRequest(BaseHTTPRequestHandler):
     def __init__(self, request_text):
@@ -1820,4 +1826,110 @@ def prepare_payloads(
                 vector=vector,
             )
             _temp.append(_r)
+    return _temp
+
+
+def payloads_to_objects(records):
+    ParameterResult = collections.namedtuple(
+        "ParameterResult",
+        ["parameter", "backend", "injection_type", "result"],
+    )
+    seen = set()
+    _temp = []
+    for entry in records:
+        parameter = json.loads(entry.parameter)
+        parameter = Struct(**parameter)
+        if parameter.key not in seen:
+            seen.add(parameter.key)
+            out = []
+            for entry in records:
+                ok = Struct(**json.loads(entry.parameter))
+                title = entry.title
+                vector = entry.vector
+                payload = entry.payload
+                backend = entry.backend
+                attempts = entry.attempts
+                endpoint = entry.endpoint
+                payload_type = entry.payload_type
+                injection_type = entry.injection_type
+                if ok.key == parameter.key:
+                    if payload_type.startswith("boolean-based"):
+                        res = {
+                            "title": title,
+                            "backend": backend,
+                            "payload": payload,
+                            "vector": vector,
+                            "attempts": attempts,
+                            "endpoint": endpoint,
+                            "payload_type": payload_type,
+                            "injection_type": injection_type,
+                            "parameter": ok,
+                        }
+                        res = Struct(**res)
+                        out.append(res)
+                    if payload_type.startswith("error-based"):
+                        res = {
+                            "title": title,
+                            "backend": backend,
+                            "payload": payload,
+                            "vector": vector,
+                            "attempts": attempts,
+                            "endpoint": endpoint,
+                            "payload_type": payload_type,
+                            "injection_type": injection_type,
+                            "parameter": ok,
+                        }
+                        res = Struct(**res)
+                        out.append(res)
+                    if payload_type.startswith("time-based"):
+                        res = {
+                            "title": title,
+                            "backend": backend,
+                            "payload": payload,
+                            "vector": vector,
+                            "attempts": attempts,
+                            "endpoint": endpoint,
+                            "payload_type": payload_type,
+                            "injection_type": injection_type,
+                            "parameter": ok,
+                        }
+                        res = Struct(**res)
+                        out.append(res)
+                    if payload_type.startswith("stacked"):
+                        res = {
+                            "title": title,
+                            "backend": backend,
+                            "payload": payload,
+                            "vector": vector,
+                            "attempts": attempts,
+                            "endpoint": endpoint,
+                            "payload_type": payload_type,
+                            "injection_type": injection_type,
+                            "parameter": ok,
+                        }
+                        res = Struct(**res)
+                        out.append(res)
+                    if payload_type.startswith("inline"):
+                        res = {
+                            "title": title,
+                            "backend": backend,
+                            "payload": payload,
+                            "vector": vector,
+                            "attempts": attempts,
+                            "endpoint": endpoint,
+                            "payload_type": payload_type,
+                            "injection_type": injection_type,
+                            "parameter": ok,
+                        }
+                        res = Struct(**res)
+                        out.append(res)
+            if out:
+                _temp.append(
+                    ParameterResult(
+                        parameter=parameter,
+                        backend=entry.backend,
+                        injection_type=entry.injection_type,
+                        result=out,
+                    )
+                )
     return _temp

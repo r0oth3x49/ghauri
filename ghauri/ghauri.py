@@ -251,6 +251,7 @@ def perform_injection(
             parameters = injection_points.get(injection_type)
             if testparameter:
                 parameters = [i for i in parameters if i.get("key") in testparameter]
+            conf.params_count = len(parameters)
             for parameter in parameters:
                 param_name = parameter.get("key")
                 param_value = parameter.get("value")
@@ -270,6 +271,7 @@ def perform_injection(
                 #         msg = f"ignoring {injection_type} parameter '{param_name}'"
                 #     logger.info(msg)
                 #     continue
+                conf.params_count -= 1
                 if not is_connection_tested:
                     retval_check = basic_check(
                         url=url,
