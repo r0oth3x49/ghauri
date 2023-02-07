@@ -60,6 +60,7 @@ from ghauri.common.utils import (
     fetch_payloads_by_suffix_prefix,
     get_payloads_with_functions,
     payloads_to_objects,
+    merge_time_based_attack_payloads,
 )
 
 
@@ -1021,12 +1022,9 @@ def check_timebased_sqli(
         timebased_only=bool("T" in techniques),
         stack_queries_only=False,
     )
-    payloads_list = []
-    [
-        payloads_list.extend([s, t])
-        for t in time_based_payloads
-        for s in stack_queries_payloads
-    ]
+    payloads_list = merge_time_based_attack_payloads(
+        time_based_payloads, stack_queries_payloads
+    )
     param_key = parameter.get("key")
     param_value = parameter.get("value")
     # in case of very slow internet users we will consider timesec value for testing and it should be >= 10 otherwise with good internet we are good to consider random sleep value

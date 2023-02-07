@@ -1829,6 +1829,20 @@ def prepare_payloads(
     return _temp
 
 
+def merge_time_based_attack_payloads(time_based, stacked_queries):
+    _temp = []
+    timed = len(time_based)
+    stacked = len(stacked_queries)
+
+    for i in range(max(timed, stacked)):
+        if i < timed:
+            _temp.append(time_based[i])
+        if i < stacked:
+            _temp.append(stacked_queries[i])
+
+    return _temp
+
+
 def payloads_to_objects(records):
     ParameterResult = collections.namedtuple(
         "ParameterResult",
