@@ -1130,6 +1130,13 @@ def prepare_attack_request(
             injection_type=injection_type,
             is_multipart=is_multipart,
         )
+    if encode and is_json:
+        payload = urlencode(
+            value=payload,
+            decode_first=True,
+            injection_type=injection_type,
+            is_multipart=is_multipart,
+        )
     key_to_split_by = urldecode(key)
     if (
         injection_type in ["GET", "POST", "COOKIE", "HEADER"]
