@@ -85,6 +85,7 @@ def perform_injection(
     text_only=False,
     skip_urlencoding=False,
     threads=None,
+    confirm_payloads=False,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -95,6 +96,7 @@ def perform_injection(
     }
     is_custom_point = False
     conf.skip_urlencoding = skip_urlencoding
+    conf.confirm_payloads = confirm_payloads
     logger.start("starting")
     if not force_ssl:
         ssl._create_default_https_context = ssl._create_unverified_context

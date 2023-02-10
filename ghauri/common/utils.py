@@ -29,6 +29,7 @@ from ghauri.common.lib import (
     gzip,
     html,
     json,
+    base64,
     chardet,
     binascii,
     urlparse,
@@ -1315,6 +1316,7 @@ def extract_multipart_formdata(data):
                     value = ""
             _out.update({"value": value})
         if _out:
+            _out.update({"parameter_type": "MULTIPART "})
             _temp.append(_out)
     return _temp
 
@@ -1398,9 +1400,13 @@ def extract_json_data(data):
                     if isinstance(i, dict):
                         extract_json_data(i)
                     if isinstance(i, str):
-                        conf._json_post_data.append({"key": key, "value": i})
+                        conf._json_post_data.append(
+                            {"key": key, "value": i, "parameter_type": "JSON "}
+                        )
             elif isinstance(value, str):
-                conf._json_post_data.append({"key": key, "value": value})
+                conf._json_post_data.append(
+                    {"key": key, "value": value, "parameter_type": "JSON "}
+                )
     # logger.debug(conf._json_post_data)
     return conf._json_post_data
 
@@ -1430,7 +1436,13 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
     is_json = False
     InjectionPoints = collections.namedtuple(
         "InjectionPoints",
-        ["custom_injection_in", "injection_points", "is_multipart", "is_json"],
+        [
+            "custom_injection_in",
+            "injection_points",
+            "is_multipart",
+            "is_json",
+            "injection_point",
+        ],
     )
     if headers:
         delimeter = "\n"
@@ -1439,6 +1451,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
             {
                 "key": i.split(":")[0].strip(),
                 "value": i.split(":")[-1].strip(),
+                "parameter_type": "",
             }
             for i in out
             if i
@@ -1463,7 +1476,11 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
             delimeter = ";"
         out = [i.strip() for i in cookies.split(delimeter)]
         params = [
-            {"key": i.split("=")[0].strip(), "value": i.split("=")[-1].strip()}
+            {
+                "key": i.split("=")[0].strip(),
+                "value": i.split("=")[-1].strip(),
+                "parameter_type": "",
+            }
             for i in out
             if i
         ]
@@ -1492,7 +1509,11 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
             else:
                 params = parse_qs(data.strip(), keep_blank_values=True)
                 params = [
-                    {"key": k.strip(), "value": "".join(v).replace("+", "%2b")}
+                    {
+                        "key": k.strip(),
+                        "value": "".join(v).replace("+", "%2b"),
+                        "parameter_type": "",
+                    }
                     for k, v in params.items()
                 ]
         if params:
@@ -1501,9 +1522,22 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
         parsed = urlparse(url)
         path = parsed.path
         params = parse_qs(parsed.query, keep_blank_values=True)
-        params = [{"key": k.strip(), "value": "".join(v)} for k, v in params.items()]
+        params = [
+            {
+                "key": k.strip(),
+                "value": "".join(v),
+                "parameter_type": "",
+            }
+            for k, v in params.items()
+        ]
         if not params and path and path != "/" and "*" in path:
-            params = [{"key": "#1*", "value": "*"}]
+            params = [
+                {
+                    "key": "#1*",
+                    "value": "*",
+                    "parameter_type": "",
+                }
+            ]
         _injection_points.update({"GET": params})
     for _type, _params in _injection_points.items():
         for entry in _params:
@@ -1514,11 +1548,19 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
                 custom_injection_in.append(_type)
             if key and "*" in key and key != "#1*":
                 custom_injection_in.append(_type)
+    injection_point = {}
+    for _type, _params in _injection_points.items():
+        _ = []
+        for entry in _params:
+            p = Struct(**entry)
+            _.append(p)
+        injection_point.update({_type: _})
     _temp = InjectionPoints(
         custom_injection_in=list(set(custom_injection_in)),
         injection_points=_injection_points,
         is_multipart=is_multipart,
         is_json=is_json,
+        injection_point=injection_point,
     )
     logger.debug(_temp)
     return _temp
@@ -1873,8 +1915,12 @@ def payloads_to_objects(records):
                 endpoint = entry.endpoint
                 payload_type = entry.payload_type
                 injection_type = entry.injection_type
+                attack01 = base64.b64decode(entry.attack01).decode()
+                string = entry.string
+                not_string = entry.not_string
                 if ok.key == parameter.key:
                     if payload_type.startswith("boolean-based"):
+                        attack01 = Struct(**json.loads(attack01))
                         res = {
                             "title": title,
                             "backend": backend,
@@ -1885,6 +1931,9 @@ def payloads_to_objects(records):
                             "payload_type": payload_type,
                             "injection_type": injection_type,
                             "parameter": ok,
+                            "attack01": attack01,
+                            "string": string,
+                            "not_string": not_string,
                         }
                         res = Struct(**res)
                         out.append(res)
@@ -1899,6 +1948,9 @@ def payloads_to_objects(records):
                             "payload_type": payload_type,
                             "injection_type": injection_type,
                             "parameter": ok,
+                            "attack01": attack01,
+                            "string": string,
+                            "not_string": not_string,
                         }
                         res = Struct(**res)
                         out.append(res)
@@ -1913,6 +1965,9 @@ def payloads_to_objects(records):
                             "payload_type": payload_type,
                             "injection_type": injection_type,
                             "parameter": ok,
+                            "attack01": attack01,
+                            "string": string,
+                            "not_string": not_string,
                         }
                         res = Struct(**res)
                         out.append(res)
@@ -1927,6 +1982,9 @@ def payloads_to_objects(records):
                             "payload_type": payload_type,
                             "injection_type": injection_type,
                             "parameter": ok,
+                            "attack01": attack01,
+                            "string": string,
+                            "not_string": not_string,
                         }
                         res = Struct(**res)
                         out.append(res)
@@ -1941,6 +1999,9 @@ def payloads_to_objects(records):
                             "payload_type": payload_type,
                             "injection_type": injection_type,
                             "parameter": ok,
+                            "attack01": attack01,
+                            "string": string,
+                            "not_string": not_string,
                         }
                         res = Struct(**res)
                         out.append(res)
@@ -1954,3 +2015,10 @@ def payloads_to_objects(records):
                     )
                 )
     return _temp
+
+
+def encode_object(obj, decode=False):
+    if not decode:
+        return base64.b64encode(json.dumps(obj).encode()).decode()
+    if decode:
+        return Struct(json.loads(base64.b64decode(obj).decode()))

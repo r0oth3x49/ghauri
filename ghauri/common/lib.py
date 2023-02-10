@@ -36,6 +36,7 @@ import html
 import gzip
 import json
 import uuid
+import base64
 import urllib
 import codecs
 import shutil
@@ -256,7 +257,11 @@ CREATE TABLE tbl_payload (
  parameter text NOT NULL,
  injection_type text NOT NULL,
  payload_type text NOT NULL,
- endpoint text NOT NULL
+ endpoint text NOT NULL,
+ parameter_type text,
+ string text,
+ not_string text,
+ attack01 text
 );
 CREATE TABLE storage (
  id integer PRIMARY KEY AUTOINCREMENT,
@@ -270,8 +275,8 @@ ON storage (type);
 
 PAYLOAD_STATEMENT = """
 INSERT 
-    INTO tbl_payload (`title`, `attempts`, `payload`, `vector`, `backend`, `parameter`, `injection_type`, `payload_type`, `endpoint`)
-VALUES  (?, ?, ?, ?, ?, ?, ?, ?, ?);
+    INTO tbl_payload (`title`, `attempts`, `payload`, `vector`, `backend`, `parameter`, `injection_type`, `payload_type`, `endpoint`, `parameter_type`, `string`, `not_string`, `attack01`)
+VALUES  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 """
 
 STORAGE = """

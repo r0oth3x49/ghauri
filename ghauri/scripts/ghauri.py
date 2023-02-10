@@ -177,6 +177,12 @@ def main():
         metavar="",
     )
     request.add_argument(
+        "--confirm",
+        dest="confirm_payloads",
+        action="store_true",
+        help="Confirm the injected payloads.",
+    )
+    request.add_argument(
         "--skip-urlencode",
         dest="skip_urlencoding",
         action="store_true",
@@ -430,6 +436,7 @@ def main():
         text_only=args.text_only,
         skip_urlencoding=args.skip_urlencoding,
         threads=args.threads,
+        confirm_payloads=args.confirm_payloads,
     )
     if resp.is_injected:
         target = ghauri.Ghauri(
