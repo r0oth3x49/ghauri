@@ -132,6 +132,12 @@ def perform_injection(
     levels = {2: "COOKIE", 3: "HEADER"}
     raw = ""
     if requestfile:
+        if not os.path.isfile(requestfile):
+            logger.error(
+                "invalid filename of file location, please provide correct filepath e.g:- '-r /path/to/requestfile.txt'"
+            )
+            logger.end("ending")
+            exit(0)
         logger.info(f"parsing HTTP request from '{requestfile}'")
         raw = "\n".join([i.strip() for i in open(requestfile) if i])
     if raw:
@@ -169,7 +175,7 @@ def perform_injection(
         level = 2
     if "HEADER" in custom_injection_in:
         level = 3
-    injection_points = obj.injection_points
+    injection_points = obj.injection_point
     conf.is_multipart = is_multipart = obj.is_multipart
     conf.is_json = is_json = obj.is_json
     conf.text_only = text_only
@@ -252,11 +258,11 @@ def perform_injection(
                 is_json_asked = True
             parameters = injection_points.get(injection_type)
             if testparameter:
-                parameters = [i for i in parameters if i.get("key") in testparameter]
+                parameters = [i for i in parameters if i.key in testparameter]
             conf.params_count = len(parameters)
             for parameter in parameters:
-                param_name = parameter.get("key")
-                param_value = parameter.get("value")
+                param_name = parameter.key
+                param_value = parameter.value
                 is_parameter_tested = False
                 is_custom_injection_marker_found = bool(
                     "*" in param_name or "*" in param_value
@@ -310,16 +316,16 @@ def perform_injection(
                             msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name}'"
                         elif "POST" in custom_point:
                             if is_multipart:
-                                msg = f"testing for SQL injection on (custom) {injection_type} parameter 'MULTIPART {param_name}'"
+                                msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
                             elif is_json:
-                                msg = f"testing for SQL injection on (custom) {injection_type} parameter 'JSON {param_name}'"
+                                msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
                             else:
                                 msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name}'"
                     else:
                         if is_multipart:
-                            msg = f"testing for SQL injection on (custom) {injection_type} parameter 'MULTIPART {param_name}'"
+                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
                         elif is_json:
-                            msg = f"testing for SQL injection on (custom) {injection_type} parameter 'JSON {param_name}'"
+                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
                         else:
                             msg = f"testing for SQL injection on {injection_type} parameter '{param_name}'"
                     logger.info(msg)

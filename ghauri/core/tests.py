@@ -63,6 +63,7 @@ from ghauri.common.utils import (
     payloads_to_objects,
     merge_time_based_attack_payloads,
     encode_object,
+    Struct,
 )
 
 
@@ -82,14 +83,9 @@ def basic_check(
 ):
     is_dynamic = False
     is_resumed = False
-    param_name = ""
     is_parameter_tested = False
-    if is_multipart:
-        param_name += "MULTIPART "
-    if is_json:
-        param_name += "JSON "
-    param_name += parameter.get("key")
-    param_key = parameter.get("key")
+    param_name = f"{parameter.type}{parameter.key}"
+    param_key = parameter.key
     Response = collections.namedtuple(
         "BasicCheckResponse",
         [
@@ -120,19 +116,11 @@ def basic_check(
             to_object=True,
         )
         if retval:
-            json_data_parameters = [json.loads(i.parameter) for i in retval]
+            json_data_parameters = [Struct(**json.loads(i.parameter)) for i in retval]
             params_tested_already = list(
-                set(
-                    [
-                        i
-                        for i in [
-                            i.get("key", "").lower() for i in json_data_parameters
-                        ]
-                        if i
-                    ]
-                )
+                set([i for i in [i.key.lower() for i in json_data_parameters] if i])
             )
-            param_tobe_tested = parameter.get("key").lower()
+            param_tobe_tested = parameter.key.lower()
             if param_tobe_tested in params_tested_already:
                 logger.debug(f"parameter '{param_tobe_tested}' is already tested..")
                 is_parameter_tested = True
@@ -176,7 +164,7 @@ def basic_check(
         exit(0)
     if not is_resumed:
         param_name = f"{mc}{param_name}{nc}"
-        expressions = ["'\",..))", "',..))", '",..))']
+        expressions = ["'\",..))", "',..))", '",..))', "'\"", "%27%22"]
         for expression in expressions:
             attack = inject_expression(
                 url=url,
@@ -326,8 +314,8 @@ def confirm_booleanbased_sqli(
 ):
     _temp = []
     Response = collections.namedtuple("Response", ["vulnerable", "tests_performed"])
-    param_key = parameter.get("key")
-    param_value = parameter.get("value")
+    param_key = parameter.key
+    param_value = parameter.value
     test_payloads = [
         {
             "true": {"payload": "2*3*8=6*8", "response": True},
@@ -350,7 +338,7 @@ def confirm_booleanbased_sqli(
             "false": {"payload": "3*2*0=6", "response": False},
         },
     ]
-    if response_time > 8 or confirmation:
+    if response_time > 8:
         test_payloads = test_payloads[0:3]
     for entry in test_payloads:
         if delay > 0:
@@ -436,12 +424,16 @@ def confirm_booleanbased_sqli(
             logger.critical(f"error {error}, during time-based confirmation phase.")
             break
     attempts_count = len(_temp)
-    total_attempts_to_vulnerable = len(test_payloads) - 2
-    if attempts_count >= total_attempts_to_vulnerable:
+    total_attempts_to_vulnerable = len(test_payloads)
+    perc = attempts_count // total_attempts_to_vulnerable * 100
+    logger.debug(
+        f"further tests shows that the chances are {perc}% for the target to be injected.."
+    )
+    if perc >= 80:
         vulnerable = check_booleanbased_tests(_temp)
     else:
         if response_time > 8:
-            if attempts_count >= total_attempts_to_vulnerable:
+            if perc >= 70:
                 vulnerable = check_booleanbased_tests(_temp)
             else:
                 vulnerable = False
@@ -509,8 +501,8 @@ def check_booleanbased_sqli(
             booleanbased_only=True, dbms=dbms or possible_dbms
         )
         blind_payloads.extend(dbms_specific_boolean_payloads)
-    param_key = parameter.get("key")
-    param_value = parameter.get("value")
+    param_key = parameter.key
+    param_value = parameter.value
     is_injected = False
     injection_type = injection_type.upper()
     end_detection_phase = False
@@ -725,11 +717,11 @@ def check_booleanbased_sqli(
                 if param_key == "#1*":
                     _it = "URI"
                 if is_multipart:
-                    message = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 elif is_json:
-                    message = f"(custom) {injection_type} parameter '{mc}JSON {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 else:
-                    message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"{_it} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 logger.notice(message)
                 if not possible_dbms and not dbms:
                     inj = FingerPrintDBMS(
@@ -768,7 +760,7 @@ def check_booleanbased_sqli(
                             "Ghauri could not determine the backend DBMS, detected payload is false positive, performing further tests.."
                         )
                         logger.warning(
-                            "false positive payload detected, continue testing remaining payloads.."
+                            "false positive payload detected, Ghauri will perform further test(s) if any to ensure if target is injectable.."
                         )
                         continue
                     if backend:
@@ -844,15 +836,15 @@ def confirm_timebased_sqli(
     if is_read_timedout:
         TEST_CASES_COUNT = 3
     inferences = [
-        {"inference": "05689=5689", "response": True},
         {"inference": "09637=5556", "response": False},
-        {"inference": "02687=26877", "response": False},
         {"inference": "8965=8956", "response": False},
         {"inference": "9686=9686", "response": True},
+        {"inference": "01648=2567", "response": False},
+        {"inference": "05689=5689", "response": True},
     ]
     Response = collections.namedtuple("Response", ["vulnerable", "tests_performed"])
-    param_key = parameter.get("key")
-    param_value = parameter.get("value")
+    param_key = parameter.key
+    param_value = parameter.value
     sleep_times = [i for i in range(0, 10) if i != injected_sleep_time]
     for _ in range(10):
         random.shuffle(sleep_times)
@@ -888,13 +880,16 @@ def confirm_timebased_sqli(
                         decoded_expression, str(response_time), str(is_ok)
                     )
                 )
-                if response_inference:
+                if response_inference and is_ok:
                     _temp.append(
                         {
                             "payload": decoded_expression,
                             "response_time": response_time,
                         }
                     )
+                if response_inference and not is_ok:
+                    # in case of read timeout we GET a false postive type we don't test it further..
+                    break
             except KeyboardInterrupt as error:
                 logger.warning("user aborted during time-based confirmation phase.")
                 break
@@ -1027,8 +1022,8 @@ def check_timebased_sqli(
     payloads_list = merge_time_based_attack_payloads(
         time_based_payloads, stack_queries_payloads
     )
-    param_key = parameter.get("key")
-    param_value = parameter.get("value")
+    param_key = parameter.key
+    param_value = parameter.value
     # in case of very slow internet users we will consider timesec value for testing and it should be >= 10 otherwise with good internet we are good to consider random sleep value
     sleep_time = timesec if timesec >= 10 else random.randint(5, 9)
     injection_type = injection_type.upper()
@@ -1175,11 +1170,11 @@ def check_timebased_sqli(
                 if param_key == "#1*":
                     _it = "URI"
                 if is_multipart:
-                    message = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 elif is_json:
-                    message = f"(custom) {injection_type} parameter '{mc}JSON {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 else:
-                    message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"{_it} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 if with_status_code_msg and "ReadTimeout" in with_status_code_msg:
                     logger.warning(
                         "in case of read timeout performing further tests to confirm if the detected payload is working.."
@@ -1289,8 +1284,8 @@ def check_errorbased_sqli(
         ],
     )
     error_based_payloads = fetch_db_specific_payload(dbms=dbms, error_based_only=True)
-    param_key = parameter.get("key")
-    param_value = parameter.get("value")
+    param_key = parameter.key
+    param_value = parameter.value
     sleep_time = random.randint(5, 9)
     injection_type = injection_type.upper()
     is_injected = False
@@ -1493,11 +1488,11 @@ def check_errorbased_sqli(
                 if param_key == "#1*":
                     _it = "URI"
                 if is_multipart:
-                    message = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 elif is_json:
-                    message = f"(custom) {injection_type} parameter '{mc}JSON {param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 else:
-                    message = f"{_it} parameter '{mc}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
+                    message = f"{_it} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{entry.title}{nc}' injectable{with_status_code_msg}"
                 logger.notice(message)
                 _url = attack.request_url if injection_type == "GET" else attack.url
                 if conf.req_counter_injected < 1:
@@ -1566,16 +1561,16 @@ def get_injectable_payloads(
     message_list = []
     for entry in retval:
         param_name = entry.parameter.key
-        param_value = entry.parameter.value
+        param_value = entry.parameter.value.replace("*", "")
         results = entry.result
         if param_name not in param_set:
             _p = f"{param_name}"
             _it = injection_type if param_name != "#1*" else "URI"
             if is_json:
-                _p = f"JSON {param_name}"
+                _p = f"{entry.parameter.parameter_type}{param_name}"
                 _it = f"(custom) {injection_type}"
             if is_multipart:
-                _p = f"MULTIPART {param_name}"
+                _p = f"{entry.parameter.parameter_type}{param_name}"
                 _it = f"(custom) {injection_type}"
             message_ok = "Parameter: {} ({})".format(_p, _it)
             param_set.add(param_name)
@@ -1594,7 +1589,7 @@ def get_injectable_payloads(
                     _data = prepare_attack_request(
                         text=data,
                         payload=payload,
-                        param=vars(res.parameter),
+                        param=res.parameter,
                         is_multipart=is_multipart,
                         injection_type=injection_type,
                         encode=False,
@@ -1603,7 +1598,7 @@ def get_injectable_payloads(
                     _url = prepare_attack_request(
                         text=url,
                         payload=payload,
-                        param=vars(res.parameter),
+                        param=res.parameter,
                         injection_type=injection_type,
                         encode=False,
                     )
@@ -1679,8 +1674,8 @@ def check_session(
     )
     retval = ok.retval
     if retval:
-        if parameter.get("key") not in ok.tested_parameters:
-            logger.debug(f"parameter '{parameter.get('key')}' is not tested..")
+        if parameter.key not in ok.tested_parameters:
+            logger.debug(f"parameter '{parameter.key}' is not tested..")
             return None
     Response = collections.namedtuple(
         "Session",
@@ -2015,7 +2010,7 @@ def check_session(
                         not_match_string=not_match_string,
                         vectors=vectors,
                         injection_type=entry.injection_type,
-                        param=vars(param_info),
+                        param=param_info,
                         backend=entry.backend,
                         is_string=is_string,
                     )
@@ -2027,9 +2022,9 @@ def check_session(
                     msg += "(custom) "
                 msg += f"{entry.injection_type} parameter "
                 if is_multipart:
-                    name = f"MULTIPART {param_info.key}"
+                    name = f"{param_info.type}{param_info.key}"
                 if is_json:
-                    name = f"JSON {param_info.key}"
+                    name = f"{param_info.type}{param_info.key}"
                 msg += f"'{name}' does not seem to be injectable"
                 logger.debug(msg)
         if not bool(_temp):
@@ -2203,8 +2198,8 @@ def check_injections(
             match_string=retval_session.match_string,
             is_string=retval_session.is_string,
         )
-    param_name += parameter.get("key")
-    param_value = parameter.get("value")
+    param_name += parameter.key
+    param_value = parameter.value
     if "E" in techniques and possible_dbms:
         esqli = check_errorbased_sqli(
             base,
@@ -2352,11 +2347,11 @@ def check_injections(
             if param_name == "#1*":
                 _it = "URI"
             if is_multipart:
-                message = f"checking if the injection point on (custom) {injection_type} parameter 'MULTIPART {param_name}' is a false positive"
+                message = f"checking if the injection point on (custom) {injection_type} parameter '{parameter.type}{param_name}' is a false positive"
             elif is_json:
-                message = f"checking if the injection point on (custom) {injection_type} parameter 'JSON {param_name}' is a false positive"
+                message = f"checking if the injection point on (custom) {injection_type} parameter '{parameter.type}{param_name}' is a false positive"
             else:
-                message = f"checking if the injection point on {_it} parameter '{param_name}' is a false positive"
+                message = f"checking if the injection point on {_it} parameter '{parameter.type}{param_name}' is a false positive"
             logger.info(message)
         if "boolean-based" in priority_keys and not error_based_in_priority:
             retval = priorities.get("boolean-based")
@@ -2422,11 +2417,11 @@ def check_injections(
             if param_name == "#1*":
                 _it = "URI"
             if is_multipart:
-                message = f"\n(custom) {injection_type} parameter 'MULTIPART {param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
+                message = f"\n(custom) {injection_type} parameter '{parameter.type}{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
             elif is_json:
-                message = f"\n(custom) {injection_type} parameter 'JSON {param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
+                message = f"\n(custom) {injection_type} parameter '{parameter.type}{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
             else:
-                message = f"\n{_it} parameter '{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
+                message = f"\n{_it} parameter '{parameter.type}{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
             question = logger.read_input(message, batch=batch, user_input="N")
             if sqlis:
                 boolean = priorities.get("boolean-based")
@@ -2451,11 +2446,11 @@ def check_injections(
                             entry.payload,
                             entry.prepared_vector,
                             entry.backend,
-                            json.dumps(entry.param),
+                            json.dumps(vars(entry.param)),
                             entry.injection_type,
                             entry.payload_type,
                             base.path,
-                            parameter.get("parameter_type"),
+                            parameter.type,
                             _string,
                             _not_string,
                             _attack01,
@@ -2509,23 +2504,21 @@ def check_injections(
             if param_name == "#1*":
                 _it = "URI"
             if is_multipart:
-                msg = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_name}{nc}' does not seem to be injectable"
+                msg = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
             if is_json:
-                msg = f"(custom) {injection_type} parameter '{mc}JSON {param_name}{nc}' does not seem to be injectable"
+                msg = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
             else:
-                msg = f"{_it} parameter '{mc}{param_name}{nc}' does not seem to be injectable"
+                msg = f"{_it} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
             logger.notice(msg)
     else:
         _it = injection_type
         if param_name == "#1*":
             _it = "URI"
         if is_multipart:
-            msg = f"(custom) {injection_type} parameter '{mc}MULTIPART {param_name}{nc}' does not seem to be injectable"
+            msg = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
         if is_json:
-            msg = f"(custom) {injection_type} parameter '{mc}JSON {param_name}{nc}' does not seem to be injectable"
+            msg = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
         else:
-            msg = (
-                f"{_it} parameter '{mc}{param_name}{nc}' does not seem to be injectable"
-            )
+            msg = f"{_it} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
         logger.notice(msg)
     return None

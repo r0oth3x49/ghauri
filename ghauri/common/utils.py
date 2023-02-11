@@ -698,7 +698,8 @@ def check_boolean_responses(
                 if (
                     not difference
                     and conf.match_ratio
-                    and conf.match_ratio != ratio_true
+                    and conf.match_ratio in [ratio_true, ratio_false]
+                    # and conf.match_ratio != ratio_true
                 ):
                     is_vulner = True
                     case = "Match Ratio"
@@ -1093,8 +1094,8 @@ def prepare_attack_request(
     is_multipart=False,
 ):
     prepared_payload = ""
-    key = param.get("key")
-    value = param.get("value")
+    key = param.key
+    value = param.value
     is_json = conf.is_json
     is_multipart = conf.is_multipart
     safe = (
@@ -1131,7 +1132,7 @@ def prepare_attack_request(
             injection_type=injection_type,
             is_multipart=is_multipart,
         )
-    if injection_type == "GET" and is_json and encode:
+    if encode and param.type == "" and is_json:
         payload = urlencode(
             value=payload,
             decode_first=True,
@@ -1316,7 +1317,7 @@ def extract_multipart_formdata(data):
                     value = ""
             _out.update({"value": value})
         if _out:
-            _out.update({"parameter_type": "MULTIPART "})
+            _out.update({"type": "MULTIPART "})
             _temp.append(_out)
     return _temp
 
@@ -1401,11 +1402,11 @@ def extract_json_data(data):
                         extract_json_data(i)
                     if isinstance(i, str):
                         conf._json_post_data.append(
-                            {"key": key, "value": i, "parameter_type": "JSON "}
+                            {"key": key, "value": i, "type": "JSON "}
                         )
             elif isinstance(value, str):
                 conf._json_post_data.append(
-                    {"key": key, "value": value, "parameter_type": "JSON "}
+                    {"key": key, "value": value, "type": "JSON "}
                 )
     # logger.debug(conf._json_post_data)
     return conf._json_post_data
@@ -1438,7 +1439,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
         "InjectionPoints",
         [
             "custom_injection_in",
-            "injection_points",
+            # "injection_points",
             "is_multipart",
             "is_json",
             "injection_point",
@@ -1451,7 +1452,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
             {
                 "key": i.split(":")[0].strip(),
                 "value": i.split(":")[-1].strip(),
-                "parameter_type": "",
+                "type": "",
             }
             for i in out
             if i
@@ -1479,7 +1480,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
             {
                 "key": i.split("=")[0].strip(),
                 "value": i.split("=")[-1].strip(),
-                "parameter_type": "",
+                "type": "",
             }
             for i in out
             if i
@@ -1512,7 +1513,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
                     {
                         "key": k.strip(),
                         "value": "".join(v).replace("+", "%2b"),
-                        "parameter_type": "",
+                        "type": "",
                     }
                     for k, v in params.items()
                 ]
@@ -1526,7 +1527,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
             {
                 "key": k.strip(),
                 "value": "".join(v),
-                "parameter_type": "",
+                "type": "",
             }
             for k, v in params.items()
         ]
@@ -1535,7 +1536,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
                 {
                     "key": "#1*",
                     "value": "*",
-                    "parameter_type": "",
+                    "type": "",
                 }
             ]
         _injection_points.update({"GET": params})
@@ -1557,7 +1558,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
         injection_point.update({_type: _})
     _temp = InjectionPoints(
         custom_injection_in=list(set(custom_injection_in)),
-        injection_points=_injection_points,
+        # injection_points=_injection_points,
         is_multipart=is_multipart,
         is_json=is_json,
         injection_point=injection_point,
