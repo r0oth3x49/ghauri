@@ -2039,7 +2039,7 @@ def check_session(
         if len(_temp) > 1:
             ses = "there were multiple injection points, please select the one to use for following injections:\n"
             for index, i in enumerate(_temp):
-                ses += f"[{index}] place: {i.injection_type}, parameter: {i.param.get('key')}"
+                ses += f"[{index}] place: {i.injection_type}, parameter: {i.param.key}"
                 if index == 0:
                     ses += "  (default)"
                 ses += "\n"
