@@ -666,7 +666,8 @@ def check_booleanbased_sqli(
             with_status_code = attack.status_code
             if attack.status_code != attack01.status_code:
                 is_different_status_code_injectable = True
-                with_status_code_msg = f" (with --code={with_status_code})"
+                if attack.status_code != 200:
+                    with_status_code_msg = f" (with --code={with_status_code})"
             if attack.status_code in [403, 406]:
                 logger.debug(
                     f"{attack.error_msg} HTTP error codes detected. ghauri is going to retry in few seconds.."
@@ -1154,7 +1155,8 @@ def check_timebased_sqli(
                         f" (with error ReadTimeout on --timeout={timeout})"
                     )
                 else:
-                    with_status_code_msg = f" (with --code={with_status_code})"
+                    if attack.status_code != 200:
+                        with_status_code_msg = f" (with --code={with_status_code})"
             if attack.status_code in [403, 406] and code and code not in [403, 406]:
                 logger.debug(
                     f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
@@ -1299,7 +1301,7 @@ def check_errorbased_sqli(
     error_based_payloads = get_payloads_with_functions(
         error_based_payloads, backend=dbms, possible_dbms=possible_dbms
     )
-    error_based_payloads.reverse()
+    # error_based_payloads.reverse()
     for entry in error_based_payloads:
         backend = entry.dbms
         index_of_payload = 0
@@ -1414,7 +1416,8 @@ def check_errorbased_sqli(
             with_status_code = attack.status_code
             if attack.status_code != base.status_code:
                 is_different_status_code_injectable = True
-                with_status_code_msg = f" (with --code={with_status_code})"
+                if attack.status_code != 200:
+                    with_status_code_msg = f" (with --code={with_status_code})"
             if attack.status_code in [403, 406] and code and code not in [403, 406]:
                 logger.critical(
                     f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."

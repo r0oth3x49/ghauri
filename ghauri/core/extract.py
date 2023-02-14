@@ -141,33 +141,33 @@ class GhauriExtractor:
             expression = entry.get("expression")
             _type = entry.get("type")
             logger.payload(f"{expression}")
-            if http_firewall_code_counter > 2:
-                message = f"{error_msg} - {http_firewall_code_counter} time(s)"
-                logger.warning(f"HTTP error code detected during run:")
-                choice = logger.read_input(
-                    f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
-                    batch=False,
-                    user_input="C",
-                )
-                if choice == "q":
-                    logger.error("user quit")
-                    logger.end("ending")
-                    exit(0)
-                if choice == "c":
-                    http_firewall_code_counter = 0
-            if retry_on_error >= retry:
-                logger.warning(f"Ghauri detected connection errors multiple times")
-                choice = logger.read_input(
-                    f"how do you want to proceed? [(C)continue/(q)uit] ",
-                    batch=False,
-                    user_input="C",
-                )
-                if choice == "q":
-                    logger.error("user quit")
-                    logger.end("ending")
-                    exit(0)
-                if choice == "c":
-                    retry_on_error = 0
+            # if http_firewall_code_counter > 2:
+            #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+            #     logger.warning(f"HTTP error code detected during run:")
+            #     choice = logger.read_input(
+            #         f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+            #         batch=False,
+            #         user_input="C",
+            #     )
+            #     if choice == "q":
+            #         logger.error("user quit")
+            #         logger.end("ending")
+            #         exit(0)
+            #     if choice == "c":
+            #         http_firewall_code_counter = 0
+            # if retry_on_error >= retry:
+            #     logger.warning(f"Ghauri detected connection errors multiple times")
+            #     choice = logger.read_input(
+            #         f"how do you want to proceed? [(C)continue/(q)uit] ",
+            #         batch=False,
+            #         user_input="C",
+            #     )
+            #     if choice == "q":
+            #         logger.error("user quit")
+            #         logger.end("ending")
+            #         exit(0)
+            #     if choice == "c":
+            #         retry_on_error = 0
             if delay > 0:
                 time.sleep(delay)
             try:
@@ -184,14 +184,14 @@ class GhauriExtractor:
                     is_multipart=is_multipart,
                     injection_type=injection_type,
                 )
-                if attack.status_code in [403, 406]:
-                    logger.critical(
-                        f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
-                    )
-                    time.sleep(0.5)
-                    error_msg = attack.error_msg
-                    http_firewall_code_counter += 1
-                    continue
+                # if attack.status_code in [403, 406]:
+                #     logger.critical(
+                #         f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                #     )
+                #     time.sleep(0.5)
+                #     error_msg = attack.error_msg
+                #     http_firewall_code_counter += 1
+                #     continue
                 logger.debug(
                     f"sleep time: {timesec}, response time: {attack.response_time}"
                 )
@@ -333,33 +333,33 @@ class GhauriExtractor:
         error_msg = None
         if identified_character:
             for i in range(1, retry + 1):
-                if http_firewall_code_counter > 2:
-                    message = f"{error_msg} - {http_firewall_code_counter} time(s)"
-                    logger.warning(f"HTTP error code detected during run:")
-                    choice = logger.read_input(
-                        f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
-                        batch=False,
-                        user_input="C",
-                    )
-                    if choice == "q":
-                        logger.error("user quit")
-                        logger.end("ending")
-                        exit(0)
-                    if choice == "c":
-                        http_firewall_code_counter = 0
-                if retry_on_error >= retry:
-                    logger.warning(f"Ghauri detected connection errors multiple times")
-                    choice = logger.read_input(
-                        f"how do you want to proceed? [(C)continue/(q)uit] ",
-                        batch=False,
-                        user_input="C",
-                    )
-                    if choice == "q":
-                        logger.error("user quit")
-                        logger.end("ending")
-                        exit(0)
-                    if choice == "c":
-                        retry_on_error = 0
+                # if http_firewall_code_counter > 2:
+                #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                #     logger.warning(f"HTTP error code detected during run:")
+                #     choice = logger.read_input(
+                #         f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+                #         batch=False,
+                #         user_input="C",
+                #     )
+                #     if choice == "q":
+                #         logger.error("user quit")
+                #         logger.end("ending")
+                #         exit(0)
+                #     if choice == "c":
+                #         http_firewall_code_counter = 0
+                # if retry_on_error >= retry:
+                #     logger.warning(f"Ghauri detected connection errors multiple times")
+                #     choice = logger.read_input(
+                #         f"how do you want to proceed? [(C)continue/(q)uit] ",
+                #         batch=False,
+                #         user_input="C",
+                #     )
+                #     if choice == "q":
+                #         logger.error("user quit")
+                #         logger.end("ending")
+                #         exit(0)
+                #     if choice == "c":
+                #         retry_on_error = 0
                 if delay > 0:
                     time.sleep(delay)
                 condition = expression_payload.format(
@@ -390,14 +390,14 @@ class GhauriExtractor:
                         is_multipart=is_multipart,
                         injection_type=injection_type,
                     )
-                    if attack.status_code in [403, 406]:
-                        logger.critical(
-                            f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
-                        )
-                        time.sleep(0.5)
-                        error_msg = attack.error_msg
-                        http_firewall_code_counter += 1
-                        continue
+                    # if attack.status_code in [403, 406]:
+                    #     logger.critical(
+                    #         f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                    #     )
+                    #     time.sleep(0.5)
+                    #     error_msg = attack.error_msg
+                    #     http_firewall_code_counter += 1
+                    #     continue
                     logger.debug(
                         f"sleep time: {sleep_time}, response time: {attack.response_time}"
                     )
@@ -528,33 +528,33 @@ class GhauriExtractor:
             )
             index = 0
             while index < len(sorted_ascii_list):
-                if http_firewall_code_counter > 2:
-                    message = f"{error_msg} - {http_firewall_code_counter} time(s)"
-                    logger.warning(f"HTTP error code detected during run:")
-                    choice = logger.read_input(
-                        f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
-                        batch=False,
-                        user_input="C",
-                    )
-                    if choice == "q":
-                        logger.error("user quit")
-                        logger.end("ending")
-                        exit(0)
-                    if choice == "c":
-                        http_firewall_code_counter = 0
-                if retry_on_error >= retry:
-                    logger.warning(f"Ghauri detected connection errors multiple times")
-                    choice = logger.read_input(
-                        f"how do you want to proceed? [(C)continue/(q)uit] ",
-                        batch=False,
-                        user_input="C",
-                    )
-                    if choice == "q":
-                        logger.error("user quit")
-                        logger.end("ending")
-                        exit(0)
-                    if choice == "c":
-                        retry_on_error = 0
+                # if http_firewall_code_counter > 2:
+                #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                #     logger.warning(f"HTTP error code detected during run:")
+                #     choice = logger.read_input(
+                #         f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+                #         batch=False,
+                #         user_input="C",
+                #     )
+                #     if choice == "q":
+                #         logger.error("user quit")
+                #         logger.end("ending")
+                #         exit(0)
+                #     if choice == "c":
+                #         http_firewall_code_counter = 0
+                # if retry_on_error >= retry:
+                #     logger.warning(f"Ghauri detected connection errors multiple times")
+                #     choice = logger.read_input(
+                #         f"how do you want to proceed? [(C)continue/(q)uit] ",
+                #         batch=False,
+                #         user_input="C",
+                #     )
+                #     if choice == "q":
+                #         logger.error("user quit")
+                #         logger.end("ending")
+                #         exit(0)
+                #     if choice == "c":
+                #         retry_on_error = 0
                 if delay > 0:
                     time.sleep(delay)
                 characters_list = sorted_ascii_list[index]
@@ -583,14 +583,14 @@ class GhauriExtractor:
                         is_multipart=is_multipart,
                         injection_type=injection_type,
                     )
-                    if attack.status_code in [403, 406]:
-                        logger.critical(
-                            f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
-                        )
-                        time.sleep(0.5)
-                        error_msg = attack.error_msg
-                        http_firewall_code_counter += 1
-                        continue
+                    # if attack.status_code in [403, 406]:
+                    #     logger.critical(
+                    #         f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                    #     )
+                    #     time.sleep(0.5)
+                    #     error_msg = attack.error_msg
+                    #     http_firewall_code_counter += 1
+                    #     continue
                     response_time = attack.response_time
                     logger.debug(
                         f"sleep time: {sleep_time}, response time: {response_time}"
@@ -733,33 +733,33 @@ class GhauriExtractor:
             logger.progress(f"retrieved: {chars}")
         sleep_time = timesec if conf.timesec <= timesec else conf.timesec
         while not is_found:
-            if http_firewall_code_counter > 2:
-                message = f"{error_msg} - {http_firewall_code_counter} time(s)"
-                logger.warning(f"HTTP error code detected during run:")
-                choice = logger.read_input(
-                    f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
-                    batch=False,
-                    user_input="C",
-                )
-                if choice == "q":
-                    logger.error("user quit")
-                    logger.end("ending")
-                    exit(0)
-                if choice == "c":
-                    http_firewall_code_counter = 0
-            if retry_on_error >= retry:
-                logger.warning(f"Ghauri detected connection errors multiple times")
-                choice = logger.read_input(
-                    f"how do you want to proceed? [(C)continue/(q)uit] ",
-                    batch=False,
-                    user_input="C",
-                )
-                if choice == "q":
-                    logger.error("user quit")
-                    logger.end("ending")
-                    exit(0)
-                if choice == "c":
-                    retry_on_error = 0
+            # if http_firewall_code_counter > 2:
+            #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+            #     logger.warning(f"HTTP error code detected during run:")
+            #     choice = logger.read_input(
+            #         f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+            #         batch=False,
+            #         user_input="C",
+            #     )
+            #     if choice == "q":
+            #         logger.error("user quit")
+            #         logger.end("ending")
+            #         exit(0)
+            #     if choice == "c":
+            #         http_firewall_code_counter = 0
+            # if retry_on_error >= retry:
+            #     logger.warning(f"Ghauri detected connection errors multiple times")
+            #     choice = logger.read_input(
+            #         f"how do you want to proceed? [(C)continue/(q)uit] ",
+            #         batch=False,
+            #         user_input="C",
+            #     )
+            #     if choice == "q":
+            #         logger.error("user quit")
+            #         logger.end("ending")
+            #         exit(0)
+            #     if choice == "c":
+            #         retry_on_error = 0
             if conf._readtimout_counter >= 3:
                 logger.warning(
                     f"Ghauri detected readtimout '{conf._readtimout_counter}' time(s), increasing --timeout to 120 seconds, default was 30 seconds.."
@@ -808,17 +808,17 @@ class GhauriExtractor:
                     is_multipart=is_multipart,
                     injection_type=injection_type,
                 )
-                if attack.status_code in [403, 406]:
-                    logger.critical(
-                        f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
-                    )
-                    time.sleep(0.5)
-                    error_msg = attack.error_msg
-                    http_firewall_code_counter += 1
-                    ascii_char = ascii_char
-                    minimum = minimum
-                    maximum = maximum
-                    continue
+                # if attack.status_code in [403, 406]:
+                #     logger.critical(
+                #         f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                #     )
+                #     time.sleep(0.5)
+                #     error_msg = attack.error_msg
+                #     http_firewall_code_counter += 1
+                #     ascii_char = ascii_char
+                #     minimum = minimum
+                #     maximum = maximum
+                #     continue
                 response_time = attack.response_time
                 logger.debug(
                     f"sleep time: {sleep_time}, response time: {response_time}"
@@ -922,33 +922,33 @@ class GhauriExtractor:
         retry_on_error = 0
         sleep_time = timesec if conf.timesec <= timesec else conf.timesec
         while start < end:
-            if http_firewall_code_counter > 2:
-                message = f"{error_msg} - {http_firewall_code_counter} time(s)"
-                logger.warning(f"HTTP error code detected during run:")
-                choice = logger.read_input(
-                    f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
-                    batch=False,
-                    user_input="C",
-                )
-                if choice == "q":
-                    logger.error("user quit")
-                    logger.end("ending")
-                    exit(0)
-                if choice == "c":
-                    http_firewall_code_counter = 0
-            if retry_on_error >= retry:
-                logger.warning(f"Ghauri detected connection errors multiple times")
-                choice = logger.read_input(
-                    f"how do you want to proceed? [(C)continue/(q)uit] ",
-                    batch=False,
-                    user_input="C",
-                )
-                if choice == "q":
-                    logger.error("user quit")
-                    logger.end("ending")
-                    exit(0)
-                if choice == "c":
-                    retry_on_error = 0
+            # if http_firewall_code_counter > 2:
+            #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+            #     logger.warning(f"HTTP error code detected during run:")
+            #     choice = logger.read_input(
+            #         f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+            #         batch=False,
+            #         user_input="C",
+            #     )
+            #     if choice == "q":
+            #         logger.error("user quit")
+            #         logger.end("ending")
+            #         exit(0)
+            #     if choice == "c":
+            #         http_firewall_code_counter = 0
+            # if retry_on_error >= retry:
+            #     logger.warning(f"Ghauri detected connection errors multiple times")
+            #     choice = logger.read_input(
+            #         f"how do you want to proceed? [(C)continue/(q)uit] ",
+            #         batch=False,
+            #         user_input="C",
+            #     )
+            #     if choice == "q":
+            #         logger.error("user quit")
+            #         logger.end("ending")
+            #         exit(0)
+            #     if choice == "c":
+            #         retry_on_error = 0
             ascii_char = list_of_chars[start]
             if delay > 0:
                 time.sleep(delay)
@@ -974,14 +974,14 @@ class GhauriExtractor:
                     is_multipart=is_multipart,
                     injection_type=injection_type,
                 )
-                if attack.status_code in [403, 406]:
-                    logger.critical(
-                        f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
-                    )
-                    time.sleep(0.5)
-                    error_msg = attack.error_msg
-                    http_firewall_code_counter += 1
-                    continue
+                # if attack.status_code in [403, 406]:
+                #     logger.critical(
+                #         f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+                #     )
+                #     time.sleep(0.5)
+                #     error_msg = attack.error_msg
+                #     http_firewall_code_counter += 1
+                #     continue
                 start += 1
                 if attack01 and vector_type == "boolean_vector":
                     bool_retval = check_boolean_responses(
@@ -1074,11 +1074,13 @@ class GhauriExtractor:
             is_noc_payload_found = False
             for entry in payloads:
                 is_noc_found = False
-                for i in range(1, 10):
+                start_pos = 1
+                stop = 10
+                while start_pos < stop:
                     if delay > 0:
                         time.sleep(delay)
                     sleep_time = timesec if conf.timesec <= timesec else conf.timesec
-                    condition = value.format(query=entry, char=i)
+                    condition = value.format(query=entry, char=start_pos)
                     expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                         "[SLEEPTIME]", f"{sleep_time}"
                     )
@@ -1103,6 +1105,12 @@ class GhauriExtractor:
                         )
                         logger.end("ending")
                         exit(0)
+                    if attack.status_code in [403, 406]:
+                        # move towards next payload in a list as current payload is restricted by firewall
+                        logger.debug(
+                            "moving towards next payload in a list as current payload is restricted by firewall."
+                        )
+                        break
                     if attack01 and vector_type == "boolean_vector":
                         bool_retval = check_boolean_responses(
                             base,
@@ -1117,9 +1125,9 @@ class GhauriExtractor:
                         if result:
                             working_query = entry
                             logger.debug(
-                                f"retrieved number of characters in length query {i}"
+                                f"retrieved number of characters in length query {start_pos}"
                             )
-                            noc = i
+                            noc = start_pos
                             is_noc_found = True
                             break
                     if vector_type == "time_vector":
@@ -1130,11 +1138,12 @@ class GhauriExtractor:
                         if response_time >= sleep_time:
                             working_query = entry
                             logger.debug(
-                                f"retrieved number of characters in length query {i}"
+                                f"retrieved number of characters in length query {start_pos}"
                             )
-                            noc = i
+                            noc = start_pos
                             is_noc_found = True
                             break
+                    start_pos += 1
                 if is_noc_found:
                     is_noc_payload_found = True
                     break
@@ -1193,54 +1202,30 @@ class GhauriExtractor:
         )
         if query_check and noc > 0:
             return _
+        if noc < 1:
+            logger.debug(
+                "Ghauri couldn't determine the number if character(s) in length query"
+            )
         length = 0
-        if not suppress_output:
-            logger.info(f"retrieving the length of query output")
-        length_extraction_payloads = LENGTH_PAYLOADS.get(backend)
-        if isinstance(length_extraction_payloads, str):
-            length_extraction_payloads = [length_extraction_payloads]
-        attack_url = url
-        attack_data = data
-        attack_headers = headers
-        for value in length_extraction_payloads:
-            is_length_found = False
-            for entry in payloads:
-                chars = ""
-                pos = 1
-                total_number_of_characters = noc + 1
-                while pos < total_number_of_characters:
-                    if attack01 and vector_type == "boolean_vector":
-                        try:
-                            retval = self._binary_search(
-                                url=url,
-                                data=data,
-                                vector=vector,
-                                parameter=parameter,
-                                headers=headers,
-                                base=base,
-                                injection_type=injection_type,
-                                delay=delay,
-                                timesec=timesec,
-                                timeout=timeout,
-                                proxy=proxy,
-                                attack01=attack01,
-                                code=code,
-                                match_string=match_string,
-                                not_match_string=not_match_string,
-                                is_multipart=is_multipart,
-                                suppress_output=suppress_output,
-                                query_check=query_check,
-                                minimum=48,
-                                maximum=58,
-                                offset=pos,
-                                expression_payload=value,
-                                queryable=entry,
-                                chars=chars,
-                                text_only=text_only,
-                                vector_type=vector_type,
-                            )
-                            if retval:
-                                is_valid = self.validate_character(
+        if noc > 1:
+            if not suppress_output:
+                logger.info(f"retrieving the length of query output")
+            length_extraction_payloads = LENGTH_PAYLOADS.get(backend)
+            if isinstance(length_extraction_payloads, str):
+                length_extraction_payloads = [length_extraction_payloads]
+            attack_url = url
+            attack_data = data
+            attack_headers = headers
+            for value in length_extraction_payloads:
+                is_length_found = False
+                for entry in payloads:
+                    chars = ""
+                    pos = 1
+                    total_number_of_characters = noc + 1
+                    while pos < total_number_of_characters:
+                        if attack01 and vector_type == "boolean_vector":
+                            try:
+                                retval = self._binary_search(
                                     url=url,
                                     data=data,
                                     vector=vector,
@@ -1248,71 +1233,100 @@ class GhauriExtractor:
                                     headers=headers,
                                     base=base,
                                     injection_type=injection_type,
+                                    delay=delay,
+                                    timesec=timesec,
+                                    timeout=timeout,
+                                    proxy=proxy,
+                                    attack01=attack01,
+                                    code=code,
+                                    match_string=match_string,
+                                    not_match_string=not_match_string,
+                                    is_multipart=is_multipart,
+                                    suppress_output=suppress_output,
+                                    query_check=query_check,
+                                    minimum=48,
+                                    maximum=58,
+                                    offset=pos,
+                                    expression_payload=value,
+                                    queryable=entry,
+                                    chars=chars,
+                                    text_only=text_only,
+                                    vector_type=vector_type,
+                                )
+                                if retval:
+                                    is_valid = self.validate_character(
+                                        url=url,
+                                        data=data,
+                                        vector=vector,
+                                        parameter=parameter,
+                                        headers=headers,
+                                        base=base,
+                                        injection_type=injection_type,
+                                        proxy=proxy,
+                                        is_multipart=is_multipart,
+                                        timeout=timeout,
+                                        delay=delay,
+                                        timesec=timesec,
+                                        identified_character=retval,
+                                        vector_type=vector_type,
+                                        offset=pos,
+                                        expression_payload=value,
+                                        queryable=entry,
+                                        code=code,
+                                        match_string=match_string,
+                                        not_match_string=not_match_string,
+                                        attack01=attack01,
+                                    )
+                                    if not is_valid:
+                                        logger.warning(
+                                            "invalid character detected, retrying."
+                                        )
+                                        break
+                                if is_valid:
+                                    pos += 1
+                                    chars += retval
+                                    logger.debug(f"character found: {chars}")
+                            except KeyboardInterrupt:
+                                is_length_found = True
+                                length = 0
+                                break
+                        if vector_type == "time_vector":
+                            try:
+                                retval = self._linear_search(
+                                    url=url,
+                                    data=data,
+                                    vector=vector,
+                                    parameter=parameter,
+                                    headers=headers,
+                                    injection_type=injection_type,
                                     proxy=proxy,
                                     is_multipart=is_multipart,
                                     timeout=timeout,
                                     delay=delay,
                                     timesec=timesec,
-                                    identified_character=retval,
-                                    vector_type=vector_type,
-                                    offset=pos,
+                                    suppress_output=suppress_output,
                                     expression_payload=value,
                                     queryable=entry,
-                                    code=code,
-                                    match_string=match_string,
-                                    not_match_string=not_match_string,
-                                    attack01=attack01,
+                                    chars=chars,
+                                    offset=pos,
+                                    list_of_chars="2013456789",
+                                    vector_type=vector_type,
                                 )
-                                if not is_valid:
-                                    logger.warning(
-                                        "invalid character detected, retrying."
-                                    )
-                                    break
-                            if is_valid:
                                 pos += 1
                                 chars += retval
-                                logger.debug(f"character found: {chars}")
-                        except KeyboardInterrupt:
-                            is_length_found = True
-                            length = 0
-                            break
-                    if vector_type == "time_vector":
-                        try:
-                            retval = self._linear_search(
-                                url=url,
-                                data=data,
-                                vector=vector,
-                                parameter=parameter,
-                                headers=headers,
-                                injection_type=injection_type,
-                                proxy=proxy,
-                                is_multipart=is_multipart,
-                                timeout=timeout,
-                                delay=delay,
-                                timesec=timesec,
-                                suppress_output=suppress_output,
-                                expression_payload=value,
-                                queryable=entry,
-                                chars=chars,
-                                offset=pos,
-                                list_of_chars="2013456789",
-                                vector_type=vector_type,
-                            )
-                            pos += 1
-                            chars += retval
-                            logger.debug(f"character found: '{str(chars)}'")
-                        except KeyboardInterrupt:
-                            is_length_found = True
-                            length = 0
-                            break
-                if len(chars) == noc:
-                    if not suppress_output:
-                        logger.info(f"retrieved: {chars}")
-                    length = int(chars) if chars.isdigit() else 0
-                    is_length_found = True
+                                logger.debug(f"character found: '{str(chars)}'")
+                            except KeyboardInterrupt:
+                                is_length_found = True
+                                length = 0
+                                break
+                    if len(chars) == noc:
+                        if not suppress_output:
+                            logger.info(f"retrieved: {chars}")
+                        length = int(chars) if chars.isdigit() else 0
+                        is_length_found = True
+                        break
+                if is_length_found:
                     break
-            if is_length_found:
-                break
         return length
 
     def fetch_using_error_based_vector(
@@ -1373,33 +1387,33 @@ class GhauriExtractor:
         if error_based_in_vectors:
             vector = conf.vectors.get("error_vector")
             while start < end:
-                if http_firewall_code_counter > 2:
-                    message = f"{error_msg} - {http_firewall_code_counter} time(s)"
-                    logger.warning(f"HTTP error code detected during run:")
-                    choice = logger.read_input(
-                        f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
-                        batch=False,
-                        user_input="C",
-                    )
-                    if choice == "q":
-                        logger.error("user quit")
-                        logger.end("ending")
-                        exit(0)
-                    if choice == "c":
-                        http_firewall_code_counter = 0
-                if retry_on_error >= retry:
-                    logger.warning(f"Ghauri detected connection errors multiple times")
-                    choice = logger.read_input(
-                        f"how do you want to proceed? [(C)continue/(q)uit] ",
-                        batch=False,
-                        user_input="C",
-                    )
-                    if choice == "q":
-                        logger.error("user quit")
-                        logger.end("ending")
-                        exit(0)
-                    if choice == "c":
-                        retry_on_error = 0
+                # if http_firewall_code_counter > 2:
+                #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
+                #     logger.warning(f"HTTP error code detected during run:")
+                #     choice = logger.read_input(
+                #         f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
+                #         batch=False,
+                #         user_input="C",
+                #     )
+                #     if choice == "q":
+                #         logger.error("user quit")
+                #         logger.end("ending")
+                #         exit(0)
+                #     if choice == "c":
+                #         http_firewall_code_counter = 0
+                # if retry_on_error >= retry:
+                #     logger.warning(f"Ghauri detected connection errors multiple times")
+                #     choice = logger.read_input(
+                #         f"how do you want to proceed? [(C)continue/(q)uit] ",
+                #         batch=False,
+                #         user_input="C",
+                #     )
+                #     if choice == "q":
+                #         logger.error("user quit")
+                #         logger.end("ending")
+                #         exit(0)
+                #     if choice == "c":
+                #         retry_on_error = 0
                 entry = payloads[start]
                 response_string = ""
                 if delay > 0:
@@ -1665,7 +1679,7 @@ class GhauriExtractor:
                     vector_type=vector_type,
                 )
             if length == 0:
-                logger.debug(
+                logger.warning(
                     "it was not possible to extract query output length for the SQL query provided."
                 )
                 continue

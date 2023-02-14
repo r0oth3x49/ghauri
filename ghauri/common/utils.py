@@ -635,7 +635,11 @@ def check_boolean_responses(
             _cases.append("Status Code")
     if _cases:
         case = ", ".join(_cases)
-        logger.debug(f"possible injectable cases detected: '{case}'")
+        if 403 in [scb, sct, scf]:
+            case = ""
+            is_vulner = False
+        else:
+            logger.debug(f"possible injectable cases detected: '{case}'")
     if case == "Page Ratio":
         w0set = set(get_filtered_page_content(base.text, True, "\n").split("\n"))
         w1set = set(get_filtered_page_content(attack_true.text, True, "\n").split("\n"))
