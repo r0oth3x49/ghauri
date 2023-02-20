@@ -171,10 +171,6 @@ def perform_injection(
         url=url, data=data, headers=full_headers, cookies=raw_cookies
     )
     custom_injection_in = obj.custom_injection_in
-    if "COOKIE" in custom_injection_in:
-        level = 2
-    if "HEADER" in custom_injection_in:
-        level = 3
     injection_points = obj.injection_point
     conf.is_multipart = is_multipart = obj.is_multipart
     conf.is_json = is_json = obj.is_json
@@ -208,7 +204,11 @@ def perform_injection(
         exit(0)
     for injection_type in list(injection_points.keys()):
         if custom_injection_in:
-            question = "y"
+            if "COOKIE" in custom_injection_in:
+                level = 2
+            if "HEADER" in custom_injection_in:
+                level = 3
+            question = None
             if "POST" in custom_injection_in:
                 if not is_asked:
                     question = logger.read_input(
@@ -235,6 +235,10 @@ def perform_injection(
                     is_asked = True
             if question and question == "y":
                 injection_types = custom_injection_in
+            if question and question == "n":
+                # when custom injection marker '*' is found but user don't want to scan those we will go with default level 1
+                level = 1
+                custom_injection_in = []
         if level == 1 and not injection_types:
             injection_types = ["GET", "POST"]
         if level == 2 and not injection_types:

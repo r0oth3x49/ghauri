@@ -51,6 +51,7 @@ from ghauri.common.lib import (
     BaseHTTPRequestHandler,
     INJECTABLE_HEADERS_DEFAULT,
     HTTP_STATUS_CODES_REASONS,
+    AVOID_PARAMS,
 )
 from ghauri.common.config import conf
 from ghauri.common.payloads import PAYLOADS
@@ -60,7 +61,12 @@ from ghauri.common.prettytable import PrettyTable, from_db_cursor
 
 class Struct:
     def __init__(self, **entries):
+        self.__key = entries.get("key")
+        self.__value = entries.get("value")
         self.__dict__.update(entries)
+
+    def __repr__(self):
+        return f"<Parameter('{self.__key}')>"
 
 
 # source: https://stackoverflow.com/questions/4685217/parse-raw-http-headers
@@ -1558,6 +1564,8 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
         _ = []
         for entry in _params:
             p = Struct(**entry)
+            if p.key in AVOID_PARAMS:
+                continue
             _.append(p)
         injection_point.update({_type: _})
     _temp = InjectionPoints(
@@ -1906,6 +1914,12 @@ def payloads_to_objects(records):
     _temp = []
     for entry in records:
         parameter = json.loads(entry.parameter)
+        if "parameter_type" not in parameter:
+            logger.warning(
+                "You are using an old version of Ghauri, Update to the latest version and re-run with switch `--flush-session`.."
+            )
+            logger.end("ending")
+            exit(0)
         parameter = Struct(**parameter)
         if parameter.key not in seen:
             seen.add(parameter.key)

@@ -286,3 +286,21 @@ INSERT INTO storage (`value`, `length`, `type`) VALUES (?, ?, ?);
 STORAGE_UPDATE = """
 UPDATE storage set value=? WHERE id=? AND type=?;
 """
+
+AVOID_PARAMS = [
+    "__ASYNCPOST",
+    "__LASTFOCUS",
+    "__EVENTTARGET",
+    "__EVENTARGUMENT",
+    "__VIEWSTATE",
+    "__VIEWSTATEGENERATOR",
+    "__VIEWSTATEENCRYPTED",
+    "__EVENTVALIDATION",
+    "__RequestVerificationToken",
+    "_dc",
+    "SAMLResponse",
+    "RelayState",
+    "__SCROLLPOSITIONY",
+    "__SCROLLPOSITIONX",
+    "__RequestVerificationToken",
+]

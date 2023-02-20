@@ -421,7 +421,7 @@ def confirm_booleanbased_sqli(
             logger.warning("user aborted during boolean-based confirmation phase")
             break
         except Exception as error:
-            logger.critical(f"error {error}, during time-based confirmation phase.")
+            logger.critical(f"error {error}, during boolean-based confirmation phase.")
             break
     attempts_count = len(_temp)
     total_attempts_to_vulnerable = len(test_payloads)
