@@ -1109,9 +1109,9 @@ def prepare_attack_request(
     is_json = conf.is_json
     is_multipart = conf.is_multipart
     safe = (
-        "/=*()&?%;,+\"'"
+        "/=*()[]&?%;,+\"'"
         if conf.backend == "Microsoft SQL Server" and injection_type == "POST"
-        else "/=*?&:;,+"
+        else "[]/=*?&:;,+"
     )
     if not is_json and not key == "#1*":
         text = urlencode(
