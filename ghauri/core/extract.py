@@ -1207,7 +1207,7 @@ class GhauriExtractor:
                 "Ghauri couldn't determine the number if character(s) in length query"
             )
         length = 0
-        if noc > 1:
+        if noc >= 1:
             if not suppress_output:
                 logger.info(f"retrieving the length of query output")
             length_extraction_payloads = LENGTH_PAYLOADS.get(backend)

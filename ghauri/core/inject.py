@@ -90,6 +90,12 @@ def inject_expression(
             is_multipart=conf.is_multipart,
             timeout=timeout,
         )
+        if attack.status_code == 401:
+            logger.warning(
+                "It seems the session got expired, update the session and re-run"
+            )
+            logger.end("ending")
+            exit(0)
     except URLError as e:
         logger.critical(f"error: {e}")
         logger.end("ending")
