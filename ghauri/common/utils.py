@@ -1914,12 +1914,6 @@ def payloads_to_objects(records):
     _temp = []
     for entry in records:
         parameter = json.loads(entry.parameter)
-        if "parameter_type" not in parameter:
-            logger.warning(
-                "You are using an old version of Ghauri, Update to the latest version and re-run with switch `--flush-session`.."
-            )
-            logger.end("ending")
-            exit(0)
         parameter = Struct(**parameter)
         if parameter.key not in seen:
             seen.add(parameter.key)
