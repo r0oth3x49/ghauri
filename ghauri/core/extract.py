@@ -105,7 +105,7 @@ class GhauriExtractor:
         linear_search = False
         retry_on_error = 0
         http_firewall_code_counter = 0
-        timesec = timesec if conf.timesec <= timesec else conf.timesec
+        timesec = conf.timesec
         error_msg = None
         _temp = GuessUsing(
             ok=False,
@@ -374,7 +374,7 @@ class GhauriExtractor:
                 expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                     "[SLEEPTIME]", f"{timesec}"
                 )
-                sleep_time = timesec if conf.timesec <= timesec else conf.timesec
+                sleep_time = conf.timesec
                 logger.payload(f"{expression}")
                 try:
                     attack = inject_expression(
@@ -510,7 +510,7 @@ class GhauriExtractor:
                 ]
             )
             logger.progress(f"retrieved: {chars}")
-        sleep_time = timesec if conf.timesec <= timesec else conf.timesec
+        sleep_time = conf.timesec
 
         def chunks(lst, n):
             """Yield successive n-sized chunks from lst."""
@@ -731,7 +731,7 @@ class GhauriExtractor:
                 ]
             )
             logger.progress(f"retrieved: {chars}")
-        sleep_time = timesec if conf.timesec <= timesec else conf.timesec
+        sleep_time = conf.timesec
         while not is_found:
             # if http_firewall_code_counter > 2:
             #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
@@ -920,7 +920,7 @@ class GhauriExtractor:
         http_firewall_code_counter = 0
         error_msg = None
         retry_on_error = 0
-        sleep_time = timesec if conf.timesec <= timesec else conf.timesec
+        sleep_time = conf.timesec
         while start < end:
             # if http_firewall_code_counter > 2:
             #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
@@ -1079,7 +1079,7 @@ class GhauriExtractor:
                 while start_pos < stop:
                     if delay > 0:
                         time.sleep(delay)
-                    sleep_time = timesec if conf.timesec <= timesec else conf.timesec
+                    sleep_time = conf.timesec
                     condition = value.format(query=entry, char=start_pos)
                     expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                         "[SLEEPTIME]", f"{sleep_time}"

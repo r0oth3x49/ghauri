@@ -99,6 +99,7 @@ def perform_injection(
     conf.skip_urlencoding = skip_urlencoding
     conf.confirm_payloads = confirm_payloads
     conf.safe_chars = safe_chars
+    conf.timesec = timesec
     logger.start("starting")
     if not force_ssl:
         ssl._create_default_https_context = ssl._create_unverified_context
