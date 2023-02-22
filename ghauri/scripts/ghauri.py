@@ -239,6 +239,14 @@ def main():
         default=None,
         metavar="",
     )
+    injection.add_argument(
+        "--safe-chars",
+        dest="safe_chars",
+        type=str,
+        help='Skip URL encoding of specific character(s): (e.g:- --safe-chars="[]"',
+        default=None,
+        metavar="",
+    )
     detection = parser.add_argument_group(
         "Detection",
         description="These options can be used to customize the detection phase",
@@ -437,6 +445,7 @@ def main():
         skip_urlencoding=args.skip_urlencoding,
         threads=args.threads,
         confirm_payloads=args.confirm_payloads,
+        safe_chars=args.safe_chars,
     )
     if resp.is_injected:
         target = ghauri.Ghauri(

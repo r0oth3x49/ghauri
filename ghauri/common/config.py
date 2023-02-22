@@ -94,6 +94,7 @@ class GhauriConfigs:
         self.req_counter_injected = 0
         self.params_count = 0
         self.confirm_payloads = False
+        self.safe_chars = None
 
     @property
     def session_filepath(self):

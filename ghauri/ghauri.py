@@ -86,6 +86,7 @@ def perform_injection(
     skip_urlencoding=False,
     threads=None,
     confirm_payloads=False,
+    safe_chars=None,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -97,6 +98,7 @@ def perform_injection(
     is_custom_point = False
     conf.skip_urlencoding = skip_urlencoding
     conf.confirm_payloads = confirm_payloads
+    conf.safe_chars = safe_chars
     logger.start("starting")
     if not force_ssl:
         ssl._create_default_https_context = ssl._create_unverified_context
@@ -202,6 +204,10 @@ def perform_injection(
         )
         logger.end("ending")
         exit(0)
+    if conf.safe_chars:
+        logger.debug(
+            f'Ghauri is going to skip urlencoding for provided safe character(s): "{safe_chars}"'
+        )
     for injection_type in list(injection_points.keys()):
         if custom_injection_in:
             if "COOKIE" in custom_injection_in:
