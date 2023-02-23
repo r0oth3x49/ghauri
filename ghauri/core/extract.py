@@ -761,11 +761,26 @@ class GhauriExtractor:
             #     if choice == "c":
             #         retry_on_error = 0
             if conf._readtimout_counter >= 3:
-                logger.warning(
-                    f"Ghauri detected readtimout '{conf._readtimout_counter}' time(s), increasing --timeout to 120 seconds, default was 30 seconds.."
-                )
-                conf.timeout += 90
-                conf._readtimout_counter = 0
+                if conf.rto_warning:
+                    if not conf.rtom_warning:
+                        choice = logger.read_input(
+                            "Ghauri detected read timeout multiple time(s). Do you want to continue? [y/N] "
+                        )
+                        if choice == "n":
+                            logger.end("ending")
+                            exit(0)
+                        conf.rtom_warning = True
+                if not conf.rto_warning:
+                    msgrto = ""
+                    if vector_type == "time_vector":
+                        msgrto = ", It is recommended to set high value of option(s) '--time-sec', increase delay between request(s) with an option '--delay'"
+                    if vector_type == "boolean_vector":
+                        msgrto = ", It is recommended to set high value of option(s) '--timeout' and also increase delay between each http request with an option '--delay'"
+                    logger.warning(
+                        f"Ghauri detected read timout '{conf._readtimout_counter}' time(s){msgrto}."
+                    )
+                    conf.rto_warning = True
+                    conf._readtimout_counter = 0
             if delay > 0:
                 time.sleep(delay)
             ascii_char = int((minimum + maximum) / 2)
@@ -1739,13 +1754,13 @@ class GhauriExtractor:
                         pos = start_pos
                         total_length = length + 1
                         if conf.threads and not binary_search and not in_based_search:
-                            logger.warning(
-                                "ghauri will use a fallback leaner search to guess character(s), adjusting threads to 1"
+                            logger.debug(
+                                "Ghauri will use a fallback leaner search to guess character(s), adjusting threads to 1"
                             )
                             conf.threads = None
                         if conf.threads and vector_type == "boolean_vector":
                             if not conf.thread_warning:
-                                logger.warning(
+                                logger.debug(
                                     "it is recommended not to use threads for data exfiltration, it could cause harm to backend DBMS or result in incorrect character(s) guessing."
                                 )
                                 conf.thread_warning = True
@@ -1762,10 +1777,10 @@ class GhauriExtractor:
                                 sorted(conf._thread_chars_query.items())
                             )
                             if conf.threads > conf._max_threads:
-                                conf.threads = 4
+                                conf.threads = conf._max_threads
                                 if not conf.max_threads_warning:
                                     logger.warning(
-                                        "ghauri recommends using threads upto 4. adjusting total number of threads to 4."
+                                        f"Ghauri recommends using threads upto {conf._max_threads}. adjusting '--threads=\"{conf._max_threads}\"'."
                                     )
                                     conf.max_threads_warning = True
                             with futures.ThreadPoolExecutor(

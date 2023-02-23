@@ -83,7 +83,7 @@ class GhauriConfigs:
         self.continue_on_http_error = continue_on_http_error
         self.follow_redirects = follow_redirects
         self.threads = threads
-        self._max_threads = 4
+        self._max_threads = 10
         self._thread_chars_query = {}
         self.lock = Lock()
         self.thread_warning = False
@@ -95,6 +95,8 @@ class GhauriConfigs:
         self.params_count = 0
         self.confirm_payloads = False
         self.safe_chars = None
+        self.rto_warning = False
+        self.rtom_warning = False
 
     @property
     def session_filepath(self):
