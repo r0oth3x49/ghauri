@@ -130,8 +130,6 @@ class GhauriAdvance:
         if start != 0 and start > 0:
             if backend != "Oracle":
                 start = start - 1
-        if start == 0 and backend == "Oracle":
-            start = 1
         logger.info("fetching database names")
         Response = collections.namedtuple(
             "Response",
@@ -321,6 +319,9 @@ class GhauriAdvance:
                     and "DB_NAME" in payload
                 ):
                     stop = stop + 1
+                if start == 0 and backend == "Oracle":
+                    start = 1 if start == 0 else start
+                    stop = total + 1 if stop == total else stop + 1
                 while start < stop:
                     payloads = prepare_query_payload(
                         backend=backend, offset=start, payload_string=payload
@@ -404,8 +405,6 @@ class GhauriAdvance:
         if start != 0 and start > 0:
             if backend != "Oracle":
                 start = start - 1
-        if start == 0 and backend == "Oracle":
-            start = 1
         logger.info(f"fetching tables for database: {database}")
         Response = collections.namedtuple(
             "Response",
@@ -506,6 +505,9 @@ class GhauriAdvance:
                     )
                     return _temp
                 payload = clean_up_offset_payload(payload, backend=backend)
+                if start == 0 and backend == "Oracle":
+                    start = 1 if start == 0 else start
+                    stop = total + 1 if stop == total else stop + 1
                 while start < stop:
                     payloads = prepare_query_payload(
                         backend=backend, offset=start, payload_string=payload
@@ -593,8 +595,6 @@ class GhauriAdvance:
         if start != 0 and start > 0:
             if backend != "Oracle":
                 start = start - 1
-        if start == 0 and backend == "Oracle":
-            start = 1
         logger.info(
             f"fetching columns for table '{mc}{table}{bw}' in database '{mc}{database}{bw}'"
         )
@@ -698,6 +698,9 @@ class GhauriAdvance:
                     )
                     return _temp
                 payload = clean_up_offset_payload(payload, backend=backend)
+                if start == 0 and backend == "Oracle":
+                    start = 1 if start == 0 else start
+                    stop = total + 1 if stop == total else stop + 1
                 while start < stop:
                     payloads = prepare_query_payload(
                         backend=backend, offset=start, payload_string=payload

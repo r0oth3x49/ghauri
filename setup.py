@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ghauri",
-    version="1.1.5",
+    version="1.1.6",
     description="An advanced SQL injection detection & exploitation tool.",
     classifiers=["Programming Language :: Python3"],
     author="Nasir Khan",
