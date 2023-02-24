@@ -1294,9 +1294,57 @@ class GhauriExtractor:
                                     )
                                     if not is_valid:
                                         logger.warning(
-                                            "invalid character detected, retrying."
+                                            "invalid character detected, retrying.."
                                         )
-                                        break
+                                        retval = self._linear_search(
+                                            url=url,
+                                            data=data,
+                                            vector=vector,
+                                            parameter=parameter,
+                                            headers=headers,
+                                            injection_type=injection_type,
+                                            proxy=proxy,
+                                            attack01=attack01,
+                                            is_multipart=is_multipart,
+                                            timeout=timeout,
+                                            match_string=match_string,
+                                            not_match_string=not_match_string,
+                                            text_only=text_only,
+                                            delay=delay,
+                                            timesec=timesec,
+                                            suppress_output=suppress_output,
+                                            expression_payload=value,
+                                            queryable=entry,
+                                            chars=chars,
+                                            offset=pos,
+                                            list_of_chars="2013456789",
+                                            vector_type=vector_type,
+                                            base=base,
+                                        )
+                                        if retval:
+                                            is_valid = self.validate_character(
+                                                url=url,
+                                                data=data,
+                                                vector=vector,
+                                                parameter=parameter,
+                                                headers=headers,
+                                                base=base,
+                                                injection_type=injection_type,
+                                                proxy=proxy,
+                                                is_multipart=is_multipart,
+                                                timeout=timeout,
+                                                delay=delay,
+                                                timesec=timesec,
+                                                identified_character=retval,
+                                                vector_type=vector_type,
+                                                offset=pos,
+                                                expression_payload=value,
+                                                queryable=entry,
+                                                code=code,
+                                                match_string=match_string,
+                                                not_match_string=not_match_string,
+                                                attack01=attack01,
+                                            )
                                 if is_valid:
                                     pos += 1
                                     chars += retval
