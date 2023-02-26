@@ -87,6 +87,7 @@ def perform_injection(
     threads=None,
     confirm_payloads=False,
     safe_chars=None,
+    fetch_using=None,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -100,6 +101,7 @@ def perform_injection(
     conf.confirm_payloads = confirm_payloads
     conf.safe_chars = safe_chars
     conf.timesec = timesec
+    conf.fetch_using = fetch_using
     logger.start("starting")
     if not force_ssl:
         ssl._create_default_https_context = ssl._create_unverified_context
@@ -198,7 +200,7 @@ def perform_injection(
     conf.filepaths = filepaths
     filepath = os.path.dirname(filepaths.logs)
     set_level(verbose_level, filepaths.logs)
-    is_params_found = check_injection_points_for_level(level, injection_points)
+    is_params_found = check_injection_points_for_level(level, obj)
     if not is_params_found:
         logger.critical(
             "no parameter(s) found for testing in the provided data (e.g. GET parameter 'id' in 'www.site.com/index.php?id=1')"

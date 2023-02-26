@@ -243,7 +243,15 @@ def main():
         "--safe-chars",
         dest="safe_chars",
         type=str,
-        help='Skip URL encoding of specific character(s): (e.g:- --safe-chars="[]"',
+        help='Skip URL encoding of specific character(s): (e.g:- --safe-chars="[]")',
+        default=None,
+        metavar="",
+    )
+    injection.add_argument(
+        "--fetch-using",
+        dest="fetch_using",
+        type=str,
+        help="Fetch data using different operator(s): (e.g: --fetch-using=between/in)",
         default=None,
         metavar="",
     )
@@ -446,6 +454,7 @@ def main():
         threads=args.threads,
         confirm_payloads=args.confirm_payloads,
         safe_chars=args.safe_chars,
+        fetch_using=args.fetch_using,
     )
     if resp.is_injected:
         target = ghauri.Ghauri(

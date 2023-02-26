@@ -96,6 +96,7 @@ class GhauriConfigs:
         self.confirm_payloads = False
         self.safe_chars = None
         self.rto_warning = False
+        self.fetch_using = None
         self.rtom_warning = False
 
     @property

@@ -1424,21 +1424,26 @@ def extract_json_data(data):
     return conf._json_post_data
 
 
-def check_injection_points_for_level(level, injection_points):
+def check_injection_points_for_level(level, obj):
     is_ok = False
+    custom_injection_in = obj.custom_injection_in
+    injection_points = obj.injection_point
     GET = injection_points.get("GET", [])
     POST = injection_points.get("POST", [])
     COOKIES = injection_points.get("COOKIE", [])
     HEADERS = injection_points.get("HEADER", [])
-    if level == 1:
-        if GET or POST:
-            is_ok = True
-    if level == 2:
-        if GET or POST or COOKIES:
-            is_ok = True
-    if level == 3:
-        if GET or POST or COOKIES or HEADERS:
-            is_ok = True
+    if custom_injection_in:
+        is_ok = True
+    else:
+        if level == 1:
+            if GET or POST:
+                is_ok = True
+        if level == 2:
+            if GET or POST or COOKIES:
+                is_ok = True
+        if level == 3:
+            if GET or POST or COOKIES or HEADERS:
+                is_ok = True
     return is_ok
 
 
