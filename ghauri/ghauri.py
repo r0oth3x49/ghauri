@@ -345,7 +345,8 @@ def perform_injection(
                             msg = f"testing for SQL injection on {injection_type} parameter '{param_name}'"
                     logger.info(msg)
                 if possible_dbms:
-                    techniques = f"E{techniques.upper()}"
+                    if not conf.test_filter:
+                        techniques = f"E{techniques.upper()}"
                     if not dbms:
                         choice = logger.read_input(
                             f"it looks like the back-end DBMS is '{possible_dbms}'. Do you want to skip test payloads specific for other DBMSes? [Y/n] ",

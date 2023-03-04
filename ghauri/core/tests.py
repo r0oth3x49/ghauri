@@ -191,15 +191,16 @@ def basic_check(
                 logger.notice(
                     f"heuristic (basic) test shows that {_it} parameter '{param_name}' might be injectable (possible DBMS: '{possible_dbms}')"
                 )
-                _tech = (
-                    f"{mc}--technique='E{techniques}'{nc}"
-                    if "E" not in techniques
-                    else None
-                )
-                if _tech:
-                    logger.notice(
-                        f"Ghauri is going to set {_tech} as heuristic (basic) detected a possible DBMS '{possible_dbms}' from SQL error message"
+                if not conf.test_filter:
+                    _tech = (
+                        f"{mc}--technique='E{techniques}'{nc}"
+                        if "E" not in techniques
+                        else None
                     )
+                    if _tech:
+                        logger.notice(
+                            f"Ghauri is going to set {_tech} as heuristic (basic) detected a possible DBMS '{possible_dbms}' from SQL error message"
+                        )
                 break
             if attack.status_code != 400:
                 break
