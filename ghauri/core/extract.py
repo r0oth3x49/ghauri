@@ -487,7 +487,7 @@ class GhauriExtractor:
                     char=ord(identified_character),
                 )
                 if vector_type == "time_vector":
-                    if conf.fetch_using.lower() == "between":
+                    if conf.fetch_using and conf.fetch_using.lower() == "between":
                         condition = replace_with(
                             string=condition,
                             character="=",
@@ -498,7 +498,7 @@ class GhauriExtractor:
                             string=condition, character="=", replace_with="!="
                         )
                 if vector_type == "boolean_vector":
-                    if conf.fetch_using.lower() == "between":
+                    if conf.fetch_using and conf.fetch_using.lower() == "between":
                         condition = replace_with(
                             string=condition,
                             character="=",
