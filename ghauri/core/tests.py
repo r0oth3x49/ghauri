@@ -64,6 +64,7 @@ from ghauri.common.utils import (
     merge_time_based_attack_payloads,
     encode_object,
     Struct,
+    clean_dups,
 )
 
 
@@ -502,6 +503,7 @@ def check_booleanbased_sqli(
             booleanbased_only=True, dbms=dbms or possible_dbms
         )
         blind_payloads.extend(dbms_specific_boolean_payloads)
+        blind_payloads = clean_dups(blind_payloads)
     param_key = parameter.key
     param_value = parameter.value
     is_injected = False

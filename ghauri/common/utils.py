@@ -1709,6 +1709,17 @@ def prepare_response(resp):
     return raw_response
 
 
+def clean_dups(payloads):
+    _temp = []
+    s = set()
+    for entry in payloads:
+        title = entry.title
+        if title.lower() not in s:
+            s.add(title.lower())
+            _temp.append(entry)
+    return _temp
+
+
 def fetch_db_specific_payload(
     dbms=None,
     timebased_only=False,
@@ -1747,6 +1758,17 @@ def fetch_db_specific_payload(
             )
             if ok:
                 _temp.extend(ok)
+    # experimental..
+    if conf.test_filter:
+        _filtered_tests = []
+        for t in _temp:
+            title = t.title
+            mobj = re.search(r"(?:%s)" % (re.escape(conf.test_filter)), title)
+            if mobj:
+                logger.debug(f"{title} ==> {conf.test_filter}")
+                _filtered_tests.append(t)
+        if _filtered_tests:
+            _temp = _filtered_tests
     return _temp
 
 
@@ -1895,16 +1917,6 @@ def prepare_payloads(
                 vector=vector,
             )
             _temp.append(_r)
-    # experimental..
-    if conf.test_filter:
-        _filtered_tests = []
-        for t in _temp:
-            title = t.title
-            mobj = re.search(r"(?is)(?:%s)" % (re.escape(conf.test_filter)), title)
-            if mobj:
-                _filtered_tests.append(t)
-        if _filtered_tests:
-            _temp = _filtered_tests
     return _temp
 
 
