@@ -64,6 +64,13 @@ def main():
         action="store_true",
         help="Flush session files for current target",
     )
+    general.add_argument(
+        "--test-filter",
+        dest="test_filter",
+        type=str,
+        help="Select test payloads by titles (experimental)",
+        metavar="",
+    )
 
     target = parser.add_argument_group(
         "Target",
@@ -455,6 +462,7 @@ def main():
         confirm_payloads=args.confirm_payloads,
         safe_chars=args.safe_chars,
         fetch_using=args.fetch_using,
+        test_filter=args.test_filter,
     )
     if resp.is_injected:
         target = ghauri.Ghauri(

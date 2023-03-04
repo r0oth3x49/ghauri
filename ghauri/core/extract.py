@@ -487,9 +487,23 @@ class GhauriExtractor:
                     char=ord(identified_character),
                 )
                 if vector_type == "time_vector":
-                    condition = replace_with(
-                        string=condition, character="=", replace_with="!="
-                    )
+                    if conf.fetch_using.lower() == "between":
+                        condition = replace_with(
+                            string=condition,
+                            character="=",
+                            replace_with=" NOT BETWEEN 0 AND ",
+                        )
+                    else:
+                        condition = replace_with(
+                            string=condition, character="=", replace_with="!="
+                        )
+                if vector_type == "boolean_vector":
+                    if conf.fetch_using.lower() == "between":
+                        condition = replace_with(
+                            string=condition,
+                            character="=",
+                            replace_with=" BETWEEN 0 AND ",
+                        )
                 expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                     "[SLEEPTIME]", f"{timesec}"
                 )

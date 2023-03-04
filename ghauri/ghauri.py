@@ -88,6 +88,7 @@ def perform_injection(
     confirm_payloads=False,
     safe_chars=None,
     fetch_using=None,
+    test_filter=None,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -102,6 +103,7 @@ def perform_injection(
     conf.safe_chars = safe_chars
     conf.timesec = timesec
     conf.fetch_using = fetch_using
+    conf.test_filter = test_filter
     logger.start("starting")
     if not force_ssl:
         ssl._create_default_https_context = ssl._create_unverified_context

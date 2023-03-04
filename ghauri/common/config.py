@@ -98,6 +98,7 @@ class GhauriConfigs:
         self.rto_warning = False
         self.fetch_using = None
         self.rtom_warning = False
+        self.test_filter = None
 
     @property
     def session_filepath(self):

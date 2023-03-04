@@ -1895,6 +1895,16 @@ def prepare_payloads(
                 vector=vector,
             )
             _temp.append(_r)
+    # experimental..
+    if conf.test_filter:
+        _filtered_tests = []
+        for t in _temp:
+            title = t.title
+            mobj = re.search(r"(?is)(?:%s)" % (re.escape(conf.test_filter)), title)
+            if mobj:
+                _filtered_tests.append(t)
+        if _filtered_tests:
+            _temp = _filtered_tests
     return _temp
 
 
