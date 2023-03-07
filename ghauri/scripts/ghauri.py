@@ -31,7 +31,7 @@ from ghauri.logger.colored_logger import logger
 
 
 def main():
-    examples = "%(prog)s http://www.site.com/vuln.php?id=1 --dbs\n\n"
+    examples = "%(prog)s -u http://www.site.com/vuln.php?id=1 --dbs\n\n"
     version = "Ghauri {version}".format(version=f"{ghauri.__version__}")
     description = "A cross-platform python based advanced sql injections detection & exploitation tool."
     parser = argparse.ArgumentParser(
