@@ -1573,10 +1573,10 @@ def get_injectable_payloads(
             _p = f"{param_name}"
             _it = injection_type if param_name != "#1*" else "URI"
             if is_json:
-                _p = f"{entry.parameter.parameter_type}{param_name}"
+                _p = f"{entry.parameter.type}{param_name}"
                 _it = f"(custom) {injection_type}"
             if is_multipart:
-                _p = f"{entry.parameter.parameter_type}{param_name}"
+                _p = f"{entry.parameter.type}{param_name}"
                 _it = f"(custom) {injection_type}"
             message_ok = "Parameter: {} ({})".format(_p, _it)
             param_set.add(param_name)
