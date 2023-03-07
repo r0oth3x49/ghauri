@@ -1357,7 +1357,7 @@ def fetch_payloads_by_suffix_prefix(
         ]
     if prefix == None and suffix == None:
         _temp = payloads
-    if prefix and not suffix:
+    if prefix and suffix == None:
         for entry in payloads:
             prefix = urldecode(prefix)
             _pref = entry.prefix
@@ -1369,7 +1369,7 @@ def fetch_payloads_by_suffix_prefix(
             if _pref and prefix and _pref[0] == prefix[0]:
                 _temp.append(entry)
     # we should try all the prefix for now
-    if suffix and not prefix:
+    if suffix and prefix == None:
         for entry in payloads:
             suffix = urldecode(suffix)
             _suff = entry.suffix
@@ -1377,7 +1377,9 @@ def fetch_payloads_by_suffix_prefix(
             # logger.debug(f"skipping payload '{entry.raw}'")
             if suffix in _suff:
                 _temp.append(entry)
-    if prefix and suffix:
+    if prefix is not None and suffix is not None:
+        if isinstance(suffix, list):
+            suffix = "--"
         # logger.debug(
         #     f" both prefix and suffix are found for injection.. '{prefix}', '{suffix}'"
         # )
