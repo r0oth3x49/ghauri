@@ -1718,7 +1718,7 @@ def check_session(
                 title = res.title
                 vector = res.vector
                 backend = res.backend
-                param_json = vars(res.parameter)
+                param_json = res.parameter
                 param_name = res.parameter.key
                 param_value = res.parameter.value.replace("*", "")
                 if payload_type == "boolean-based blind":
@@ -1746,6 +1746,7 @@ def check_session(
                         expression01 = expression01.replace(
                             "[ORIGVALUE]", param_value.replace("*", "")
                         )
+                        logger.payload(expression)
                         try:
                             attack = inject_expression(
                                 url=url,
@@ -1841,6 +1842,7 @@ def check_session(
                                 string, backend=backend, to_str=to_str, to_char=to_char
                             ),
                         )
+                        logger.payload(expression)
                         try:
                             attack = inject_expression(
                                 url=url,
@@ -1887,6 +1889,7 @@ def check_session(
                         expression = vector.replace(
                             "[INFERENCE]", "03567=3567"
                         ).replace("[SLEEPTIME]", f"{sleep_time}")
+                        logger.payload(expression)
                         try:
                             attack = inject_expression(
                                 url=url,
@@ -1954,6 +1957,7 @@ def check_session(
                         expression = vector.replace(
                             "[INFERENCE]", "03567=3567"
                         ).replace("[SLEEPTIME]", f"{sleep_time}")
+                        logger.payload(expression)
                         try:
                             attack = inject_expression(
                                 url=url,
