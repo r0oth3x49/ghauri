@@ -99,6 +99,8 @@ class GhauriConfigs:
         self.fetch_using = None
         self.rtom_warning = False
         self.test_filter = None
+        self.prioritize = False
+        self._is_asked_for_priority = False
 
     @property
     def session_filepath(self):

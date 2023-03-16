@@ -194,14 +194,15 @@ def basic_check(
                 )
                 if not conf.test_filter:
                     _tech = (
-                        f"{mc}--technique='E{techniques}'{nc}"
+                        f'--technique="E{techniques}"'
                         if "E" not in techniques
                         else None
                     )
-                    if _tech:
-                        logger.notice(
-                            f"Ghauri is going to set {_tech} as heuristic (basic) detected a possible DBMS '{possible_dbms}' from SQL error message"
+                    if _tech and not conf.prioritize:
+                        logger.debug(
+                            f"Ghauri is going ask to set {_tech} as heuristic (basic) detected a possible DBMS '{_possible_dbms}' from SQL error message"
                         )
+                        conf.prioritize = True
                 break
             if attack.status_code != 400:
                 break

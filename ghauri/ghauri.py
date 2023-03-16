@@ -345,8 +345,6 @@ def perform_injection(
                             msg = f"testing for SQL injection on {injection_type} parameter '{param_name}'"
                     logger.info(msg)
                 if possible_dbms:
-                    if not conf.test_filter:
-                        techniques = f"E{techniques.upper()}"
                     if not dbms:
                         choice = logger.read_input(
                             f"it looks like the back-end DBMS is '{possible_dbms}'. Do you want to skip test payloads specific for other DBMSes? [Y/n] ",
@@ -355,6 +353,16 @@ def perform_injection(
                         )
                         if choice == "y":
                             dbms = possible_dbms
+                    if not conf.test_filter:
+                        if conf.prioritize and not conf._is_asked_for_priority:
+                            conf._is_asked_for_priority = True
+                            choice_priority = logger.read_input(
+                                f"it is suggested to set '--technique=E{techniques.upper()}'. Do you want Ghauri set it for you ? [Y/n] ",
+                                batch=batch,
+                                user_input="Y",
+                            )
+                            if choice_priority == "y":
+                                techniques = f"E{techniques.upper()}"
                     if dbms and possible_dbms == dbms:
                         if not is_remaining_tests_asked:
                             choice = logger.read_input(

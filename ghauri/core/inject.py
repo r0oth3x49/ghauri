@@ -97,9 +97,32 @@ def inject_expression(
             logger.end("ending")
             exit(0)
     except URLError as e:
-        logger.critical(f"error: {e}")
-        logger.end("ending")
-        exit(0)
+        tried = 1
+        logger.critical(f"{e.reason}. Ghauri is going to retry..")
+        response_ok = False
+        while tried <= conf.retry:
+            attack = inject_expression(
+                url,
+                data,
+                proxy,
+                delay=delay,
+                timesec=timesec,
+                timeout=timeout,
+                headers=headers,
+                parameter=parameter,
+                expression=expression,
+                is_multipart=is_multipart,
+                injection_type=injection_type,
+            )
+            tried += 1
+            if attack.ok:
+                response_ok = True
+                break
+        if response_ok:
+            return attack
+        else:
+            logger.end("ending")
+            exit(0)
     except ConnectionAbortedError as e:
         raise e
     except ConnectionRefusedError as e:
@@ -111,5 +134,28 @@ def inject_expression(
     except TimeoutError as e:
         raise e
     except Exception as e:
+        tried = 1
+        logger.critical(f"{e.reason}. Ghauri is going to retry..")
+        response_ok = False
+        while tried <= conf.retry:
+            attack = inject_expression(
+                url,
+                data,
+                proxy,
+                delay=delay,
+                timesec=timesec,
+                timeout=timeout,
+                headers=headers,
+                parameter=parameter,
+                expression=expression,
+                is_multipart=is_multipart,
+                injection_type=injection_type,
+            )
+            tried += 1
+            if attack.ok:
+                response_ok = True
+                break
+        if response_ok:
+            return attack
         raise e
     return attack
