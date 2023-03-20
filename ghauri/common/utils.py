@@ -784,6 +784,8 @@ def urlencode(
     _temp = value
     if decode_first:
         value = urldecode(value)
+    if conf.safe_chars:
+        safe = f"{safe}{conf.safe_chars}"
     if (
         injection_type
         and injection_type not in ["HEADER", "COOKIE"]
@@ -1113,8 +1115,6 @@ def prepare_attack_request(
         if conf.backend == "Microsoft SQL Server" and injection_type == "POST"
         else "/=*?&:;,+"
     )
-    if conf.safe_chars:
-        safe = f"{conf.safe_chars}{safe}"
     if not is_json and not key == "#1*":
         text = urlencode(
             value=text,
