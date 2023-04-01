@@ -45,6 +45,7 @@ def inject_expression(
     expression=None,
     is_multipart=False,
     injection_type=None,
+    connection_test=False,
 ):
     attack = None
     attack_url = url
@@ -57,36 +58,38 @@ def inject_expression(
     # )
     if conf.timeout and conf.timeout > 30:
         timeout = conf.timeout
-    if injection_type in ["HEADER", "COOKIE"]:
-        attack_headers = prepare_attack_request(
-            headers,
-            expression,
-            param=parameter,
-            injection_type=injection_type,
-        )
-    if injection_type == "GET":
-        attack_url = prepare_attack_request(
-            url,
-            expression,
-            param=parameter,
-            encode=True,
-            injection_type=injection_type,
-        )
+    if not connection_test:
+        if injection_type in ["HEADER", "COOKIE"]:
+            attack_headers = prepare_attack_request(
+                headers,
+                expression,
+                param=parameter,
+                injection_type=injection_type,
+            )
+        if injection_type == "GET":
+            attack_url = prepare_attack_request(
+                url,
+                expression,
+                param=parameter,
+                encode=True,
+                injection_type=injection_type,
+            )
 
-    if injection_type == "POST":
-        attack_data = prepare_attack_request(
-            data,
-            expression,
-            param=parameter,
-            encode=True,
-            injection_type=injection_type,
-        )
+        if injection_type == "POST":
+            attack_data = prepare_attack_request(
+                data,
+                expression,
+                param=parameter,
+                encode=True,
+                injection_type=injection_type,
+            )
     try:
         attack = request.perform(
             url=attack_url,
             data=attack_data,
             proxy=conf.proxy,
             headers=attack_headers,
+            connection_test=connection_test,
             is_multipart=conf.is_multipart,
             timeout=timeout,
         )

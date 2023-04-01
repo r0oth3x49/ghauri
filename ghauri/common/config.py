@@ -101,6 +101,10 @@ class GhauriConfigs:
         self.test_filter = None
         self.prioritize = False
         self._is_asked_for_priority = False
+        self._bool_check_on_ct = True
+        self._bool_ctb = None
+        self._bool_ctt = None
+        self._bool_ctf = None
 
     @property
     def session_filepath(self):

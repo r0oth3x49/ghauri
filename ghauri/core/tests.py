@@ -101,14 +101,13 @@ def basic_check(
     _possible_dbms = None
     try:
         logger.notice("testing connection to the target URL")
-        base = request.perform(
+        base = inject_expression(
             url=url,
             data=data,
             proxy=proxy,
             headers=headers,
+            parameter=parameter,
             connection_test=True,
-            is_multipart=is_multipart,
-            timeout=timeout,
         )
         retval = session.fetchall(
             session_filepath=conf.session_filepath,
@@ -133,16 +132,21 @@ def basic_check(
                 time.sleep(0.5)
             except:
                 pass
-            resp = request.perform(
+            resp = inject_expression(
                 url=url,
                 data=data,
                 proxy=proxy,
                 headers=headers,
+                parameter=parameter,
                 connection_test=True,
-                is_multipart=is_multipart,
-                timeout=timeout,
             )
             logger.debug(f"r1: {base.content_length}, r2: {resp.content_length}")
+            # check when content length for two similar request differs it mean there could be a false positive boolean based injection detection
+            # based on content length of a page so to avoid that content these two initial request should match the content length
+            # for Ghauri to consider content length based boolean injection types, default check is true
+            if base.content_length != resp.content_length:
+                conf._bool_check_on_ct = False
+            conf._bool_ctb = base.content_length
             baseSet = set(base.filtered_text.split("\n"))
             respSet = set(resp.filtered_text.split("\n"))
             is_stable = bool(baseSet == respSet)
@@ -395,6 +399,16 @@ def confirm_booleanbased_sqli(
             confirm_response_type = boolean_confirm_retval.vulnerable
             case = boolean_confirm_retval.case
             diff = boolean_confirm_retval.difference
+            if case == "Content Length" and conf._bool_ctf and conf._bool_ctt:
+                is_bool_ct_ok = bool(
+                    conf._bool_ctt == attack.content_length
+                    and conf._bool_ctf == attack01.content_length
+                )
+                if not is_bool_ct_ok:
+                    # logger.debug(f"false positive payload detected for case '{case}'")
+                    conf._bool_ctt = None
+                    conf._bool_ctf = None
+                    break
             if confirm_response_type:
                 logger.debug(
                     "  Test: {}, Response Type {}".format(

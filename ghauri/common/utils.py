@@ -574,8 +574,7 @@ def check_boolean_responses(
         w2 = attack_false.filtered_text
     ratio_true = get_boolean_ratio(w0, w1)
     ratio_false = get_boolean_ratio(w0, w2)
-    logger.debug(f"ratio false payload attack: {ratio_false}")
-    logger.debug(f"ratio true payload attack: {ratio_true}")
+    # logger.debug(f"ratios: (True => {ratio_true} / False => {ratio_false})")
     if not conf.match_ratio:
         if ratio_false >= 0.02 and ratio_false <= 0.98:
             conf.match_ratio = ratio_false
@@ -622,14 +621,16 @@ def check_boolean_responses(
                 not_string = difference
                 _cases.append("Page Content")
     else:
-        if ctt != ctf and ctb == ctt:
-            is_vulner = True
-            content_length = ctt
-            _cases.append("Content Length")
-        elif ctt != ctf and ctb == ctf:
-            is_vulner = True
-            content_length = ctf
-            _cases.append("Content Length")
+        # do check if initial requests performed returrned exact same content length
+        if conf._bool_check_on_ct:
+            if ctt != ctf and ctb == ctt:
+                is_vulner = True
+                content_length = ctt
+                _cases.append("Content Length")
+            elif ctt != ctf and ctb == ctf:
+                is_vulner = True
+                content_length = ctf
+                _cases.append("Content Length")
         if ratio_true != ratio_false:
             _cases.append("Page Ratio")
             is_vulner = True
@@ -646,6 +647,13 @@ def check_boolean_responses(
             is_vulner = False
         else:
             logger.debug(f"possible injectable cases detected: '{case}'")
+    if case == "Content Length":
+        if not conf._bool_ctt and not conf._bool_ctf:
+            logger.debug(
+                "setting config content length for comparision to avoid false positive.."
+            )
+            conf._bool_ctt = ctt
+            conf._bool_ctf = ctf
     if case == "Page Ratio":
         w0set = set(get_filtered_page_content(base.text, True, "\n").split("\n"))
         w1set = set(get_filtered_page_content(attack_true.text, True, "\n").split("\n"))
