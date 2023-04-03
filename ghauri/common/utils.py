@@ -654,6 +654,18 @@ def check_boolean_responses(
             )
             conf._bool_ctt = ctt
             conf._bool_ctf = ctf
+    if case == "Page Content" and conf._match_ratio_check:
+        is_vulner = False
+        if ratio_true != ratio_false and conf.match_ratio == ratio_true:
+            is_vulner = True
+            case = "Page Content"
+            difference = match_string if match_string else not_match_string
+        elif ratio_true != ratio_false and conf.match_ratio == ratio_false:
+            is_vulner = True
+            case = "Page Content"
+            difference = match_string if match_string else not_match_string
+        else:
+            difference = ""
     if case == "Page Ratio":
         w0set = set(get_filtered_page_content(base.text, True, "\n").split("\n"))
         w1set = set(get_filtered_page_content(attack_true.text, True, "\n").split("\n"))
@@ -721,6 +733,15 @@ def check_boolean_responses(
                 ):
                     is_vulner = True
                     case = "Match Ratio"
+                elif (
+                    difference
+                    and conf.match_ratio
+                    and conf.match_ratio in [ratio_true, ratio_false]
+                ):
+                    if not conf._match_ratio_check:
+                        is_vulner = True
+                        case = "Page Ratio, Match Ratio"
+                        conf._match_ratio_check = True
         if difference and is_vulner:
             string = difference
             not_string = ""
