@@ -87,7 +87,7 @@ REGEX_XPATH = r"(?isx)(XPATH.*error\s*:\s*\'~(?:\()?(?P<error_based_response>.*?
 # )
 REGEX_ERROR_BASED = (
     # r"(?is)(?:Duplicate\s*entry\s*(['\"])(?P<error_based_response>(.*?))(?:~)?1\1)"
-    r"(?is)(?:Duplicate\s*entry\s*(['\"])(?P<error_based_response>(.*?))(?:~1)?\1)"
+    r"(?is)(?:Duplicate\s*entry\s*(['\"])(?P<error_based_response>(.*?))(?:~)?(?:1)?\1)"
 )
 REGEX_BIGINT_BASED = (
     r"(?isx)(BIGINT.*\s.*Injected~(?:\()?(?P<error_based_response>.*?))\~END"
