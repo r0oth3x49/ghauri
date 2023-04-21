@@ -53,6 +53,7 @@ from ghauri.common.lib import (
     HTTP_STATUS_CODES_REASONS,
     AVOID_PARAMS,
 )
+import base64
 from ghauri.common.config import conf
 from ghauri.common.payloads import PAYLOADS
 from ghauri.logger.colored_logger import logger
@@ -69,11 +70,31 @@ class Struct:
         return f"<Parameter('{self.__key}')>"
 
 
+def parse_burp_request(request_text):
+    _temp = ""
+    regex = r"(?is)(?:<request base64=(['\"])(?P<is_base64>(?:true|false))\1><!\[CDATA\[(?P<request>(.+?))\]\]></request>)"
+    mobj = re.search(regex, request_text)
+    if mobj:
+        is_base64 = mobj.group("is_base64") == "true"
+        req = mobj.group("request")
+        if is_base64:
+            # logger.debug("decoding and parsing base64 encoded burp request..")
+            _temp = base64.b64decode(req).decode()
+        else:
+            # logger.debug("parsing burp request..")
+            _temp = req
+    else:
+        # logger.debug("normal http request file..")
+        _temp = request_text
+    return _temp
+
+
 # source: https://stackoverflow.com/questions/4685217/parse-raw-http-headers
 class HTTPRequest(BaseHTTPRequestHandler):
     def __init__(self, request_text):
         self.__request = request_text
         request_text = request_text.replace("HTTP/2", "HTTP/1.1")
+        request_text = parse_burp_request(request_text)
         if isinstance(request_text, str):
             request_text = request_text.encode("utf-8")
         self.rfile = BytesIO(request_text)
