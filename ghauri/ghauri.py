@@ -32,6 +32,7 @@ from ghauri.logger.colored_logger import logger, set_level
 from ghauri.core.tests import basic_check, check_injections
 from ghauri.common.lib import (
     os,
+    re,
     ssl,
     json,
     quote,
@@ -146,7 +147,10 @@ def perform_injection(
             logger.end("ending")
             exit(0)
         logger.info(f"parsing HTTP request from '{requestfile}'")
-        raw = "\n".join([i.strip() for i in open(requestfile) if i])
+        # raw = "\n".join([i.strip() for i in open(requestfile) if i])
+        raw = "\n".join(
+            [re.sub(r"[^\x00-\x7F]+", " ", i.strip()) for i in open(requestfile) if i]
+        )
     if raw:
         req = HTTPRequest(raw)
         url = req.url

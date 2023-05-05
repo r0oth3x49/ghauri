@@ -109,9 +109,10 @@ class HTTPRequest(BaseHTTPRequestHandler):
 
     def __body(self):
         content_type = self.content_type
+        body = self.rfile.read().decode("utf-8").strip()
         if content_type and "multipart/form-data" in content_type:
             self.is_multipart = True
-            return self.rfile.read().decode("utf-8").strip()
+            return body
         if content_type and content_type in [
             "application/x-www-form-urlencoded",
             "application/x-www-form-urlencoded; charset=UTF-8",
@@ -119,7 +120,7 @@ class HTTPRequest(BaseHTTPRequestHandler):
             "application/json; charset=UTF-8",
             "application/json;charset=UTF-8",
         ]:
-            return self.rfile.read().decode("utf-8").strip()
+            return body
 
     @property
     def type(self):
@@ -1246,6 +1247,11 @@ def prepare_attack_request(
         if injection_type in ["GET", "POST", "COOKIE"]:
             if injection_type == "POST" and is_json:
                 _ = re.search(REGEX_JSON_INJECTION, text)
+                REGEX_JSON_KEY_VALUE = (
+                    r"(?is)(?:(?P<key>(['\"]%s['\"]))(:)\s*(?P<value>(['\"\[]*)(%s)(['\"\]]*))(?:,)?)"
+                    % (key, value)
+                )
+                mkv = re.search(REGEX_JSON_KEY_VALUE, text)
                 if _ and "*" in _.group(4).strip():
                     value = re.sub(r"\*", "", _.group(4).strip())
                     if len(value) > 0:
@@ -1262,9 +1268,20 @@ def prepare_attack_request(
                             text,
                         )
                 else:
+                    # ugly hack for JSON based int values to convert them into string for adding a payload properly
+                    v_ = "\\4%s\\5"
+                    try:
+                        if mkv:
+                            v = mkv.group("value")
+                            _mobj = re.search(r"^\d+$", v)
+                            if _mobj:
+                                v_ = '"\\4%s"\\5'
+                    except:
+                        pass
+                    v_ = v_ % (payload.replace('"', '\\"'))
                     prepared_payload = re.sub(
                         REGEX_JSON_INJECTION,
-                        "\\1\\2\\3\\4%s\\5" % (payload.replace('"', '\\"')),
+                        "\\1\\2\\3%s" % (v_),
                         text,
                     )
                 if replace_value:
@@ -1468,9 +1485,9 @@ def extract_json_data(data):
                         conf._json_post_data.append(
                             {"key": key, "value": i, "type": "JSON "}
                         )
-            elif isinstance(value, str):
+            elif isinstance(value, (str, int)):
                 conf._json_post_data.append(
-                    {"key": key, "value": value, "type": "JSON "}
+                    {"key": key, "value": "{}".format(value), "type": "JSON "}
                 )
     # logger.debug(conf._json_post_data)
     return conf._json_post_data
@@ -1729,6 +1746,7 @@ def prepare_request(url, data, custom_headers, use_requests=False):
     raw = f"{request_type} {path} HTTP/1.1\n"
     raw += f"{custom_headers if custom_headers else ''}\n"
     if data:
+        data = re.sub(r"[\n]+", "", data)
         raw += f"\n{data}\n"
     header = {}
     headers = custom_headers.split("\n")

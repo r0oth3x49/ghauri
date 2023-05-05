@@ -1615,6 +1615,8 @@ def get_injectable_payloads(
                         injection_type=injection_type,
                         encode=False,
                     )
+                    if is_json:
+                        _data = re.sub(r"[\n]+", "", _data)
                 if injection_type == "GET":
                     _url = prepare_attack_request(
                         text=url,
