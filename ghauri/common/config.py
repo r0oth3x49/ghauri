@@ -106,6 +106,7 @@ class GhauriConfigs:
         self._bool_ctt = None
         self._bool_ctf = None
         self._match_ratio_check = False
+        self.fresh_queries = False
 
     @property
     def session_filepath(self):

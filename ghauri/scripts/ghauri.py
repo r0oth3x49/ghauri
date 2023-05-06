@@ -65,6 +65,12 @@ def main():
         help="Flush session files for current target",
     )
     general.add_argument(
+        "--fresh-queries",
+        dest="fresh_queries",
+        action="store_true",
+        help="Ignore query results stored in session file",
+    )
+    general.add_argument(
         "--test-filter",
         dest="test_filter",
         type=str,
@@ -416,6 +422,12 @@ def main():
         default=None,
         metavar="",
     )
+    enumeration.add_argument(
+        "--sql-shell",
+        dest="sql_shell",
+        action="store_true",
+        help="Prompt for an interactive SQL shell (experimental)",
+    )
     examples = parser.add_argument_group("Example", description=examples)
 
     args = parser.parse_args()
@@ -463,6 +475,8 @@ def main():
         safe_chars=args.safe_chars,
         fetch_using=args.fetch_using,
         test_filter=args.test_filter,
+        sql_shell=args.sql_shell,
+        fresh_queries=args.fresh_queries,
     )
     if resp.is_injected:
         target = ghauri.Ghauri(
@@ -484,17 +498,16 @@ def main():
             match_string=resp.match_string,
             vectors=resp.vectors,
         )
-        if not args.dbs and (
-            args.hostname or args.current_user or args.current_db or args.banner
-        ):
-            if args.banner:
-                target.extract_banner()
-            if args.current_user:
-                target.extract_current_user()
-            if args.current_db:
-                target.extract_current_db()
-            if args.hostname:
-                target.extract_hostname()
+        current_db = None
+        if args.banner:
+            target.extract_banner()
+        if args.current_user:
+            target.extract_current_user()
+        if args.current_db:
+            response = target.extract_current_db()
+            current_db = response.result.strip() if response.ok else None
+        if args.hostname:
+            target.extract_hostname()
         if args.dbs:
             target.extract_dbs(start=args.limitstart, stop=args.limitstop)
         if args.db and args.tables:
@@ -523,7 +536,6 @@ def main():
                 stop=args.limitstop,
                 dump_requested=True,
             )
-
         if args.db and args.tbl and args.dump and not args.cols:
             target.dump_table(
                 database=args.db,
@@ -532,6 +544,10 @@ def main():
                 stop=args.limitstop,
                 dump_requested=True,
             )
+        if args.dump and not args.db and not args.tbl and not args.cols:
+            target.dump_current_db(current_db=current_db, dump_requested=True)
+        logger.success("")
+        target._end()
 
 
 if __name__ == "__main__":

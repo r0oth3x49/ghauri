@@ -1746,57 +1746,31 @@ class GhauriExtractor:
         error_msg = None
         retry_on_error = 0
         is_resumed = False
-        retval_session = session.fetchall(
-            session_filepath=conf.session_filepath,
-            query="SELECT * FROM storage WHERE `type`=?",
-            values=(dump_type,),
-        )
-        if retval_session:
-            retval_session = retval_session.pop()
-            is_resumed = True
-            result = retval_session.get("value")
-            length = retval_session.get("length")
-            logger.progress(f"resumed: {result}")
-            last_row_id = retval_session.get("id")
-            if len(result) == length:
-                _temp = PayloadResponse(
-                    ok=True,
-                    error="",
-                    result=result,
-                    payload="",
-                    resumed=is_resumed,
-                )
-                return _temp
+        if dump_type and not conf.fresh_queries:
+            retval_session = session.fetchall(
+                session_filepath=conf.session_filepath,
+                query="SELECT * FROM storage WHERE `type`=?",
+                values=(dump_type,),
+            )
+            if retval_session:
+                retval_session = retval_session.pop()
+                is_resumed = True
+                result = retval_session.get("value")
+                length = retval_session.get("length")
+                logger.progress(f"resumed: {result}")
+                last_row_id = retval_session.get("id")
+                if len(result) == length:
+                    _temp = PayloadResponse(
+                        ok=True,
+                        error="",
+                        result=result,
+                        payload="",
+                        resumed=is_resumed,
+                    )
+                    return _temp
         if error_based_in_vectors:
             vector = conf.vectors.get("error_vector")
             while start < end:
-                # if http_firewall_code_counter > 2:
-                #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
-                #     logger.warning(f"HTTP error code detected during run:")
-                #     choice = logger.read_input(
-                #         f"{message}. how do you want to proceed? [(C)continue/(q)uit] ",
-                #         batch=False,
-                #         user_input="C",
-                #     )
-                #     if choice == "q":
-                #         logger.error("user quit")
-                #         logger.end("ending")
-                #         exit(0)
-                #     if choice == "c":
-                #         http_firewall_code_counter = 0
-                # if retry_on_error >= retry:
-                #     logger.warning(f"Ghauri detected connection errors multiple times")
-                #     choice = logger.read_input(
-                #         f"how do you want to proceed? [(C)continue/(q)uit] ",
-                #         batch=False,
-                #         user_input="C",
-                #     )
-                #     if choice == "q":
-                #         logger.error("user quit")
-                #         logger.end("ending")
-                #         exit(0)
-                #     if choice == "c":
-                #         retry_on_error = 0
                 entry = payloads[start]
                 response_string = ""
                 if delay > 0:
@@ -1895,7 +1869,7 @@ class GhauriExtractor:
                                     "it was not possible to count the number of entries for the SQL query provided. Ghauri will assume that it returns only one entry"
                                 )
                     try:
-                        if dump_type:
+                        if dump_type and not conf.fresh_queries:
                             session.dump(
                                 session_filepath=conf.session_filepath,
                                 query=STORAGE,
@@ -2014,7 +1988,7 @@ class GhauriExtractor:
         is_resumed = False
         start_pos = 1
         start_chars = ""
-        if dump_type:
+        if dump_type and not conf.fresh_queries:
             retval_session = session.fetchall(
                 session_filepath=conf.session_filepath,
                 query="SELECT * FROM storage WHERE `type`=?",
@@ -2072,7 +2046,7 @@ class GhauriExtractor:
                     ok=True, error="", result="", payload=length, resumed=False
                 )
             try:
-                if not is_resumed and dump_type:
+                if not is_resumed and dump_type and not conf.fresh_queries:
                     last_row_id = session.dump(
                         session_filepath=conf.session_filepath,
                         query=STORAGE,
@@ -2241,7 +2215,11 @@ class GhauriExtractor:
                                 conf._thread_chars_query = {}
                                 with conf.lock:
                                     try:
-                                        if dump_type and chars:
+                                        if (
+                                            dump_type
+                                            and chars
+                                            and not conf.fresh_queries
+                                        ):
                                             session.dump(
                                                 session_filepath=conf.session_filepath,
                                                 query=STORAGE_UPDATE,
@@ -2528,7 +2506,11 @@ class GhauriExtractor:
                                                     "it seems the current payload is filtered out by some sort of WAF/IDS."
                                                 )
                                                 break
-                                            if dump_type and chars:
+                                            if (
+                                                dump_type
+                                                and chars
+                                                and not conf.fresh_queries
+                                            ):
                                                 session.dump(
                                                     session_filepath=conf.session_filepath,
                                                     query=STORAGE_UPDATE,
@@ -2741,7 +2723,11 @@ class GhauriExtractor:
                                                     "it seems the current payload is filtered out by some sort of WAF/IDS."
                                                 )
                                                 break
-                                            if dump_type and chars:
+                                            if (
+                                                dump_type
+                                                and chars
+                                                and not conf.fresh_queries
+                                            ):
                                                 session.dump(
                                                     session_filepath=conf.session_filepath,
                                                     query=STORAGE_UPDATE,

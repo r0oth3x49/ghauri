@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/badge/release-v1.1.9-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.1.9)
+[![GitHub release](https://img.shields.io/badge/release-v1.2-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.2)
 [![GitHub stars](https://img.shields.io/github/stars/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/network)
 [![GitHub issues](https://img.shields.io/github/issues/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/issues)
@@ -53,6 +53,9 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - added support for skip urlencoding switch: `--skip-urlencode`
  - added support to verify extracted characters in case of boolean/time based injections.
  - added support for handling redirects on user demand.
+ - added support for sql-shell switch: `--sql-shell` (experimental)
+ - added support for fresh queries switch: `--fresh-queries`
+ - added switch for hostname extraction: `--hostname`
 
 
 ## **Advanced Usage**
@@ -70,6 +73,8 @@ General:
   -v VERBOSE          Verbosity level: 1-5 (default 1).
   --batch             Never ask for user input, use the default behavior
   --flush-session     Flush session files for current target
+  --fresh-queries     Ignore query results stored in session file
+  --test-filter       Select test payloads by titles (experimental)
 
 Target:
   At least one of these options has to be provided to define the
@@ -146,9 +151,12 @@ Enumeration:
   -C COLS             DBMS database table column(s) to enumerate
   --start             Retrieve entries from offset for dbs/tables/columns/dump
   --stop              Retrieve entries till offset for dbs/tables/columns/dump
+  --sql-shell         Prompt for an interactive SQL shell (experimental)
 
 Example:
-  ghauri http://www.site.com/vuln.php?id=1 --dbs
+  ghauri -u http://www.site.com/vuln.php?id=1 --dbs
+
+
 </code></pre>
 
 

