@@ -159,6 +159,14 @@ def perform_injection(
         req = HTTPRequest(raw)
         url = req.url
         headers = req.headers
+        header_keys = headers.keys()
+        if not req.host and not header_keys:
+            logger.debug("invalid format of a request file")
+            logger.critical(
+                f"specified file '{requestfile}' does not contain a usable HTTP request (with parameters)"
+            )
+            logger.end("ending")
+            exit(0)
         full_headers = req.raw_full_headers
         raw_cookies = req.raw_cookies
         data = req.body
@@ -272,6 +280,9 @@ def perform_injection(
                     user_input="Y",
                 )
                 is_mp_asked = True
+                if question_mp and question_mp == "q":
+                    logger.end("ending")
+                    exit(0)
             if is_json and not is_json_asked and injection_type == "POST":
                 choice = logger.read_input(
                     "JSON data found in POST body. Do you want to process it? [Y/n/q] ",
@@ -279,6 +290,9 @@ def perform_injection(
                     user_input="Y",
                 )
                 is_json_asked = True
+                if choice and choice == "q":
+                    logger.end("ending")
+                    exit(0)
             parameters = injection_points.get(injection_type)
             if testparameter:
                 parameters = [i for i in parameters if i.key in testparameter]
