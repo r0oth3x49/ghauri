@@ -1234,7 +1234,8 @@ def prepare_attack_request(
         #     json.dumps(value),
         # )  # (?is)(?:(['\"]%s['\"])(:)(\s*[\['\"]+%s)(['\"\]]))
         REGEX_MULTIPART_INJECTION = (
-            r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?(.*?))(%s)(\n--))"
+            # r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?(.*?))(%s)(\n--))"
+            r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?\s*)(%s)(\n--))"
             % (key, value)
         )
         replace_value = bool(
@@ -1324,20 +1325,30 @@ def prepare_attack_request(
     if is_multipart:
         if replace_value:
             prepared_payload = re.sub(
-                REGEX_MULTIPART_INJECTION, "\\1\\2%s\\4" % (payload), text
+                # REGEX_MULTIPART_INJECTION, "\\1\\2%s\\4" % (payload), text
+                REGEX_MULTIPART_INJECTION,
+                "\\1%s\\3" % (payload),
+                text,
             )
         else:
             _ = re.search(REGEX_MULTIPART_INJECTION, text)
-            if _ and "*" in _.group(3).strip():
+            # if _ and "*" in _.group(3).strip():
+            if _ and "*" in _.group(2).strip():
                 prepared_payload = re.sub(
-                    REGEX_MULTIPART_INJECTION, "\\1\\2\\3%s\\4" % (payload), text
+                    # REGEX_MULTIPART_INJECTION, "\\1\\2\\3%s\\4" % (payload), text
+                    REGEX_MULTIPART_INJECTION,
+                    "\\1\\2%s\\3" % (payload),
+                    text,
                 )
                 prepared_payload = replace_with(
                     prepared_payload, character="*", replace_with="", right=False
                 )
             else:
                 prepared_payload = re.sub(
-                    REGEX_MULTIPART_INJECTION, "\\1\\2\\3%s\\4" % (payload), text
+                    # REGEX_MULTIPART_INJECTION, "\\1\\2\\3%s\\4" % (payload), text
+                    REGEX_MULTIPART_INJECTION,
+                    "\\1\\2%s\\3" % (payload),
+                    text,
                 )
     # logger.debug(f"prepared payload: {prepared_payload}")
     return prepared_payload
