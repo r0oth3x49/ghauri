@@ -48,6 +48,7 @@ from ghauri.common.utils import (
     prepare_custom_headers,
     prepare_attack_request,
     check_boolean_responses,
+    extract_uri_params,
     extract_injection_points,
     fetch_db_specific_payload,
     check_injection_points_for_level,
@@ -220,11 +221,18 @@ def perform_injection(
     set_level(verbose_level, filepaths.logs)
     is_params_found = check_injection_points_for_level(level, obj)
     if not is_params_found:
-        logger.critical(
-            "no parameter(s) found for testing in the provided data (e.g. GET parameter 'id' in 'www.site.com/index.php?id=1')"
-        )
-        logger.end("ending")
-        exit(0)
+        obj = extract_uri_params(url)
+        custom_injection_in = obj.custom_injection_in
+        injection_points = obj.injection_point
+        conf.is_multipart = is_multipart = obj.is_multipart
+        conf.is_json = is_json = obj.is_json
+        is_params_found = check_injection_points_for_level(level, obj)
+        if not is_params_found:
+            logger.critical(
+                "no parameter(s) found for testing in the provided data (e.g. GET parameter 'id' in 'www.site.com/index.php?id=1')"
+            )
+            logger.end("ending")
+            exit(0)
     if conf.safe_chars:
         logger.debug(
             f'Ghauri is going to skip urlencoding for provided safe character(s): "{safe_chars}"'

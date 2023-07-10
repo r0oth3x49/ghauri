@@ -1212,8 +1212,14 @@ def prepare_attack_request(
         key_new = key_to_split_by.replace("*", "")
         prepared_payload = f"{init}{key_new}{payload}{last}"
     elif key == "#1*" and injection_type == "GET":
-        init, last = text.split(value)
-        prepared_payload = f"{init}{payload}{last}"
+        if value == "*":
+            init, last = text.split(value)
+            prepared_payload = f"{init}{payload}{last}"
+        else:
+            ok = re.search(r"(?is)(?:/%s)" % value, text)
+            prepared_payload = re.sub(
+                r"(?is)(/%s)" % (value), "\\1%s" % (payload), text
+            )
     else:
         key = re.escape(key)
         value = re.escape(value)
@@ -1525,6 +1531,80 @@ def check_injection_points_for_level(level, obj):
             if GET or POST or COOKIES or HEADERS:
                 is_ok = True
     return is_ok
+
+
+def extract_uri_params(url):
+    _injection_points = {}
+    custom_injection_in = []
+    is_multipart = False
+    is_json = False
+    InjectionPoints = collections.namedtuple(
+        "InjectionPoints",
+        [
+            "custom_injection_in",
+            # "injection_points",
+            "is_multipart",
+            "is_json",
+            "injection_point",
+        ],
+    )
+    if url:
+        parsed = urlparse(url)
+        path = parsed.path
+        # extracting URI params such as files and folders
+        endpoints = [i for i in path.split("/") if i and i != ""]
+        is_uri_test_allowed = False
+        if len(endpoints) >= 1:
+            logger.warning(
+                "you've provided target URL without any GET parameters (e.g. 'http://www.site.com/article.php?id=1') and without providing any POST parameters through option '--data'"
+            )
+            uri_choice = logger.read_input(
+                "do you want to try URI injections in the target URL itself? [Y/n/q]",
+                user_input="Y",
+            )
+            if uri_choice == "y":
+                is_uri_test_allowed = True
+        if len(endpoints) >= 1 and is_uri_test_allowed:
+            folders = [i.strip() for i in endpoints[:-1] if i]
+            ep = endpoints[-1]
+            _tempf = []
+            for entry in folders:
+                _tempf.append({"key": "#1*", "value": f"{entry}", "type": ""})
+            if len(ep) >= 1:
+                if "." in ep:
+                    ep, ext = [i.strip() for i in ep.rsplit(".", 1)]
+                else:
+                    ep, ext = ep, ""
+                _tempf.append({"key": "#1*", "value": f"{ep}", "type": ""})
+            _tempf.reverse()
+            _injection_points.update({"GET": _tempf})
+    for _type, _params in _injection_points.items():
+        for entry in _params:
+            key = entry.get("key")
+            value = entry.get("value")
+            # logger.debug(f"type: {_type}, param: {entry}")
+            if value and "*" in value:
+                custom_injection_in.append(_type)
+            if key and "*" in key and key != "#1*":
+                custom_injection_in.append(_type)
+    injection_point = {}
+    for _type, _params in _injection_points.items():
+        _ = []
+        for entry in _params:
+            p = Struct(**entry)
+            if p.key in AVOID_PARAMS:
+                continue
+            _.append(p)
+        injection_point.update({_type: _})
+    _temp = InjectionPoints(
+        custom_injection_in=list(set(custom_injection_in)),
+        # injection_points=_injection_points,
+        is_multipart=is_multipart,
+        is_json=is_json,
+        injection_point=injection_point,
+    )
+    logger.debug((f"URI processed params: {_temp}"))
+    return _temp
 
 
 def extract_injection_points(url="", data="", headers="", cookies="", delimeter=""):
