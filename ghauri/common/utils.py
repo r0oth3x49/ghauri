@@ -1578,6 +1578,7 @@ def extract_uri_params(url):
                 _tempf.append({"key": "#1*", "value": f"{ep}", "type": ""})
             _tempf.reverse()
             _injection_points.update({"GET": _tempf})
+        # end extracting URI params such as files and folders
     for _type, _params in _injection_points.items():
         for entry in _params:
             key = entry.get("key")
