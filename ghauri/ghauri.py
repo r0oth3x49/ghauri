@@ -221,7 +221,7 @@ def perform_injection(
     set_level(verbose_level, filepaths.logs)
     is_params_found = check_injection_points_for_level(level, obj)
     if not is_params_found:
-        obj = extract_uri_params(url)
+        obj = extract_uri_params(url, batch=batch)
         custom_injection_in = obj.custom_injection_in
         injection_points = obj.injection_point
         conf.is_multipart = is_multipart = obj.is_multipart

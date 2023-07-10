@@ -1533,7 +1533,7 @@ def check_injection_points_for_level(level, obj):
     return is_ok
 
 
-def extract_uri_params(url):
+def extract_uri_params(url, batch=False):
     _injection_points = {}
     custom_injection_in = []
     is_multipart = False
@@ -1561,6 +1561,7 @@ def extract_uri_params(url):
             uri_choice = logger.read_input(
                 "do you want to try URI injections in the target URL itself? [Y/n/q]",
                 user_input="Y",
+                batch=batch,
             )
             if uri_choice == "y":
                 is_uri_test_allowed = True
