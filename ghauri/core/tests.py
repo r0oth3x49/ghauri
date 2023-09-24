@@ -556,7 +556,7 @@ def check_booleanbased_sqli(
                 logger.warning(f"HTTP error code detected during run:")
                 choice = logger.read_input(
                     f"{message}. Do you want to keep testing the others (if any) [y/N]? ",
-                    batch=False,
+                    batch=batch,
                     user_input="N",
                 )
                 if choice == "n":
@@ -569,7 +569,7 @@ def check_booleanbased_sqli(
                 logger.warning(f"Ghauri detected connection errors multiple times")
                 choice = logger.read_input(
                     f"Do you want to keep testing the others (if any) [y/N]? ",
-                    batch=False,
+                    batch=batch,
                     user_input="N",
                 )
                 if choice == "n":
@@ -1079,7 +1079,7 @@ def check_timebased_sqli(
                 logger.warning(f"HTTP error code detected during run:")
                 choice = logger.read_input(
                     f"{message}. Do you want to keep testing the others (if any) [y/N]? ",
-                    batch=False,
+                    batch=batch,
                     user_input="N",
                 )
                 if choice == "n":
@@ -1092,7 +1092,7 @@ def check_timebased_sqli(
                 logger.warning(f"Ghauri detected connection errors multiple times")
                 choice = logger.read_input(
                     f"Do you want to keep testing the others (if any) [y/N]? ",
-                    batch=False,
+                    batch=batch,
                     user_input="N",
                 )
                 if choice == "n":
@@ -1339,7 +1339,7 @@ def check_errorbased_sqli(
                 logger.warning(f"HTTP error code detected during run:")
                 choice = logger.read_input(
                     f"{message}. Do you want to keep testing the others (if any) [y/N]? ",
-                    batch=False,
+                    batch=batch,
                     user_input="N",
                 )
                 if choice == "n":
@@ -1352,7 +1352,7 @@ def check_errorbased_sqli(
                 logger.warning(f"Ghauri detected connection errors multiple times")
                 choice = logger.read_input(
                     f"Do you want to keep testing the others (if any) [y/N]? ",
-                    batch=False,
+                    batch=batch,
                     user_input="N",
                 )
                 if choice == "n":

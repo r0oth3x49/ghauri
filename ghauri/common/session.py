@@ -146,9 +146,18 @@ class SessionFactory:
             pass
         if os.path.exists(dbfilepath):
             filepath = os.path.join(dbfilepath, f"{table}.csv")
-            with open(filepath, "w", encoding="utf-8") as fd:
+            fmode = "w"
+            is_file_exists = False
+            try:
+                with open(filepath, encoding="utf-8") as fe:
+                    pass
+                fmode = "a"
+                is_file_exists = True
+            except Exception as e:
+                pass
+            with open(filepath, fmode, encoding="utf-8") as fd:
                 csv_writer = csv.writer(fd, delimiter=",")
-                if field_names:
+                if field_names and not is_file_exists:
                     csv_writer.writerow([i.strip() for i in field_names])
                 csv_writer.writerows(results)
                 ok = True
