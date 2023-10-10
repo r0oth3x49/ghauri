@@ -17,17 +17,37 @@
 
 ## ***Installation***
 
+```console
+git clone https://github.com/r0oth3x49/ghauri.git
+cd ghauri
+python3 -m pip install --upgrade -r requirements.txt
+python3 setup.py install
+ghauri --help
+```
+OR
+
+```console
+git clone https://github.com/r0oth3x49/ghauri.git
+cd ghauri
+python3 -m pip install --upgrade -r requirements.txt
+python3 -m pip install -e .
+ghauri --help
+```
+
+OR
+
+In simple terms, you can install **ghauri** in following steps :
  - cd to **ghauri** directory.
  - install requirements: `python3 -m pip install --upgrade -r requirements.txt`
  - run: `python3 setup.py install` or `python3 -m pip install -e .`
- - you will be able to access and run the ghauri with simple `ghauri --help` command.
+ - you will be able to access and run the **ghauri** with simple `ghauri --help` command.
 
 ## ***Download Ghauri***
 
-You can download the latest version of Ghauri by cloning the GitHub repository.
-
-    git clone https://github.com/r0oth3x49/ghauri.git
-
+You can download the latest version of **Ghauri** by cloning the GitHub repository.
+```console
+git clone https://github.com/r0oth3x49/ghauri.git
+```
 ## ***Features***
  - Supports following types of injection payloads:
    - Boolean based.
