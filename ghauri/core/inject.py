@@ -100,10 +100,17 @@ def inject_expression(
             logger.end("ending")
             exit(0)
     except URLError as e:
-        tried = 1
-        logger.critical(f"{e.reason}. Ghauri is going to retry..")
         response_ok = False
-        while tried <= conf.retry:
+        conf.retry_counter += 1
+        if conf.retry_counter == conf.retry:
+            logger.critical("target URL is not responding..")
+            logger.debug(f"Reason: URLError: {e.reason}")
+            logger.debug(
+                "Ghauri was not able to establish connection to the target URL due to internet connectivity issue.."
+            )
+            logger.end("ending")
+            exit(0)
+        if conf.retry_counter <= conf.retry:
             attack = inject_expression(
                 url,
                 data,
@@ -117,10 +124,8 @@ def inject_expression(
                 is_multipart=is_multipart,
                 injection_type=injection_type,
             )
-            tried += 1
             if attack.ok:
                 response_ok = True
-                break
         if response_ok:
             return attack
         else:
@@ -137,10 +142,17 @@ def inject_expression(
     except TimeoutError as e:
         raise e
     except Exception as e:
-        tried = 1
-        logger.critical(f"{e.reason}. Ghauri is going to retry..")
+        # logger.critical(f"{e.reason}. Ghauri is going to retry..")
         response_ok = False
-        while tried <= conf.retry:
+        conf.retry_counter += 1
+        if conf.retry_counter == conf.retry:
+            logger.critical(
+                "target URL is not responding, Please check the target menually.."
+            )
+            logger.debug(f"Reason: URLError: {e.reason}")
+            logger.end("ending")
+            exit(0)
+        if conf.retry_counter <= conf.retry:
             attack = inject_expression(
                 url,
                 data,
@@ -154,10 +166,8 @@ def inject_expression(
                 is_multipart=is_multipart,
                 injection_type=injection_type,
             )
-            tried += 1
             if attack.ok:
                 response_ok = True
-                break
         if response_ok:
             return attack
         raise e

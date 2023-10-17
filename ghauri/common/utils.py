@@ -121,6 +121,19 @@ class HTTPRequest(BaseHTTPRequestHandler):
             "application/json;charset=UTF-8",
         ]:
             return body
+        if (
+            body
+            and content_type
+            and content_type
+            not in [
+                "application/x-www-form-urlencoded",
+                "application/x-www-form-urlencoded; charset=UTF-8",
+                "application/json",
+                "application/json; charset=UTF-8",
+                "application/json;charset=UTF-8",
+            ]
+        ):
+            return body
 
     @property
     def type(self):
@@ -1422,7 +1435,7 @@ def fetch_payloads_by_suffix_prefix(
     payloads, prefix=None, suffix=None, is_parameter_replace=False
 ):
     _temp = []
-    # logger.debug(f"prefix=({prefix}), suffix=({suffix})")
+    logger.debug(f"prefix=('{prefix}'), suffix=('{suffix}')")
     if is_parameter_replace:
         # in case of payload type is parameter replace then we don't need prefix and suffix in that case
         # we will use the default payload base prefixes and suffixes if any from Ghauri
@@ -1441,39 +1454,39 @@ def fetch_payloads_by_suffix_prefix(
         ]
     if prefix == None and suffix == None:
         _temp = payloads
-    if prefix and suffix == None:
+    if (prefix or prefix == "") and suffix == None:
+        prefix = urldecode(prefix)
+        payload = payloads[-1].raw
+        suf_seen = set()
         for entry in payloads:
-            prefix = urldecode(prefix)
-            _pref = entry.prefix
-            if prefix.startswith(" "):
-                prefix = " "
-            if _pref and prefix and _pref[0] != prefix[0]:
-                pass
-                # logger.debug(f"skipping payload '{entry.raw}'")
-            if _pref and prefix and _pref[0] == prefix[0]:
-                _temp.append(entry)
-    # we should try all the prefix for now
-    if suffix and prefix == None:
+            if entry.suffix not in suf_seen:
+                suf_seen.add(entry.suffix)
+                _payload = Payload(
+                    prefix=prefix,
+                    suffix=entry.suffix,
+                    string=f"{prefix}{payload}{entry.suffix}",
+                    raw=payload,
+                )
+                _temp.append(_payload)
+    if (suffix or suffix == "" or isinstance(suffix, list)) and prefix == None:
+        if isinstance(suffix, list):
+            suffix = "--"
+        payload = payloads[-1].raw
+        suffix = urldecode(suffix)
+        pref_seen = set()
         for entry in payloads:
-            suffix = urldecode(suffix)
-            _suff = entry.suffix
-            # if suffix not in _suff:
-            # logger.debug(f"skipping payload '{entry.raw}'")
-            if suffix in _suff:
-                _temp.append(entry)
+            if entry.prefix not in pref_seen:
+                pref_seen.add(entry.prefix)
+                _payload = Payload(
+                    prefix=entry.prefix,
+                    suffix=suffix,
+                    string=f"{entry.prefix}{payload}{suffix}",
+                    raw=payload,
+                )
+                _temp.append(_payload)
     if prefix is not None and suffix is not None:
         if isinstance(suffix, list):
             suffix = "--"
-        # logger.debug(
-        #     f" both prefix and suffix are found for injection.. '{prefix}', '{suffix}'"
-        # )
-        # logger.debug("checking payloads for provided prefix and suffix..")
-        # for entry in payloads:
-        #     _pref = entry.prefix
-        #     prefix = urldecode(prefix)
-        #     if _pref and prefix and prefix[0] == _pref[0]:
-        #         _temp.append(entry)
-        # if not _temp:
         payload = payloads[-1].raw
         if prefix and prefix[-1] in [")", "'", '"']:
             if not prefix.endswith(" "):
