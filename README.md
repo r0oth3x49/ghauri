@@ -57,7 +57,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - added support for fresh queries switch: `--fresh-queries`
  - added switch for hostname extraction: `--hostname`
  - added switch to update ghauri from github: `--update` 
-    - Note: ghauri has to be cloned/installed from github
+    - Note: ghauri has to be cloned/installed from github.
 
 
 ## **Advanced Usage**
