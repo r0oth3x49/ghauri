@@ -31,6 +31,7 @@ from ghauri.core.extract import ghauri_extractor
 from ghauri.logger.colored_logger import logger, set_level
 from ghauri.core.tests import basic_check, check_injections
 from ghauri.core.extract import ghauri_extractor as ge
+from ghauri.core.update import update_ghauri
 from ghauri.common.lib import (
     os,
     re,
@@ -94,6 +95,7 @@ def perform_injection(
     test_filter=None,
     sql_shell=False,
     fresh_queries=False,
+    update=False,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -119,6 +121,15 @@ def perform_injection(
     set_level(verbose_level, "")
     if threads and threads > 1:
         conf.threads = threads
+    if update:
+        try:
+            update_ghauri()
+            logger.end("ending")
+            exit(0)
+        except Exception as error:
+            logger.error("could not update ghauri, do it manually...")
+            logger.end("ending")
+            exit(0)
     GhauriResponse = collections.namedtuple(
         "GhauriResponse",
         [

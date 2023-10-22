@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/badge/release-v1.2.6-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.2.6)
+[![GitHub release](https://img.shields.io/badge/release-v1.2.7-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.2.7)
 [![GitHub stars](https://img.shields.io/github/stars/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/network)
 [![GitHub issues](https://img.shields.io/github/issues/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/issues)
@@ -56,6 +56,8 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - added support for sql-shell switch: `--sql-shell` (experimental)
  - added support for fresh queries switch: `--fresh-queries`
  - added switch for hostname extraction: `--hostname`
+ - added switch to update ghauri from github: `--update` 
+    - Note: ghauri has to be cloned/installed from github
 
 
 ## **Advanced Usage**
@@ -71,6 +73,7 @@ General:
   -h, --help          Shows the help.
   --version           Shows the version.
   -v VERBOSE          Verbosity level: 1-5 (default 1).
+  --update            update ghauri
   --batch             Never ask for user input, use the default behavior
   --flush-session     Flush session files for current target
   --fresh-queries     Ignore query results stored in session file

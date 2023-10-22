@@ -82,6 +82,9 @@ from urllib.request import (
 
 NO_DEFAULT = object()
 
+GIT_REPOSITORY = "https://www.github.com/r0oth3x49/ghauri.git"
+LATEST_VERSION = "https://api.github.com/repos/r0oth3x49/ghauri/releases/latest"
+
 INJECTABLE_HEADERS_DEFAULT = [
     "X-Forwarded-For",
     "User-Agent",

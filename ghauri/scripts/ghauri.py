@@ -46,6 +46,12 @@ def main():
         "--version", action="version", version=version, help="Shows the version."
     )
     general.add_argument(
+        "--update",
+        dest="update",
+        action="store_true",
+        help="update ghauri",
+    )
+    general.add_argument(
         "-v",
         dest="verbose",
         type=int,
@@ -434,8 +440,9 @@ def main():
 
     raw = ""
     if not args.url and not args.requestfile:
-        parser.print_help()
-        exit(0)
+        if not args.update:
+            parser.print_help()
+            exit(0)
 
     if args.testparameter:
         args.testparameter = [i.strip() for i in args.testparameter.split(",")]
@@ -477,6 +484,7 @@ def main():
         test_filter=args.test_filter,
         sql_shell=args.sql_shell,
         fresh_queries=args.fresh_queries,
+        update=args.update,
     )
     if resp.is_injected:
         target = ghauri.Ghauri(
