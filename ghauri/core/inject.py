@@ -51,19 +51,31 @@ def inject_expression(
     attack_url = url
     attack_data = data
     attack_headers = headers
-    # expression = (
-    #     urlencode(value=expression)
-    #     if injection_type.upper() not in ["HEADER"]
-    #     else expression
-    # )
     if conf.timeout and conf.timeout > 30:
         timeout = conf.timeout
     if not connection_test:
-        if injection_type in ["HEADER", "COOKIE"]:
+        if injection_type == "HEADER":
             attack_headers = prepare_attack_request(
                 headers,
                 expression,
                 param=parameter,
+                injection_type=injection_type,
+            )
+        if injection_type == "COOKIE":
+            if not conf._is_cookie_choice_taken:
+                choice = logger.read_input(
+                    "do you want to URL encode cookie values (implementation specific)? [Y/n] ",
+                    batch=conf.batch,
+                    user_input="Y",
+                )
+                if choice and choice != "n":
+                    conf._encode_cookie = True
+                conf._is_cookie_choice_taken = True
+            attack_headers = prepare_attack_request(
+                headers,
+                expression,
+                param=parameter,
+                encode=conf._encode_cookie,
                 injection_type=injection_type,
             )
         if injection_type == "GET":

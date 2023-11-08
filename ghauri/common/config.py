@@ -108,6 +108,8 @@ class GhauriConfigs:
         self._match_ratio_check = False
         self.fresh_queries = False
         self.retry_counter = 0
+        self._is_cookie_choice_taken = False
+        self._encode_cookie = False
 
     @property
     def session_filepath(self):

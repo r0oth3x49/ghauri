@@ -844,22 +844,23 @@ def urlencode(
     decode_first=False,
     injection_type=None,
     is_multipart=False,
+    value_type="",
 ):
     _temp = value
     if decode_first:
         value = urldecode(value)
     if conf.safe_chars:
         safe = f"{safe}{conf.safe_chars}"
-    if (
-        injection_type
-        and injection_type not in ["HEADER", "COOKIE"]
-        and not is_multipart
-    ):
-        if not conf.skip_urlencoding:
-            _temp = quote(value, safe=safe)
-        if conf.skip_urlencoding:
-            if not conf.is_multipart and not conf.is_json:
-                _temp = value.replace(" ", "+")
+    if injection_type and injection_type not in ["HEADER"] and not is_multipart:
+        if injection_type == "COOKIE":
+            if value_type == "payload":
+                _temp = quote(value, safe=conf.safe_chars or "()*%=/:'\"")
+        else:
+            if not conf.skip_urlencoding:
+                _temp = quote(value, safe=safe)
+            if conf.skip_urlencoding:
+                if not conf.is_multipart and not conf.is_json:
+                    _temp = value.replace(" ", "+")
     return _temp
 
 
@@ -1207,6 +1208,7 @@ def prepare_attack_request(
             decode_first=True,
             injection_type=injection_type,
             is_multipart=is_multipart,
+            value_type="payload",
         )
     if encode and param.type == "" and is_json:
         payload = urlencode(
@@ -1750,14 +1752,23 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
                 continue
             _.append(p)
         injection_point.update({_type: _})
+    sorted_injection_points = collections.OrderedDict()
+    sorted_injection_points.update(
+        {
+            "GET": injection_point.get("GET"),
+            "POST": injection_point.get("POST"),
+            "COOKIE": injection_point.get("COOKIE"),
+            "HEADER": injection_point.get("HEADER"),
+        }
+    )
+    sorted_injection_points = dict(sorted_injection_points)
     _temp = InjectionPoints(
         custom_injection_in=list(set(custom_injection_in)),
-        # injection_points=_injection_points,
         is_multipart=is_multipart,
         is_json=is_json,
-        injection_point=injection_point,
+        injection_point=sorted_injection_points,
     )
-    logger.debug(_temp)
+    logger.debug(sorted_injection_points)
     return _temp
 
 
