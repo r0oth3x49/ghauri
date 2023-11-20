@@ -1235,6 +1235,9 @@ def prepare_attack_request(
             prepared_payload = re.sub(
                 r"(?is)(/%s)" % (value), "\\1%s" % (payload), text
             )
+    elif key != "#1*" and "*" in urldecode(value) and injection_type in ["GET", "POST"]:
+        # dirty fix for when value is provided with custom injection marker
+        prepared_payload = re.sub(r"\*", f"{payload}", text)
     else:
         key = re.escape(key)
         value = re.escape(value)
