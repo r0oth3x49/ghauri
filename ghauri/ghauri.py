@@ -209,11 +209,13 @@ def perform_injection(
     injection_points = obj.injection_point
     conf.is_multipart = is_multipart = obj.is_multipart
     conf.is_json = is_json = obj.is_json
+    conf.is_xml = is_xml = obj.is_xml
     conf.text_only = text_only
     base = None
     is_asked = False
     is_mp_asked = False
     is_json_asked = False
+    is_xml_asked = False
     is_resumed = False
     is_dynamic = False
     possible_dbms = None
@@ -237,6 +239,7 @@ def perform_injection(
         injection_points = obj.injection_point
         conf.is_multipart = is_multipart = obj.is_multipart
         conf.is_json = is_json = obj.is_json
+        conf.is_xml = is_xml = obj.is_xml
         is_params_found = check_injection_points_for_level(level, obj)
         if not is_params_found:
             logger.critical(
@@ -312,6 +315,16 @@ def perform_injection(
                 if choice and choice == "q":
                     logger.end("ending")
                     exit(0)
+            if is_xml and not is_xml_asked and injection_type == "POST":
+                choice = logger.read_input(
+                    "SOAP/XML data found in POST body. Do you want to process it? [Y/n/q] ",
+                    batch=batch,
+                    user_input="Y",
+                )
+                is_json_asked = True
+                if choice and choice == "q":
+                    logger.end("ending")
+                    exit(0)
             parameters = injection_points.get(injection_type)
             if testparameter:
                 parameters = [i for i in parameters if i.key in testparameter]
@@ -375,12 +388,16 @@ def perform_injection(
                                 msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
                             elif is_json:
                                 msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
+                            elif is_xml:
+                                msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
                             else:
                                 msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name}'"
                     else:
                         if is_multipart:
                             msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
                         elif is_json:
+                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
+                        elif is_xml:
                             msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
                         else:
                             msg = f"testing for SQL injection on {injection_type} parameter '{param_name}'"

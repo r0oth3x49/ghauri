@@ -859,7 +859,7 @@ def urlencode(
             if not conf.skip_urlencoding:
                 _temp = quote(value, safe=safe)
             if conf.skip_urlencoding:
-                if not conf.is_multipart and not conf.is_json:
+                if not conf.is_multipart and not conf.is_json and not conf.is_xml:
                     _temp = value.replace(" ", "+")
     return _temp
 
@@ -1175,6 +1175,13 @@ def prepare_attack_request(
     value = param.value
     is_json = conf.is_json
     is_multipart = conf.is_multipart
+    replace_value = bool(
+        payload.startswith("if(")
+        or payload.startswith("OR(")
+        or payload.startswith("XOR")
+        or payload.startswith("(SELEC")
+        or payload.startswith("AND(")
+    )
     safe = (
         "/=*()&?%;,+\"'"
         if conf.backend == "Microsoft SQL Server" and injection_type == "POST"
@@ -1261,13 +1268,6 @@ def prepare_attack_request(
             # r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?(.*?))(%s)(\n--))"
             r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?\s*)(%s)(\n--))"
             % (key, value)
-        )
-        replace_value = bool(
-            payload.startswith("if(")
-            or payload.startswith("OR(")
-            or payload.startswith("XOR")
-            or payload.startswith("(SELEC")
-            or payload.startswith("AND(")
         )
         if injection_type in ["GET", "POST", "COOKIE"]:
             if injection_type == "POST" and is_json:
@@ -1371,6 +1371,36 @@ def prepare_attack_request(
                 prepared_payload = re.sub(
                     # REGEX_MULTIPART_INJECTION, "\\1\\2\\3%s\\4" % (payload), text
                     REGEX_MULTIPART_INJECTION,
+                    "\\1\\2%s\\3" % (payload),
+                    text,
+                )
+    if conf.is_xml:
+        text = urldecode(text)
+        REGEX_SOAPXML_INJECTION = r"(?is)(?:(<%s>)(%s)(</%s>))" % (
+            re.escape(urldecode(key)),
+            re.escape(urldecode(value)),
+            re.escape(urldecode(key)),
+        )
+        if replace_value:
+            prepared_payload = re.sub(
+                REGEX_SOAPXML_INJECTION,
+                "\\1%s\\3" % (payload),
+                text,
+            )
+        else:
+            _ = re.search(REGEX_SOAPXML_INJECTION, text)
+            if _ and "*" in _.group(2).strip():
+                prepared_payload = re.sub(
+                    REGEX_SOAPXML_INJECTION,
+                    "\\1\\2%s\\3" % (payload),
+                    text,
+                )
+                prepared_payload = replace_with(
+                    prepared_payload, character="*", replace_with="", right=False
+                )
+            else:
+                prepared_payload = re.sub(
+                    REGEX_SOAPXML_INJECTION,
                     "\\1\\2%s\\3" % (payload),
                     text,
                 )
@@ -1556,6 +1586,7 @@ def extract_uri_params(url, batch=False):
     custom_injection_in = []
     is_multipart = False
     is_json = False
+    is_xml = False
     InjectionPoints = collections.namedtuple(
         "InjectionPoints",
         [
@@ -1564,6 +1595,7 @@ def extract_uri_params(url, batch=False):
             "is_multipart",
             "is_json",
             "injection_point",
+            "is_xml",
         ],
     )
     if url:
@@ -1622,6 +1654,7 @@ def extract_uri_params(url, batch=False):
         is_multipart=is_multipart,
         is_json=is_json,
         injection_point=injection_point,
+        is_xml=is_xml,
     )
     logger.debug((f"URI processed params: {_temp}"))
     return _temp
@@ -1632,6 +1665,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
     custom_injection_in = []
     is_multipart = False
     is_json = False
+    is_xml = False
     InjectionPoints = collections.namedtuple(
         "InjectionPoints",
         [
@@ -1640,6 +1674,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
             "is_multipart",
             "is_json",
             "injection_point",
+            "is_xml",
         ],
     )
     if headers:
@@ -1704,6 +1739,21 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
                 params = extract_multipart_formdata(data)
                 # for entry in params:
                 #     multipart_formdata.update({entry.get("key"): entry.get("value")})
+            # Regular expression for XML POST data
+            XML_RECOGNITION_REGEX = r"(?s)\A\s*<[^>]+>(.+>)?\s*\Z"
+            xmlmobj = re.search(XML_RECOGNITION_REGEX, data)
+            if xmlmobj:
+                is_xml = True
+                params = [
+                    i.groupdict()
+                    for i in re.finditer(
+                        r"(<(?P<key>[^>]+)( [^<]*)?>)(?P<value>([^<]*))(</\2)", data
+                    )
+                ]
+                params = [
+                    {"key": i.get("key"), "value": i.get("value"), "type": "SOUP "}
+                    for i in params
+                ]
             else:
                 params = parse_qs(data.strip(), keep_blank_values=True)
                 params = [
@@ -1770,6 +1820,7 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
         is_multipart=is_multipart,
         is_json=is_json,
         injection_point=sorted_injection_points,
+        is_xml=is_xml,
     )
     logger.debug(sorted_injection_points)
     return _temp

@@ -37,6 +37,7 @@ class GhauriConfigs:
         vectors="",
         is_string=False,
         is_json=False,
+        is_xml=False,
         is_multipart=False,
         skip_urlencoding=False,
         filepaths=None,
@@ -61,6 +62,7 @@ class GhauriConfigs:
         self.vectors = vectors
         self.is_string = is_string
         self.is_json = is_json
+        self.is_xml = is_xml
         self.is_multipart = is_multipart
         self.skip_urlencoding = skip_urlencoding
         self.filepaths = filepaths
