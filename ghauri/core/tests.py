@@ -2377,6 +2377,8 @@ def check_injections(
                 message = f"checking if the injection point on (custom) {injection_type} parameter '{parameter.type}{param_name}' is a false positive"
             elif is_json:
                 message = f"checking if the injection point on (custom) {injection_type} parameter '{parameter.type}{param_name}' is a false positive"
+            elif conf.is_xml:
+                message = f"checking if the injection point on (custom) {injection_type} parameter '{parameter.type}{param_name}' is a false positive"
             else:
                 message = f"checking if the injection point on {_it} parameter '{parameter.type}{param_name}' is a false positive"
             logger.info(message)
@@ -2446,6 +2448,8 @@ def check_injections(
             if is_multipart:
                 message = f"\n(custom) {injection_type} parameter '{parameter.type}{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
             elif is_json:
+                message = f"\n(custom) {injection_type} parameter '{parameter.type}{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
+            elif conf.is_xml:
                 message = f"\n(custom) {injection_type} parameter '{parameter.type}{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
             else:
                 message = f"\n{_it} parameter '{parameter.type}{param_name}' is vulnerable. Do you want to keep testing the others (if any)? [y/N] "
@@ -2534,6 +2538,8 @@ def check_injections(
                 msg = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
             if is_json:
                 msg = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
+            if conf.is_xml:
+                msg = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
             else:
                 msg = f"{_it} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
             logger.notice(msg)
@@ -2544,6 +2550,8 @@ def check_injections(
         if is_multipart:
             msg = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
         if is_json:
+            msg = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
+        if conf.is_xml:
             msg = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
         else:
             msg = f"{_it} parameter '{mc}{parameter.type}{param_name}{nc}' does not seem to be injectable"
