@@ -46,6 +46,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
    - Cookies Based injections
    - Mulitipart Form data injections
    - JSON based injections
+   - SOAP/XML based injections
  - support proxy option `--proxy`.
  - supports parsing request from txt file: switch for that `-r file.txt`
  - supports limiting data extraction for dbs/tables/columns/dump: switch `--start 1 --stop 2`
