@@ -1264,11 +1264,6 @@ def prepare_attack_request(
         #     key,
         #     json.dumps(value),
         # )  # (?is)(?:(['\"]%s['\"])(:)(\s*[\['\"]+%s)(['\"\]]))
-        REGEX_MULTIPART_INJECTION = (
-            # r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?(.*?))(%s)(\n--))"
-            r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?\s*)(%s)(\n--))"
-            % (key, value)
-        )
         if injection_type in ["GET", "POST", "COOKIE"]:
             if injection_type == "POST" and is_json:
                 _ = re.search(REGEX_JSON_INJECTION, text)
@@ -1347,6 +1342,11 @@ def prepare_attack_request(
                     REGEX_GET_POST_COOKIE_INJECTION, "\\1\\2%s" % (payload), text
                 )
     if is_multipart:
+        REGEX_MULTIPART_INJECTION = (
+            # r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?(.*?))(%s)(\n--))"
+            r"(?is)(?:(Content-Disposition[^\n]+?name\s*=\s*[\"']?%s[\"']?\s*)(%s)(\n--))"
+            % (key, value)
+        )
         if replace_value:
             prepared_payload = re.sub(
                 # REGEX_MULTIPART_INJECTION, "\\1\\2%s\\4" % (payload), text
@@ -1735,15 +1735,13 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
             mobj = re.search(MULTIPART_RECOGNITION_REGEX, data)
             if mobj:
                 is_multipart = True
-            if is_multipart:
-                params = extract_multipart_formdata(data)
-                # for entry in params:
-                #     multipart_formdata.update({entry.get("key"): entry.get("value")})
-            # Regular expression for XML POST data
             XML_RECOGNITION_REGEX = r"(?s)\A\s*<[^>]+>(.+>)?\s*\Z"
             xmlmobj = re.search(XML_RECOGNITION_REGEX, data)
             if xmlmobj:
                 is_xml = True
+            if is_multipart:
+                params = extract_multipart_formdata(data)
+            elif is_xml:
                 params = [
                     i.groupdict()
                     for i in re.finditer(
@@ -1808,10 +1806,10 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
     sorted_injection_points = collections.OrderedDict()
     sorted_injection_points.update(
         {
-            "GET": injection_point.get("GET"),
-            "POST": injection_point.get("POST"),
-            "COOKIE": injection_point.get("COOKIE"),
-            "HEADER": injection_point.get("HEADER"),
+            "GET": injection_point.get("GET", []),
+            "POST": injection_point.get("POST", []),
+            "COOKIE": injection_point.get("COOKIE", []),
+            "HEADER": injection_point.get("HEADER", []),
         }
     )
     sorted_injection_points = dict(sorted_injection_points)

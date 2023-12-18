@@ -112,6 +112,7 @@ def perform_injection(
     conf.fetch_using = fetch_using
     conf.test_filter = test_filter
     conf.fresh_queries = fresh_queries
+    conf.batch = batch
     logger.start("starting")
     if not force_ssl:
         ssl._create_default_https_context = ssl._create_unverified_context
