@@ -22,6 +22,10 @@
  - run: `python3 setup.py install` or `python3 -m pip install -e .`
  - you will be able to access and run the ghauri with simple `ghauri --help` command.
 
+ ***OR***
+  
+ - Follow this [installation guideline](https://github.com/r0oth3x49/ghauri/issues/119#issuecomment-1873049386) if facing an installation issue.
+
 ## ***Download Ghauri***
 
 You can download the latest version of Ghauri by cloning the GitHub repository.
