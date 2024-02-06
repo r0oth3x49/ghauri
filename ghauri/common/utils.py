@@ -210,7 +210,7 @@ class SmartRedirectHandler(HTTPRedirectHandler):
         if conf.follow_redirects == None:
             choice = logger.read_input(
                 f"got a {code} redirect to '{redirect_url}'. Do you want to follow? [Y/n] ",
-                batch=False,
+                batch=conf.batch,
                 user_input="Y",
             )
             if choice and choice == "y":
