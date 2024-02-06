@@ -37,7 +37,8 @@ from ghauri.common.lib import (
 )
 from ghauri.logger.colored_logger import logger
 from ghauri.common.utils import Struct
-
+import random
+import string
 
 class SessionFactory:
 
@@ -105,11 +106,13 @@ class SessionFactory:
         if flush_session:
             logger.info("flushing session file")
             try:
+                os.chmod(filepath, 0o777)
                 shutil.rmtree(filepath)
             except Exception as e:
                 pass
         try:
             os.makedirs(filepath)
+            os.chmod(filepath, 0o777)
         except Exception as e:
             pass
         session_filepath = os.path.join(filepath, "session.sqlite")
@@ -123,6 +126,7 @@ class SessionFactory:
         )
         self.generate(session_filepath=session_filepath)
         with open(target_filepath, "w") as fd:
+            os.chmod(target_filepath, 0o777)
             arguments = " ".join(sys.argv[1:])
             fw = f"{_t} ({method}) # ghauri {arguments}"
             if data and "-r" in arguments:
@@ -130,6 +134,7 @@ class SessionFactory:
             fd.write(fw)
         if not os.path.isfile(log_filepath):
             with open(log_filepath, "w") as fd:
+                os.chmod(log_filepath, 0o777)
                 pass
         return _temp
 
@@ -141,7 +146,9 @@ class SessionFactory:
         dump = os.path.join(filepath, "dump")
         dbfilepath = os.path.join(dump, database)
         try:
+            os.chmod(filepath, 0o777)
             os.makedirs(dbfilepath)
+            os.chmod(dbfilepath, 0o777)
         except:
             pass
         if os.path.exists(dbfilepath):
@@ -151,11 +158,13 @@ class SessionFactory:
             try:
                 with open(filepath, encoding="utf-8") as fe:
                     pass
+                os.chmod(filepath, 0o777)
                 fmode = "a"
                 is_file_exists = True
             except Exception as e:
                 pass
             with open(filepath, fmode, encoding="utf-8") as fd:
+                os.chmod(filepath, 0o777)
                 csv_writer = csv.writer(fd, delimiter=",")
                 if field_names and not is_file_exists:
                     csv_writer.writerow([i.strip() for i in field_names])
@@ -164,11 +173,16 @@ class SessionFactory:
         return ok
 
     def generate(self, session_filepath=""):
+        random_string = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
         if session_filepath and not os.path.isfile(session_filepath):
-            conn = sqlite3.connect(session_filepath)
+            temp_filename = random_string + '.db'
+            temp_filepath = os.path.join('/tmp', temp_filename)
+            conn = sqlite3.connect(temp_filepath)
             conn.executescript(SESSION_STATEMENETS)
             conn.commit()
             conn.close()
+            os.chmod(temp_filepath, 0o777)
+            shutil.move(temp_filepath, session_filepath)
         if (
             session_filepath
             and os.path.isfile(session_filepath)
