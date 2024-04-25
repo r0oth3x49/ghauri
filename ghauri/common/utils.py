@@ -210,7 +210,7 @@ class SmartRedirectHandler(HTTPRedirectHandler):
         if conf.follow_redirects == None:
             choice = logger.read_input(
                 f"got a {code} redirect to '{redirect_url}'. Do you want to follow? [Y/n] ",
-                batch=False,
+                batch=conf.batch,
                 user_input="Y",
             )
             if choice and choice == "y":
@@ -833,7 +833,7 @@ def is_encoded(string):
 def urldecode(value):
     is_mssql = bool("%2b" in value.lower())
     _temp = unquote(value)
-    if is_mssql:
+    if is_mssql and not conf.skip_urlencoding:
         _temp = _temp.replace("+", "%2b")
     return _temp
 
@@ -1224,6 +1224,8 @@ def prepare_attack_request(
             injection_type=injection_type,
             is_multipart=is_multipart,
         )
+    if conf.is_json:
+        payload = urldecode(payload)
     key_to_split_by = urldecode(key)
     if (
         injection_type in ["GET", "POST", "COOKIE", "HEADER"]
@@ -1242,9 +1244,9 @@ def prepare_attack_request(
             prepared_payload = re.sub(
                 r"(?is)(/%s)" % (value), "\\1%s" % (payload), text
             )
-    elif key != "#1*" and "*" in urldecode(value) and injection_type in ["GET", "POST"]:
-        # dirty fix for when value is provided with custom injection marker
-        prepared_payload = re.sub(r"\*", f"{payload}", text)
+    # elif key != "#1*" and "*" in urldecode(value) and injection_type in ["GET", "POST"]:
+    #     # dirty fix for when value is provided with custom injection marker
+    #     prepared_payload = re.sub(r"\*", f"{payload}", text)
     else:
         key = re.escape(key)
         value = re.escape(value)
@@ -1687,20 +1689,20 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
                 "type": "",
             }
             for i in out
-            if i
-            and i.split(":")[0].strip().lower()
-            in [h.lower() for h in INJECTABLE_HEADERS_DEFAULT]
         ]
         _temp = []
         for entry in params:
             v = entry.get("value")
-            if "*" in v:
+            k = entry.get("key")
+            # Patterns often seen in HTTP headers containing custom injection marking character '*'
+            PROBLEMATIC_CUSTOM_INJECTION_PATTERNS = r"(;q=[^;']+)|(\*/\*)"
+            _ = re.sub(PROBLEMATIC_CUSTOM_INJECTION_PATTERNS, "", v or "")
+            if "*" in _:
                 _temp.append(entry)
-                break
+            if k in INJECTABLE_HEADERS_DEFAULT:
+                _temp.append(entry)
         if _temp:
-            params = _temp
-        if params:
-            _injection_points.update({"HEADER": params})
+            _injection_points.update({"HEADER": _temp})
         delimeter = ""
     if cookies:
         if not delimeter:
@@ -1757,7 +1759,9 @@ def extract_injection_points(url="", data="", headers="", cookies="", delimeter=
                 params = [
                     {
                         "key": k.strip(),
-                        "value": "".join(v).replace("+", "%2b"),
+                        "value": v[-1].strip()
+                        if len(v) > 1
+                        else "".join(v).strip(),  # "".join(v).replace("+", "%2b"),
                         "type": "",
                     }
                     for k, v in params.items()

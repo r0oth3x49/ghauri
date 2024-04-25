@@ -202,6 +202,14 @@ def main():
         help="Confirm the injected payloads.",
     )
     request.add_argument(
+        "--ignore-code",
+        dest="ignore_code",
+        type=str,
+        help="Ignore (problematic) HTTP error code(s) (e.g. 401)",
+        default="",
+        metavar="",
+    )
+    request.add_argument(
         "--skip-urlencode",
         dest="skip_urlencoding",
         action="store_true",
@@ -485,6 +493,7 @@ def main():
         sql_shell=args.sql_shell,
         fresh_queries=args.fresh_queries,
         update=args.update,
+        ignore_code=args.ignore_code,
     )
     if resp.is_injected:
         target = ghauri.Ghauri(

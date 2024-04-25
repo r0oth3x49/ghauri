@@ -112,6 +112,23 @@ class GhauriConfigs:
         self.retry_counter = 0
         self._is_cookie_choice_taken = False
         self._encode_cookie = False
+        self.__ignore_code = ""
+
+    @property
+    def ignore_code(self):
+        codes = []
+        if self.__ignore_code == "*":
+            codes == [401]
+        if self.__ignore_code and isinstance(self.__ignore_code, str):
+            try:
+                codes = [int(i) for i in self.__ignore_code.replace(" ", "").split(",")]
+            except ValueError:
+                errMsg = "option '--ignore-code' should contain a list of integer values or a wildcard value '*'"
+                # raise Exception(errMsg)
+                logger.critical(errMsg)
+                logger.end("ending")
+                exit(0)
+        return codes
 
     @property
     def session_filepath(self):

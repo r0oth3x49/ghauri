@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/badge/release-v1.3-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.3)
+[![GitHub release](https://img.shields.io/badge/release-v1.3.1-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.3.1)
 [![GitHub stars](https://img.shields.io/github/stars/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/network)
 [![GitHub issues](https://img.shields.io/github/issues/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/issues)
@@ -66,6 +66,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
       for older version users they have to run git pull (if installed using git) to get this update
       and for futures updates the update will be possible with `ghauri --update` command to get the
       latest version of ghauri.
+ - added switch for ignore problematic HTTP codes. (e.g 401): `--ignore-code`
 
 
 ## **Advanced Usage**
@@ -80,8 +81,8 @@ A cross-platform python based advanced sql injections detection & exploitation t
 General:
   -h, --help          Shows the help.
   --version           Shows the version.
-  -v VERBOSE          Verbosity level: 1-5 (default 1).
   --update            update ghauri
+  -v VERBOSE          Verbosity level: 1-5 (default 1).
   --batch             Never ask for user input, use the default behavior
   --flush-session     Flush session files for current target
   --fresh-queries     Ignore query results stored in session file
@@ -109,6 +110,7 @@ Request:
   --timeout           Seconds to wait before timeout connection (default 30)
   --retries           Retries when the connection related error occurs (default 3)
   --confirm           Confirm the injected payloads.
+  --ignore-code       Ignore (problematic) HTTP error code(s) (e.g. 401)
   --skip-urlencode    Skip URL encoding of payload data
   --force-ssl         Force usage of SSL/HTTPS
 

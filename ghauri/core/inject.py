@@ -105,12 +105,22 @@ def inject_expression(
             is_multipart=conf.is_multipart,
             timeout=timeout,
         )
-        if attack.status_code == 401:
-            logger.warning(
-                "It seems the session got expired, update the session and re-run"
-            )
-            logger.end("ending")
-            exit(0)
+        status_code = attack.status_code
+        if status_code == 401:
+            ignore_codes = conf.ignore_code
+            show_err = False
+            if ignore_codes and status_code in ignore_codes:
+                show_err = True
+            if not ignore_codes:
+                show_err = True
+            if show_err:
+                errMsg = "not authorized, try to provide right HTTP "
+                errMsg += "authentication type and valid credentials"
+                errMsg += "If this is intended, try to rerun by providing "
+                errMsg += "a valid value for option '--ignore-code'"
+                logger.error(errMsg)
+                logger.end("ending")
+                exit(0)
     except URLError as e:
         response_ok = False
         conf.retry_counter += 1

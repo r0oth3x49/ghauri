@@ -96,6 +96,7 @@ def perform_injection(
     sql_shell=False,
     fresh_queries=False,
     update=False,
+    ignore_code="",
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -112,6 +113,7 @@ def perform_injection(
     conf.fetch_using = fetch_using
     conf.test_filter = test_filter
     conf.fresh_queries = fresh_queries
+    conf.__ignore_code = ignore_code
     conf.batch = batch
     logger.start("starting")
     if not force_ssl:

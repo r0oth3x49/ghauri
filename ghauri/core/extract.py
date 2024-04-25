@@ -2593,8 +2593,9 @@ class GhauriExtractor:
                                                         1
                                                     )
                                                     binary_search = False
-                                                    in_based_search = True
+                                                    in_based_search = False
                                                     linear_search = False
+                                                    between_based_search = True
                                                 if is_valid:
                                                     pos += 1
                                                     chars += retval
@@ -2652,6 +2653,74 @@ class GhauriExtractor:
                                                     binary_search = False
                                                     in_based_search = False
                                                     linear_search = True
+                                                    between_based_search = False
+                                                if is_valid:
+                                                    pos += 1
+                                                    chars += retval
+                                        elif between_based_search:
+                                            retval = (
+                                                self._search_using_between_operator(
+                                                    url=url,
+                                                    data=data,
+                                                    vector=vector,
+                                                    parameter=parameter,
+                                                    headers=headers,
+                                                    base=base,
+                                                    injection_type=injection_type,
+                                                    delay=delay,
+                                                    timesec=timesec,
+                                                    timeout=timeout,
+                                                    proxy=proxy,
+                                                    attack01=attack01,
+                                                    code=code,
+                                                    match_string=match_string,
+                                                    not_match_string=not_match_string,
+                                                    is_multipart=is_multipart,
+                                                    suppress_output=suppress_output,
+                                                    query_check=query_check,
+                                                    minimum=32,
+                                                    maximum=127,
+                                                    offset=pos,
+                                                    expression_payload=value,
+                                                    queryable=entry,
+                                                    chars=chars,
+                                                    text_only=text_only,
+                                                    vector_type=vector_type,
+                                                )
+                                            )
+                                            if retval:
+                                                is_valid = self.validate_character(
+                                                    url=url,
+                                                    data=data,
+                                                    vector=vector,
+                                                    parameter=parameter,
+                                                    headers=headers,
+                                                    base=base,
+                                                    injection_type=injection_type,
+                                                    proxy=proxy,
+                                                    is_multipart=is_multipart,
+                                                    timeout=timeout,
+                                                    delay=delay,
+                                                    timesec=timesec,
+                                                    identified_character=retval,
+                                                    vector_type=vector_type,
+                                                    offset=pos,
+                                                    expression_payload=value,
+                                                    queryable=entry,
+                                                    code=code,
+                                                    match_string=match_string,
+                                                    not_match_string=not_match_string,
+                                                    attack01=attack01,
+                                                )
+                                                if not is_valid:
+                                                    logger.warning(
+                                                        "invalid character detected, retrying."
+                                                    )
+                                                    bool_invalid_character_counter += 1
+                                                    binary_search = False
+                                                    between_based_search = False
+                                                    in_based_search = True
+                                                    linear_search = False
                                                 if is_valid:
                                                     pos += 1
                                                     chars += retval
@@ -2715,8 +2784,6 @@ class GhauriExtractor:
                                                 if is_valid:
                                                     pos += 1
                                                     chars += retval
-                                            chars += retval
-                                            pos += 1
                                         try:
                                             if invalid_character_detection_counter >= 3:
                                                 logger.debug(
