@@ -72,7 +72,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
 ## **Advanced Usage**
 
 <pre><code>
-Author: Nasir khan (<a href="https://pk.linkedin.com/in/r0oth3x49">r0ot h3x49</a>)
+Author: Nasir khan (<a href="https://pk.linkedin.com/in/r0oth3x49">r0oth3x49</a>)
 
 usage: ghauri -u URL [OPTIONS]
 
