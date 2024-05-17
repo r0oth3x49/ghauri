@@ -109,8 +109,13 @@ def inject_expression(
         if status_code == 401:
             ignore_codes = conf.ignore_code
             show_err = False
+            if not conf._shw_ignc and ignore_codes:
+                logger.debug(
+                    f"ghauri is going to ignore http status codes: '{ignore_codes}'"
+                )
+                conf._shw_ignc = True
             if ignore_codes and status_code in ignore_codes:
-                show_err = True
+                show_err = False
             if not ignore_codes:
                 show_err = True
             if show_err:
@@ -169,7 +174,7 @@ def inject_expression(
         conf.retry_counter += 1
         if conf.retry_counter == conf.retry:
             logger.critical(
-                "target URL is not responding, Please check the target menually.."
+                "target URL is not responding, Please check the target manually.."
             )
             logger.debug(f"Reason: URLError: {e.reason}")
             logger.end("ending")
