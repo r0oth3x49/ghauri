@@ -52,6 +52,7 @@ import itertools
 import collections
 from os.path import expanduser
 from io import BytesIO, StringIO
+from difflib import unified_diff
 from difflib import SequenceMatcher
 import concurrent.futures as futures
 from concurrent.futures import thread
@@ -264,7 +265,8 @@ CREATE TABLE tbl_payload (
  parameter_type text,
  string text,
  not_string text,
- attack01 text
+ attack01 text,
+ cases text DEFAULT "" NOT NULL
 );
 CREATE TABLE storage (
  id integer PRIMARY KEY AUTOINCREMENT,
@@ -278,8 +280,8 @@ ON storage (type);
 
 PAYLOAD_STATEMENT = """
 INSERT 
-    INTO tbl_payload (`title`, `attempts`, `payload`, `vector`, `backend`, `parameter`, `injection_type`, `payload_type`, `endpoint`, `parameter_type`, `string`, `not_string`, `attack01`)
-VALUES  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    INTO tbl_payload (`title`, `attempts`, `payload`, `vector`, `backend`, `parameter`, `injection_type`, `payload_type`, `endpoint`, `parameter_type`, `string`, `not_string`, `attack01`, `cases`)
+VALUES  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 """
 
 STORAGE = """

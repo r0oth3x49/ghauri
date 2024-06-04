@@ -178,6 +178,24 @@ class SessionFactory:
             conn.executescript(SESSION_STATEMENETS)
             conn.commit()
             conn.close()
+        if (
+            session_filepath
+            and os.path.isfile(session_filepath)
+            and os.stat(session_filepath).st_size > 0
+        ):
+            QUERY = "SELECT (SELECT CASE WHEN ((SELECT COUNT(*) FROM pragma_table_info('tbl_payload') WHERE name='cases')!=0) THEN TRUE  ELSE FALSE END) as cases_found;"
+            res = self.fetchall(session_filepath=session_filepath, query=QUERY).pop()
+            if not res.get("cases_found"):
+                # logger.debug(
+                #     "cases column doesn't exist, altering table to create one..."
+                # )
+                QUERY_ALTER = (
+                    'ALTER TABLE tbl_payload ADD COLUMN cases text DEFAULT "" NOT NULL;'
+                )
+                self.execute_query(session_filepath=session_filepath, query=QUERY_ALTER)
+            if res.get("cases_found"):
+                # logger.debug("cases column exist, moving further...")
+                pass
         return session_filepath
 
     def dump(self, session_filepath="", query="", values=None):

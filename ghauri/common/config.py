@@ -114,6 +114,7 @@ class GhauriConfigs:
         self._encode_cookie = False
         self._ignore_code = ""
         self._shw_ignc = False
+        self.cases = []
 
     @property
     def ignore_code(self):

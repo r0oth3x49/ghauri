@@ -2464,10 +2464,12 @@ def check_injections(
                     _attack01 = ""
                     _string = ""
                     _not_string = ""
+                    _case = ""
                     if _type.startswith("boolean-based") and boolean:
                         _attack01 = encode_object(boolean.attacks[-1]._asdict())
                         _string = boolean.string
                         _not_string = boolean.not_string
+                        _case = boolean.case
                     session.dump(
                         session_filepath=session_filepath,
                         query=PAYLOAD_STATEMENT,
@@ -2485,6 +2487,7 @@ def check_injections(
                             _string,
                             _not_string,
                             _attack01,
+                            _case,
                         ),
                     )
             if question and question == "y":

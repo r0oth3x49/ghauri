@@ -44,6 +44,7 @@ from ghauri.common.lib import (
     unquote,
     BytesIO,
     urljoin,
+    unified_diff,
     SequenceMatcher,
     addinfourl,
     DBMS_DICT,
@@ -450,6 +451,70 @@ def get_page_ratio_difference(response, response_01):
     return _diff, _temp
 
 
+def get_page_by_unified_diff(original, modifired, match_string=None):
+    Response = collections.namedtuple(
+        "UnifiedPageDifference",
+        ["is_vulner", "string", "not_string", "case", "difference", "differences"],
+    )
+    original = get_filtered_page_content(original)
+    modifired = get_filtered_page_content(modifired)
+    case = None
+    string = ""
+    not_string = ""
+    is_vulner = False
+    difference = None
+    diffs = {}
+    _temp = Response(
+        is_vulner=is_vulner,
+        difference=difference,
+        case=case,
+        string=string,
+        not_string=not_string,
+        differences=diffs,
+    )
+    differences = list(
+        unified_diff(
+            original.split(),
+            modifired.split(),
+            fromfile="",
+            tofile="",
+        )
+    )
+
+    def get_string_by_matcher(data, matcher):
+        retval = ""
+        for i in data:
+            i = i.replace("\\\\n", "").replace("\\n", "")
+            if i.startswith(matcher) or i.startswith(" "):
+                retval += re.sub(r"[^a-zA-Z0-9\.\-\s]+", " ", i)
+        retval = re.sub(r"[^a-zA-Z0-9\.\s]+", " ", retval)
+        retval = re.sub(r"[^a-zA-Z0-9\.\s]+", " ", retval).strip().lstrip().rstrip()
+        return retval
+
+    string = get_string_by_matcher(data=differences, matcher="-")
+    not_string = get_string_by_matcher(data=differences, matcher="+")
+    is_vulner = bool(string != not_string)
+    if match_string:
+        is_vulner = bool(match_string == string)
+    if is_vulner:
+        case = "Page Ratio"
+        difference = string
+        if len(difference) > 30:
+            difference = difference[0:30]
+        _temp = Response(
+            is_vulner=is_vulner,
+            difference=difference,
+            case=case,
+            string=string,
+            not_string=not_string,
+            differences=differences,
+        )
+        logger.debug(
+            f'vulnerable with (--string="{string}", --not-string="{not_string}")'
+        )
+    return _temp
+
+
 def check_page_difference(w1, w2, match_string=None):
     Response = collections.namedtuple(
         "PageDifference", ["is_vulner", "difference", "case", "ratio", "differences"]
@@ -632,13 +697,21 @@ def check_boolean_responses(
             string = match_string
             _cases.append("Page Content")
         else:
-            ok = check_page_difference(w1, w2, match_string=match_string)
-            difference = ok.difference
-            is_vulner = ok.is_vulner
+            res = get_page_by_unified_diff(w1, w2, match_string=match_string)
+            difference = res.difference
+            is_vulner = res.is_vulner
             if is_vulner:
-                not_string = not_match_string
                 string = difference
+                not_string = not_match_string
                 _cases.append("Page Content")
+            else:
+                ok = check_page_difference(w1, w2, match_string=match_string)
+                difference = ok.difference
+                is_vulner = ok.is_vulner
+                if is_vulner:
+                    not_string = not_match_string
+                    string = difference
+                    _cases.append("Page Content")
     elif not_match_string:
         mobj = re.search(r"(?is)(?:%s)" % (re.escape(not_match_string)), w2)
         if mobj:
@@ -648,13 +721,21 @@ def check_boolean_responses(
             not_string = not_match_string
             _cases.append("Page Content")
         else:
-            ok = check_page_difference(w1, w2, match_string=not_match_string)
-            difference = ok.difference
-            is_vulner = ok.is_vulner
+            res = get_page_by_unified_diff(w1, w2, match_string=not_match_string)
+            difference = res.difference
+            is_vulner = res.is_vulner
             if is_vulner:
                 string = match_string
                 not_string = difference
                 _cases.append("Page Content")
+            else:
+                ok = check_page_difference(w1, w2, match_string=not_match_string)
+                difference = ok.difference
+                is_vulner = ok.is_vulner
+                if is_vulner:
+                    string = match_string
+                    not_string = difference
+                    _cases.append("Page Content")
     else:
         # do check if initial requests performed returrned exact same content length
         if conf._bool_check_on_ct:
@@ -709,6 +790,14 @@ def check_boolean_responses(
         )
         is_vulner = False
         case = ""
+        if not difference and not is_vulner:
+            res = get_page_by_unified_diff(w1, w2)
+            difference = res.difference
+            is_vulner = res.is_vulner
+            case = res.case
+            if difference:
+                string = res.string
+                not_string = res.not_string
         if not difference and not is_vulner:
             # special case when the above page ratio mechanism fails.
             ok = check_page_difference(w1, w2)
@@ -786,6 +875,10 @@ def check_boolean_responses(
                 conf.not_string = not_string
             case = "Page Ratio"
             logger.debug(f'injectable with --string="{difference}".')
+    if is_vulner:
+        _case = [i.strip() for i in case.split(",")]
+        if conf.cases and _case and len(_case) > 1:
+            is_vulner = bool(conf.cases == _case)
     if is_vulner:
         if not status_code:
             status_code = attack_true.status_code
@@ -2200,6 +2293,9 @@ def payloads_to_objects(records):
                 endpoint = entry.endpoint
                 payload_type = entry.payload_type
                 injection_type = entry.injection_type
+                cases = entry.cases
+                if cases:
+                    conf.cases = [i.strip() for i in cases.split(",")]
                 attack01 = base64.b64decode(entry.attack01).decode()
                 string = entry.string
                 not_string = entry.not_string
