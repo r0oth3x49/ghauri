@@ -944,6 +944,9 @@ def urlencode(
         value = urldecode(value)
     if conf.safe_chars:
         safe = f"{safe}{conf.safe_chars}"
+    is_aspdotnet = bool("%2b" in value.lower())
+    if is_aspdotnet:
+        safe += "%"
     if injection_type and injection_type not in ["HEADER"] and not is_multipart:
         if injection_type == "COOKIE":
             if value_type == "payload":
