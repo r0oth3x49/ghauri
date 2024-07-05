@@ -1660,7 +1660,7 @@ PAYLOADS = {
                 ],
                 "title": "Oracle boolean-based blind - Parameter replace",
                 "vector": "(SELECT (CASE WHEN ([INFERENCE]) THEN 01234 ELSE CAST(1 AS INT)/(SELECT 0 FROM DUAL) END) FROM DUAL)",
-                "dbms": "",
+                "dbms": "Oracle",
             },
             {
                 "payload": "AND (SELECT (CASE WHEN ([RANDNUM]=[RANDNUM]) THEN NULL ELSE CTXSYS.DRITHSX.SN(1,0568) END) FROM DUAL) IS NULL",

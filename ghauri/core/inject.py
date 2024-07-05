@@ -62,7 +62,7 @@ def inject_expression(
                 injection_type=injection_type,
             )
         if injection_type == "COOKIE":
-            if not conf._is_cookie_choice_taken:
+            if not conf._is_cookie_choice_taken and not conf.skip_urlencoding:
                 choice = logger.read_input(
                     "do you want to URL encode cookie values (implementation specific)? [Y/n] ",
                     batch=conf.batch,
@@ -129,11 +129,11 @@ def inject_expression(
     except URLError as e:
         response_ok = False
         conf.retry_counter += 1
+        logger.critical(f"target URL is not responding, Ghauri is going to retry")
         if conf.retry_counter == conf.retry:
-            logger.critical("target URL is not responding..")
-            logger.debug(f"Reason: URLError: {e.reason}")
+            logger.debug(f"Reason error: {e.reason}")
             logger.debug(
-                "Ghauri was not able to establish connection to the target URL due to internet connectivity issue.."
+                "Ghauri was not able to establish connection, retry again later of check if target manually.."
             )
             logger.end("ending")
             exit(0)
@@ -153,6 +153,9 @@ def inject_expression(
             )
             if attack.ok:
                 response_ok = True
+                # start counting from 0 as we have found our response for the current character guess in
+                # configured retries..
+                conf.retry_counter = 0
         if response_ok:
             return attack
         else:
@@ -169,14 +172,14 @@ def inject_expression(
     except TimeoutError as e:
         raise e
     except Exception as e:
-        # logger.critical(f"{e.reason}. Ghauri is going to retry..")
         response_ok = False
         conf.retry_counter += 1
+        logger.critical(f"target URL is not responding, Ghauri is going to retry")
         if conf.retry_counter == conf.retry:
             logger.critical(
-                "target URL is not responding, Please check the target manually.."
+                "Ghauri was not able to establish connection, retry again later of check if target manually.."
             )
-            logger.debug(f"Reason: URLError: {e.reason}")
+            logger.debug(f"Reason error: {e.reason}")
             logger.end("ending")
             exit(0)
         if conf.retry_counter <= conf.retry:
@@ -194,6 +197,9 @@ def inject_expression(
                 injection_type=injection_type,
             )
             if attack.ok:
+                # start counting from 0 as we have found our response for the current character guess in
+                # configured retries..
+                conf.retry_counter = 0
                 response_ok = True
         if response_ok:
             return attack

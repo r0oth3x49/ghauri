@@ -394,6 +394,12 @@ def main():
         help="Enumerate DBMS database table columns",
     )
     enumeration.add_argument(
+        "--count",
+        dest="count_only",
+        action="store_true",
+        help="Retrieve number of entries for table(s)",
+    )
+    enumeration.add_argument(
         "--dump",
         dest="dump",
         action="store_true",
@@ -537,6 +543,15 @@ def main():
                 table=args.tbl,
                 start=args.limitstart,
                 stop=args.limitstop,
+            )
+        if args.db and args.tbl and args.count_only:
+            target.extract_records(
+                database=args.db,
+                table=args.tbl,
+                columns="",
+                start=args.limitstart,
+                stop=args.limitstop,
+                count_only=args.count_only,
             )
         if args.db and args.tbl and args.cols and args.dump:
             target.extract_records(

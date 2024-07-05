@@ -788,23 +788,25 @@ class GhauriAdvance:
         not_match_string=None,
         code=None,
         text_only=False,
+        count_only=False,
     ):
         __columns = to_list(columns)
         if start != 0 and start > 0:
             if backend != "Oracle":
                 start = start - 1
-        logger.info(
-            f"fetching entries of column(s) '{mc}{columns}{bw}' for table '{mc}{table}{bw}' in database '{mc}{database}{bw}'"
-        )
         Response = collections.namedtuple(
             "Response",
             ["ok", "error", "database", "table", "result"],
         )
         _results = []
         _temp = Response(ok=False, error="", database=database, table=table, result=[])
-        logger.info(
-            f"{bw}fetching number of column(s) '{mc}{columns}{bw}' entries for table '{mc}{table}{bw}' in database '{mc}{database}{bw}'"
-        )
+        if not count_only:
+            logger.info(
+                f"fetching entries of column(s) '{mc}{columns}{bw}' for table '{mc}{table}{bw}' in database '{mc}{database}{bw}'"
+            )
+            logger.info(
+                f"{bw}fetching number of column(s) '{mc}{columns}{bw}' entries for table '{mc}{table}{bw}' in database '{mc}{database}{bw}'"
+            )
         payloads_count = PAYLOADS_RECS_COUNT.get(backend)
         _column = __columns[-1] if backend == "Microsoft SQL Server" else None
         payloads_count = prepare_extraction_payloads(
@@ -837,12 +839,29 @@ class GhauriAdvance:
             not_match_string=not_match_string,
             code=code,
             text_only=text_only,
+            dump_type=f"{database}_{table}_entries" if count_only else None,
         )
         if retval.ok:
             total = 0
             if retval.result.isdigit():
                 total = int(retval.result)
-            logger.info("retrieved: %s" % (total))
+            if not retval.resumed:
+                logger.info("retrieved: %s" % (total))
+            if retval.resumed:
+                logger.info("resumed: %s" % (total))
+            if count_only:
+                _results = [[f"{table}", f"{total}"]]
+                _temp = Response(
+                    ok=True,
+                    error="",
+                    database=database,
+                    table=table,
+                    result=_results,
+                )
+                ret = prettifier(_results, field_names="Table, Entries", header=True)
+                logger.success(f"Database: {database}")
+                logger.success(f"{ret.data}")
+                return _temp
             if total == 0:
                 logger.warning("the SQL query provided does not return any output")
             if total > 0:

@@ -842,6 +842,7 @@ class Ghauri:
         start=0,
         stop=None,
         dump_requested=False,
+        count_only=False,
     ):
         response = target_adv.dump_table(
             self.url,
@@ -867,10 +868,11 @@ class Ghauri:
             database=database,
             table=table,
             columns=columns,
+            count_only=count_only,
         )
         fetched = response.ok
         if fetched:
-            if not dump_requested:
+            if not dump_requested and not count_only:
                 # logger.success("")
                 self._end(database=database, table=table, fetched=False)
         return response

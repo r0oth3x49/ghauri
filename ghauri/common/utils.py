@@ -877,7 +877,7 @@ def check_boolean_responses(
             logger.debug(f'injectable with --string="{difference}".')
     if is_vulner:
         _case = [i.strip() for i in case.split(",")]
-        if conf.cases and _case and len(_case) > 1:
+        if conf.cases:
             is_vulner = bool(conf.cases == _case)
     if is_vulner:
         if not status_code:

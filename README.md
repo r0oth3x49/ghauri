@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/badge/release-v1.3.4-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.3.4)
+[![GitHub release](https://img.shields.io/badge/release-v1.3.5-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.3.5)
 [![GitHub stars](https://img.shields.io/github/stars/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/network)
 [![GitHub issues](https://img.shields.io/github/issues/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/issues)
@@ -67,6 +67,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
       and for futures updates the update will be possible with `ghauri --update` command to get the
       latest version of ghauri.
  - added switch for ignore problematic HTTP codes. (e.g 401): `--ignore-code`
+ - added switch for retreiving entries count for table.: `--count`
 
 
 ## **Advanced Usage**
@@ -158,6 +159,7 @@ Enumeration:
   --dbs               Enumerate DBMS databases
   --tables            Enumerate DBMS database tables
   --columns           Enumerate DBMS database table columns
+  --count             Retrieve number of entries for table(s)
   --dump              Dump DBMS database table entries
   -D DB               DBMS database to enumerate
   -T TBL              DBMS database tables(s) to enumerate
@@ -183,5 +185,5 @@ Example:
   - Add support for inline queries.
   - Add support for Union based queries
 
-## ***Like Ghauri, consider supporting***
+## ***Like Ghauri, consider supporting the developer***
 <a href="https://www.buymeacoffee.com/r0oth3x49" target="_blank"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee"></a> <a href="https://ko-fi.com/r0oth3x49" target="_blank"><img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white"></a>
