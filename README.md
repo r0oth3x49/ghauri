@@ -69,7 +69,6 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - added switch for ignore problematic HTTP codes. (e.g 401): `--ignore-code`
  - added switch for retreiving entries count for table.: `--count`
 
-
 ## **Advanced Usage**
 
 <pre><code>
@@ -184,6 +183,21 @@ Example:
 ## **TODO**
   - Add support for inline queries.
   - Add support for Union based queries
+
+## ***Why choose Ghauri***
+
+There are numerous articles and posts highlighting the success users have had with Ghauri compared to SQLMap. While I am not directly comparing Ghauri to SQLMap, many users have done so. I initiated this project because, in my daily work, I frequently encountered significant challenges in configuring and using SQLMap effectively, even for seemingly simple SQL injections. Despite these injections appearing straightforward, SQLMap often failed to detect them. Encouraged by a friend, I decided to create my own tool. I had developed numerous scripts for exploitation, each tailored for specific cases, and I realized the potential benefit of integrating these techniques into a single module. This led to the creation of Ghauri, which has been well-received by the community, earning positive feedback and stars due to its effectiveness.
+
+Even ***Stamparam*** acknowledged Ghauri, describing it as a "rewrite of internals" in a tweet, underscoring the importance of its internal mechanics.
+
+For example, you can save a vulnerable HTTP request to a file (an SQLi behind authentication) and provide it to both Ghauri and SQLMap using the -r switch. The results will speak for themselves without requiring custom configurations.
+
+Ghauri operates both in a browser-like manner and with its own unique methods, automatically switching to different exfiltration techniques and bypasses. Again, this is not a direct comparison since Ghauri still has many features to be implemented, while SQLMap is already feature-rich. However, Ghauri consistently performs the tasks required.
+
+Since developing this tool, I seldom use SQLMap, except in a few cases where Ghauri is still being improved.
+
+I encourage you to try it for yourself.
+Thank you.
 
 ## ***Like Ghauri, consider supporting the developer***
 <a href="https://www.buymeacoffee.com/r0oth3x49" target="_blank"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee"></a> <a href="https://ko-fi.com/r0oth3x49" target="_blank"><img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white"></a>
