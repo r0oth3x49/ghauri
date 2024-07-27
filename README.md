@@ -23,6 +23,31 @@
  - you will be able to access and run the ghauri with simple `ghauri --help` command.
 
  ***OR***
+ 
+Installation Update !!!
+
+You Can Try Below Command to install Ghauri.
+
+Specially For VPS Users And Normal Linux Users also Can Try !!!
+
+```
+pip install git+https://github.com/r0oth3x49/ghauri.git
+```
+
+After Installation You Cant Find the Ghauri installed Location then Try
+
+```
+whereis ghauri
+```
+
+Then  use Below Command 
+Don't Forget to Change ghauri-location to Location you Found using above Command 
+
+```
+cp ghauri-location /usr/local/bin/
+```
+ 
+ ***STILL FACING PROBLEM***
   
  - Follow this [installation guideline](https://github.com/r0oth3x49/ghauri/issues/119#issuecomment-1873049386) if facing an installation issue.
 
