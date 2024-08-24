@@ -44,6 +44,7 @@ from ghauri.common.lib import (
     PAYLOAD_STATEMENT,
 )
 from ghauri.common.utils import (
+    to_list,
     HTTPRequest,
     prepare_proxy,
     prepare_custom_headers,
@@ -844,37 +845,40 @@ class Ghauri:
         dump_requested=False,
         count_only=False,
     ):
-        response = target_adv.dump_table(
-            self.url,
-            data=self.data,
-            vector=self.vector,
-            parameter=self.parameter,
-            headers=self.headers,
-            base=self.base,
-            injection_type=self.injection_type,
-            backend=self.backend,
-            proxy=self.proxy,
-            is_multipart=self.is_multipart,
-            timeout=self.timeout,
-            delay=self.delay,
-            timesec=self.timesec,
-            attack=self._attack,
-            match_string=self._match_string,
-            not_match_string=self._not_match_string,
-            code=self._code,
-            text_only=self._text_only,
-            start=start,
-            stop=stop,
-            database=database,
-            table=table,
-            columns=columns,
-            count_only=count_only,
-        )
-        fetched = response.ok
-        if fetched:
-            if not dump_requested and not count_only:
-                # logger.success("")
-                self._end(database=database, table=table, fetched=False)
+        response = ""
+        tables = to_list(table)
+        for table in tables:
+            response = target_adv.dump_table(
+                self.url,
+                data=self.data,
+                vector=self.vector,
+                parameter=self.parameter,
+                headers=self.headers,
+                base=self.base,
+                injection_type=self.injection_type,
+                backend=self.backend,
+                proxy=self.proxy,
+                is_multipart=self.is_multipart,
+                timeout=self.timeout,
+                delay=self.delay,
+                timesec=self.timesec,
+                attack=self._attack,
+                match_string=self._match_string,
+                not_match_string=self._not_match_string,
+                code=self._code,
+                text_only=self._text_only,
+                start=start,
+                stop=stop,
+                database=database,
+                table=table,
+                columns=columns,
+                count_only=count_only,
+            )
+            fetched = response.ok
+            if fetched:
+                if not dump_requested and not count_only:
+                    # logger.success("")
+                    self._end(database=database, table=table, fetched=False)
         return response
 
     def dump_database(self, database="", start=0, stop=None, dump_requested=False):

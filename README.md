@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/badge/release-v1.3.5-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.3.5)
+[![GitHub release](https://img.shields.io/badge/release-v1.3.6-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.3.6)
 [![GitHub stars](https://img.shields.io/github/stars/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/network)
 [![GitHub issues](https://img.shields.io/github/issues/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/issues)

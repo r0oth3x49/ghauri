@@ -94,7 +94,9 @@ def parse_burp_request(request_text):
 class HTTPRequest(BaseHTTPRequestHandler):
     def __init__(self, request_text):
         self.__request = request_text
-        request_text = request_text.replace("HTTP/2", "HTTP/1.1")
+        request_text = re.sub(
+            r"HTTP/(.+?)", "HTTP/1.1", request_text
+        )  # request_text.replace("HTTP/2", "HTTP/1.1")
         request_text = parse_burp_request(request_text)
         if isinstance(request_text, str):
             request_text = request_text.encode("utf-8")
