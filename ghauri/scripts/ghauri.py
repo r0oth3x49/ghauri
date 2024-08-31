@@ -101,6 +101,12 @@ def main():
         type=str,
         help="Load HTTP request from a file",
     )
+    target.add_argument(
+        "-m",
+        dest="bulkfile",
+        type=str,
+        help="Scan multiple targets given in a textual file"
+    )
     request = parser.add_argument_group(
         "Request",
         description="These options can be used to specify how to connect to the target URL",
