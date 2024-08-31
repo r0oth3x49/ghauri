@@ -59,6 +59,7 @@ from ghauri.common.config import conf
 from ghauri.common.payloads import PAYLOADS
 from ghauri.logger.colored_logger import logger
 from ghauri.common.prettytable import PrettyTable, from_db_cursor
+import os
 
 
 class Struct:
@@ -88,6 +89,21 @@ def parse_burp_request(request_text):
         # logger.debug("normal http request file..")
         _temp = request_text
     return _temp
+
+
+def parse_request_file(requestfile):
+    if not os.path.isfile(requestfile):
+        logger.error(
+            "invalid filename of file location, please provide correct filepath e.g:- '-r /path/to/requestfile.txt'"
+        )
+        logger.end("ending")
+        exit(0)
+    logger.info(f"parsing HTTP request from '{requestfile}'")
+    # raw = "\n".join([i.strip() for i in open(requestfile) if i])
+    raw = "\n".join(
+        [re.sub(r"[^\x00-\x7F]+", " ", i.strip()) for i in open(requestfile) if i]
+    )
+    return raw
 
 
 # source: https://stackoverflow.com/questions/4685217/parse-raw-http-headers

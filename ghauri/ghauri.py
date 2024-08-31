@@ -44,6 +44,7 @@ from ghauri.common.lib import (
     PAYLOAD_STATEMENT,
 )
 from ghauri.common.utils import (
+    parse_request_file,
     to_list,
     HTTPRequest,
     prepare_proxy,
@@ -160,17 +161,7 @@ def perform_injection(
     levels = {2: "COOKIE", 3: "HEADER"}
     raw = ""
     if requestfile:
-        if not os.path.isfile(requestfile):
-            logger.error(
-                "invalid filename of file location, please provide correct filepath e.g:- '-r /path/to/requestfile.txt'"
-            )
-            logger.end("ending")
-            exit(0)
-        logger.info(f"parsing HTTP request from '{requestfile}'")
-        # raw = "\n".join([i.strip() for i in open(requestfile) if i])
-        raw = "\n".join(
-            [re.sub(r"[^\x00-\x7F]+", " ", i.strip()) for i in open(requestfile) if i]
-        )
+        raw = parse_request_file(requestfile)
     if raw:
         req = HTTPRequest(raw)
         url = req.url
