@@ -123,6 +123,14 @@ def parse_request_file(requestfile):
     )
     return raw
 
+def parse_bulk_file(bulkfile):
+    logger.info(f"fetching urls from '{bulkfile}")
+    urls = [l.strip() for l in open(bulkfile) if l]
+    for i in range(len(urls)):
+        url = urls[i]
+        if not url.startswith("http"):
+            urls[i] = f"http://{url}" if not url.startswith("//") else f"http:{url}"
+    return urls
 
 # source: https://stackoverflow.com/questions/4685217/parse-raw-http-headers
 class HTTPRequest(BaseHTTPRequestHandler):
