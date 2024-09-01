@@ -90,14 +90,32 @@ def parse_burp_request(request_text):
         _temp = request_text
     return _temp
 
+def assert_file_exists(path: str, cmd_type: str):
+    '''
+    checks whether file exists
 
-def parse_request_file(requestfile):
-    if not os.path.isfile(requestfile):
+    if file is absent, error message is printed, then program
+    will exit
+
+    Params:
+        path: path provided in terminal
+        cmd_type: path type ie RAW_HTTP_REQUEST, BULK_FILE
+    '''
+    if not os.path.isfile(path):
+        if cmd_type == 'RAW_HTTP_REQUEST':
+            flag = 'r'
+            file = 'requestfile'
+        elif cmd_type == 'BULK_FILE':
+            flag = 'm'
+            file = 'bulkfile'
         logger.error(
-            "invalid filename of file location, please provide correct filepath e.g:- '-r /path/to/requestfile.txt'"
+            f"invalid filename of file location, please provide correct filepath e.g: ' -{flag} /path/to/{file}.txt'"
         )
         logger.end("ending")
         exit(0)
+
+def parse_request_file(requestfile):
+    assert_file_exists(requestfile, cmd_type='RAW_HTTP_REQUEST')
     logger.info(f"parsing HTTP request from '{requestfile}'")
     # raw = "\n".join([i.strip() for i in open(requestfile) if i])
     raw = "\n".join(
