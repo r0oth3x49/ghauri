@@ -47,7 +47,7 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.url and not args.requestfile:
+    if not args.url and not args.requestfile and not args.bulkfile:
         if not args.update:
             parser.print_help()
             exit(0)
