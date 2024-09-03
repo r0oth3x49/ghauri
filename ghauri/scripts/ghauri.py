@@ -47,14 +47,6 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.url and not args.requestfile and not args.bulkfile:
-        if not args.update:
-            parser.print_help()
-            exit(0)
-
-    if args.testparameter:
-        args.testparameter = [i.strip() for i in args.testparameter.split(",")]
-
     logger.start("starting")
 
     verbose_level = VERBOSE_LEVELS.get(args.verbose, logging.INFO)
@@ -68,6 +60,13 @@ def main():
             logger.error("could not update ghauri, do it manually...")
             logger.end("ending")
             exit(0)
+
+    if not args.url and not args.requestfile and not args.bulkfile:
+        parser.print_help()
+        exit(0)
+
+    if args.testparameter:
+        args.testparameter = [i.strip() for i in args.testparameter.split(",")]
 
     resp = ghauri.perform_injection(
         url=args.url,
