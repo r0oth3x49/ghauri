@@ -117,7 +117,7 @@ def perform_injection(
     conf.fresh_queries = fresh_queries
     conf._ignore_code = ignore_code
     conf.batch = batch
-    logger.start("starting")
+
     if not force_ssl:
         ssl._create_default_https_context = ssl._create_unverified_context
     if proxy:
@@ -126,15 +126,7 @@ def perform_injection(
     set_level(verbose_level, "")
     if threads and threads > 1:
         conf.threads = threads
-    if update:
-        try:
-            update_ghauri()
-            logger.end("ending")
-            exit(0)
-        except Exception as error:
-            logger.error("could not update ghauri, do it manually...")
-            logger.end("ending")
-            exit(0)
+
     GhauriResponse = collections.namedtuple(
         "GhauriResponse",
         [

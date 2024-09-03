@@ -27,7 +27,9 @@ import ghauri
 import argparse
 from ghauri.common import banner
 from ghauri.common.utils import dbms_full_name, register_cmdline_args
-from ghauri.logger.colored_logger import logger
+from ghauri.core.update import update_ghauri
+from ghauri.logger.colored_logger import VERBOSE_LEVELS, logger, set_level
+from ghauri.common.lib import logging
 
 
 def main():
@@ -45,7 +47,6 @@ def main():
 
     args = parser.parse_args()
 
-    raw = ""
     if not args.url and not args.requestfile:
         if not args.update:
             parser.print_help()
@@ -53,6 +54,20 @@ def main():
 
     if args.testparameter:
         args.testparameter = [i.strip() for i in args.testparameter.split(",")]
+
+    logger.start("starting")
+
+    verbose_level = VERBOSE_LEVELS.get(args.verbose, logging.INFO)
+    set_level(verbose_level, "")
+    if args.update:
+        try:
+            update_ghauri()
+            logger.end("ending")
+            exit(0)
+        except Exception:
+            logger.error("could not update ghauri, do it manually...")
+            logger.end("ending")
+            exit(0)
 
     resp = ghauri.perform_injection(
         url=args.url,
