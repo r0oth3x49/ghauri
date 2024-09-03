@@ -80,6 +80,12 @@ def update_ghauri():
 
         logger.info("update in progress....")
 
+        # for testing terminal output, network call will be skipped
+        # TODO: implement testing stub
+        if os.environ.get('ALL_TESTS', None) is not None:
+            logger.info("End of test")
+            return
+
         output = ""
         try:
             process = subprocess.Popen(
