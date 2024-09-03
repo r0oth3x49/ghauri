@@ -283,3 +283,12 @@ class ColoredLogger:
 colored_logger = ColoredLogger(logger=log)
 logger = colored_logger.logger
 set_level = colored_logger.set_level
+
+# determines type of output to be displayed in terminal
+VERBOSE_LEVELS = {
+    1: logging.INFO,
+    2: logging.DEBUG,
+    3: logging.PAYLOAD,
+    4: logging.TRAFFIC_OUT,
+    5: logging.TRAFFIC_IN,
+}
