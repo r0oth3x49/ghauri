@@ -28,7 +28,7 @@ from ghauri.common.session import session
 from ghauri.extractor.common import target
 from ghauri.extractor.advance import target_adv
 from ghauri.core.extract import ghauri_extractor
-from ghauri.logger.colored_logger import logger, set_level
+from ghauri.logger.colored_logger import VERBOSE_LEVELS, logger, set_level
 from ghauri.core.tests import basic_check, check_injections
 from ghauri.core.extract import ghauri_extractor as ge
 from ghauri.core.update import update_ghauri
@@ -100,13 +100,6 @@ def perform_injection(
     update=False,
     ignore_code="",
 ):
-    verbose_levels = {
-        1: logging.INFO,
-        2: logging.DEBUG,
-        3: logging.PAYLOAD,
-        4: logging.TRAFFIC_OUT,
-        5: logging.TRAFFIC_IN,
-    }
     is_custom_point = False
     conf.skip_urlencoding = skip_urlencoding
     conf.confirm_payloads = confirm_payloads
@@ -122,7 +115,7 @@ def perform_injection(
         ssl._create_default_https_context = ssl._create_unverified_context
     if proxy:
         conf.proxy = proxy = prepare_proxy(proxy)
-    verbose_level = verbose_levels.get(verbosity, logging.INFO)
+    verbose_level = VERBOSE_LEVELS.get(verbosity, logging.INFO)
     set_level(verbose_level, "")
     if threads and threads > 1:
         conf.threads = threads
