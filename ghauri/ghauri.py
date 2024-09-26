@@ -54,9 +54,171 @@ from ghauri.common.utils import (
     extract_injection_points,
     fetch_db_specific_payload,
     check_injection_points_for_level,
+    dbms_full_name,
 )
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+def perform_multitarget_injection(args):
+    logger.start("starting")
+    verbose_levels = {
+        1: logging.INFO,
+        2: logging.DEBUG,
+        3: logging.PAYLOAD,
+        4: logging.TRAFFIC_OUT,
+        5: logging.TRAFFIC_IN,
+    }
+    verbose_level = verbose_levels.get(args.verbose, logging.INFO)
+    set_level(verbose_level, "")
+    logger.info(f"parsing multiple targets list from '{args.bulkfile}'")
+    urls = [i.strip() for i in open(args.bulkfile) if i]
+    logger.info(f"found a total of {len(urls)} targets")
+    for index, url in enumerate(urls):
+        message = f"[{index+1}/{len(urls)}] URL:\nGET {url}\ndo you want to test this URL? [Y/n/q]\n> "
+        choice = logger.read_input(message, batch=args.batch, user_input="Y")
+        if choice == "q":
+            break
+        if choice == "y":
+            logger.info(f"testing URL '{url}'")
+            # this csv message should appear only one time
+            fp = session.generate_filepath(
+                url,
+                multitarget_mode=True,
+            )
+            if not conf._mt_mode:
+                logger.info(
+                    f"using '{fp}' as the CSV results file in multiple targets mode"
+                )
+                conf._mt_mode = True
+            resp = perform_injection(
+                url=url,
+                data=args.data,
+                host=args.host,
+                header=args.header,
+                cookies=args.cookie,
+                headers=args.headers,
+                referer=args.referer,
+                user_agent=args.user_agent,
+                level=args.level,
+                verbosity=args.verbose,
+                techniques=args.tech,
+                batch=args.batch,
+                requestfile=args.requestfile,
+                flush_session=args.flush_session,
+                proxy=args.proxy,
+                force_ssl=args.force_ssl,
+                timeout=args.timeout,
+                delay=args.delay,
+                timesec=args.timesec,
+                dbms=dbms_full_name(args.dbms),
+                testparameter=args.testparameter,
+                retries=args.retries,
+                prefix=args.prefix,
+                suffix=args.suffix,
+                code=args.code,
+                string=args.string,
+                not_string=args.not_string,
+                text_only=args.text_only,
+                skip_urlencoding=args.skip_urlencoding,
+                threads=args.threads,
+                confirm_payloads=args.confirm_payloads,
+                safe_chars=args.safe_chars,
+                fetch_using=args.fetch_using,
+                test_filter=args.test_filter,
+                sql_shell=args.sql_shell,
+                fresh_queries=args.fresh_queries,
+                update=args.update,
+                ignore_code=args.ignore_code,
+                bulkfile=True,
+            )
+            if resp.is_injected:
+                exp_choice = logger.read_input(
+                    "do you want to exploit this SQL injection? [Y/n] ",
+                    batch=args.batch,
+                    user_input="Y",
+                )
+                if exp_choice == "y":
+                    target = Ghauri(
+                        url=resp.url,
+                        data=resp.data,
+                        vector=resp.vector,
+                        backend=resp.backend,
+                        parameter=resp.parameter,
+                        headers=resp.headers,
+                        base=resp.base,
+                        injection_type=resp.injection_type,
+                        proxy=resp.proxy,
+                        filepaths=resp.filepaths,
+                        is_multipart=resp.is_multipart,
+                        timeout=args.timeout,
+                        delay=args.delay,
+                        timesec=args.timesec,
+                        attack=resp.attack,
+                        match_string=resp.match_string,
+                        vectors=resp.vectors,
+                    )
+                    current_db = None
+                    if args.banner:
+                        target.extract_banner()
+                    if args.current_user:
+                        target.extract_current_user()
+                    if args.current_db:
+                        response = target.extract_current_db()
+                        current_db = response.result.strip() if response.ok else None
+                    if args.hostname:
+                        target.extract_hostname()
+                    if args.dbs:
+                        target.extract_dbs(start=args.limitstart, stop=args.limitstop)
+                    if args.db and args.tables:
+                        target.extract_tables(
+                            database=args.db, start=args.limitstart, stop=args.limitstop
+                        )
+                    if args.db and args.tbl and args.columns:
+                        target.extract_columns(
+                            database=args.db,
+                            table=args.tbl,
+                            start=args.limitstart,
+                            stop=args.limitstop,
+                        )
+                    if args.db and args.tbl and args.count_only:
+                        target.extract_records(
+                            database=args.db,
+                            table=args.tbl,
+                            columns="",
+                            start=args.limitstart,
+                            stop=args.limitstop,
+                            count_only=args.count_only,
+                        )
+                    if args.db and args.tbl and args.cols and args.dump:
+                        target.extract_records(
+                            database=args.db,
+                            table=args.tbl,
+                            columns=args.cols,
+                            start=args.limitstart,
+                            stop=args.limitstop,
+                        )
+                    if args.db and args.dump and not args.tbl and not args.cols:
+                        target.dump_database(
+                            database=args.db,
+                            start=args.limitstart,
+                            stop=args.limitstop,
+                            dump_requested=True,
+                        )
+                    if args.db and args.tbl and args.dump and not args.cols:
+                        target.dump_table(
+                            database=args.db,
+                            table=args.tbl,
+                            start=args.limitstart,
+                            stop=args.limitstop,
+                            dump_requested=True,
+                        )
+                    if args.dump and not args.db and not args.tbl and not args.cols:
+                        target.dump_current_db(
+                            current_db=current_db, dump_requested=True
+                        )
+                    logger.success("")
+    logger.end("ending")
 
 
 def perform_injection(
@@ -98,6 +260,7 @@ def perform_injection(
     fresh_queries=False,
     update=False,
     ignore_code="",
+    bulkfile=False,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -116,7 +279,8 @@ def perform_injection(
     conf.fresh_queries = fresh_queries
     conf._ignore_code = ignore_code
     conf.batch = batch
-    logger.start("starting")
+    if not bulkfile:
+        logger.start("starting")
     if not force_ssl:
         ssl._create_default_https_context = ssl._create_unverified_context
     if proxy:

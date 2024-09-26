@@ -24,8 +24,8 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
 
-__version__ = "1.3.7"
+__version__ = "1.3.8"
 __author__ = "Nasir Khan (r0ot h3x49)"
 __license__ = "MIT"
 __copyright__ = "Copyright (c) 2016-2025 Nasir Khan (r0ot h3x49)"
-from ghauri.ghauri import perform_injection, Ghauri
+from ghauri.ghauri import perform_injection, Ghauri, perform_multitarget_injection

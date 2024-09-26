@@ -28,6 +28,7 @@ from ghauri.common.lib import (
     re,
     csv,
     sys,
+    time,
     shutil,
     sqlite3,
     urlparse,
@@ -90,7 +91,9 @@ class SessionFactory:
         conn.commit()
         conn.close()
 
-    def generate_filepath(self, target, flush_session=False, method="", data=""):
+    def generate_filepath(
+        self, target, flush_session=False, method="", data="", multitarget_mode=False
+    ):
         filepath = ""
         Response = collections.namedtuple(
             "Filepaths", ["logs", "target", "session", "filepath"]
@@ -101,6 +104,16 @@ class SessionFactory:
         if target and ":" in target:
             target, port = [i.strip() for i in target.split(":")]
         filepath = os.path.join(user, ".ghauri")
+        if multitarget_mode:
+            filepath = os.path.join(filepath, "output")
+            try:
+                os.makedirs(filepath)
+            except Exception as e:
+                pass
+            filepath = os.path.join(
+                filepath, f"results-{str(time.strftime('%m%d%Y_%I%M%p')).lower()}.csv"
+            )
+            return filepath
         filepath = os.path.join(filepath, target)
         if flush_session:
             logger.info("flushing session file")

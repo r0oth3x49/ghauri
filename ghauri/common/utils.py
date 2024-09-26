@@ -791,15 +791,6 @@ def check_boolean_responses(
         is_vulner = False
         case = ""
         if not difference and not is_vulner:
-            res = get_page_by_unified_diff(w1, w2)
-            difference = res.difference
-            is_vulner = res.is_vulner
-            case = res.case
-            if difference:
-                string = res.string
-                not_string = res.not_string
-        if not difference and not is_vulner:
-            # special case when the above page ratio mechanism fails.
             ok = check_page_difference(w1, w2)
             difference = ok.difference
             is_vulner = ok.is_vulner
@@ -807,6 +798,15 @@ def check_boolean_responses(
             if difference:
                 string = ok.differences.get("string")
                 not_string = ok.differences.get("not_string")
+        # commenting out because of false detection as well as skiping multiple page ratio based detections..
+        # if not difference and not is_vulner:
+        #     res = get_page_by_unified_diff(w1, w2)
+        #     difference = res.difference
+        #     is_vulner = res.is_vulner
+        #     case = res.case
+        #     if difference:
+        #         string = res.string
+        #         not_string = res.not_string
         if not difference and not is_vulner:
             if w0set == w1set != w2set:
                 candidates = w1set - w2set - w0set
@@ -1340,9 +1340,15 @@ def prepare_attack_request(
             prepared_payload = re.sub(
                 r"(?is)(/%s)" % (value), "\\1%s" % (payload), text
             )
-    # elif key != "#1*" and "*" in urldecode(value) and injection_type in ["GET", "POST"]:
-    #     # dirty fix for when value is provided with custom injection marker
-    #     prepared_payload = re.sub(r"\*", f"{payload}", text)
+    elif (
+        key != "#1*"
+        and "*" in urldecode(value)
+        and injection_type in ["GET", "POST", "COOKIE"]
+    ):
+        # dirty fix for when value is provided with custom injection marker
+        parameter = f"{key}={value}"
+        prepared_payload = re.sub(r"\*", f"{payload}", parameter)
+        prepared_payload = re.sub(re.escape(parameter), prepared_payload, text)
     else:
         key = re.escape(key)
         value = re.escape(value)

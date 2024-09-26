@@ -1643,7 +1643,11 @@ def get_injectable_payloads(
                         injection_type=injection_type,
                     )
                 elif injection_type == "COOKIE":
-                    payload = f"{param_name}={param_value}{payload}"
+                    if "*" in entry.parameter.value:
+                        parameter = f"{param_name}={entry.parameter.value}"
+                        payload = re.sub(r"\*", f"{payload}", parameter)
+                    else:
+                        parameter = f"{param_name}={param_value}{payload}"
                     payload = parse_payload(
                         payload=payload,
                         injection_type=injection_type,

@@ -115,6 +115,7 @@ class GhauriConfigs:
         self._ignore_code = ""
         self._shw_ignc = False
         self.cases = []
+        self._mt_mode = False
 
     @property
     def ignore_code(self):

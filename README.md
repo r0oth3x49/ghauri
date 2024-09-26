@@ -68,6 +68,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
       latest version of ghauri.
  - added switch for ignore problematic HTTP codes. (e.g 401): `--ignore-code`
  - added switch for retreiving entries count for table.: `--count`
+ - added switch for Scanning multiple targets given in a textual fil. `-m` (experimental)
 
 ## **Advanced Usage**
 
@@ -93,6 +94,7 @@ Target:
   target(s)
 
   -u URL, --url URL   Target URL (e.g. 'http://www.site.com/vuln.php?id=1).
+  -m BULKFILE         Scan multiple targets given in a textual file
   -r REQUESTFILE      Load HTTP request from a file
 
 Request:
