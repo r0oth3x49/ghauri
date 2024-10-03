@@ -5,6 +5,10 @@
 [![GitHub license](https://img.shields.io/github/license/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/blob/main/LICENSE)
 
 
+## ***Like Ghauri, consider supporting the developer***
+<a href="https://www.buymeacoffee.com/r0oth3x49" target="_blank"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee"></a> <a href="https://ko-fi.com/r0oth3x49" target="_blank"><img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white"></a>
+
+
 # Ghauri
 **An advanced cross-platform tool that automates the process of detecting and exploiting SQL injection security flaws.**
 
@@ -200,6 +204,3 @@ Since developing this tool, I seldom use SQLMap, except in a few cases where Gha
 
 I encourage you to try it for yourself.
 Thank you.
-
-## ***Like Ghauri, consider supporting the developer***
-<a href="https://www.buymeacoffee.com/r0oth3x49" target="_blank"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee"></a> <a href="https://ko-fi.com/r0oth3x49" target="_blank"><img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white"></a>
