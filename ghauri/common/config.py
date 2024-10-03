@@ -116,6 +116,8 @@ class GhauriConfigs:
         self._shw_ignc = False
         self.cases = []
         self._mt_mode = False
+        self._multitarget_csv = None
+        self._technique = None
 
     @property
     def ignore_code(self):

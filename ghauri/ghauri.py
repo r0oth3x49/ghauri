@@ -82,13 +82,13 @@ def perform_multitarget_injection(args):
         if choice == "y":
             logger.info(f"testing URL '{url}'")
             # this csv message should appear only one time
-            fp = session.generate_filepath(
+            session.generate_filepath(
                 url,
                 multitarget_mode=True,
             )
             if not conf._mt_mode:
                 logger.info(
-                    f"using '{fp}' as the CSV results file in multiple targets mode"
+                    f"using '{conf._multitarget_csv}' as the CSV results file in multiple targets mode"
                 )
                 conf._mt_mode = True
             resp = perform_injection(
@@ -138,6 +138,36 @@ def perform_multitarget_injection(args):
                     batch=args.batch,
                     user_input="Y",
                 )
+                try:
+                    techniques = {
+                        "error_vector": "E",
+                        "boolean_vector": "B",
+                        "time_vector": "T",
+                    }
+                    keys = resp.vectors.keys()
+                    tech = []
+                    for vect in keys:
+                        tech.append(techniques[vect])
+                    session.dump_to_csv(
+                        [
+                            [
+                                resp.url,
+                                resp.injection_type,
+                                resp.parameter.key,
+                                ",".join(tech),
+                            ]
+                        ],
+                        field_names=[
+                            "Target URL",
+                            "Place",
+                            "Parameter",
+                            "Technique(s)",
+                        ],
+                        filepath=conf._multitarget_csv,
+                        is_multitarget=True,
+                    )
+                except Exception as error:
+                    logger.debug(error)
                 if exp_choice == "y":
                     target = Ghauri(
                         url=resp.url,

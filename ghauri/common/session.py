@@ -38,6 +38,7 @@ from ghauri.common.lib import (
 )
 from ghauri.logger.colored_logger import logger
 from ghauri.common.utils import Struct
+from ghauri.common.config import conf
 
 
 class SessionFactory:
@@ -110,10 +111,12 @@ class SessionFactory:
                 os.makedirs(filepath)
             except Exception as e:
                 pass
-            filepath = os.path.join(
-                filepath, f"results-{str(time.strftime('%m%d%Y_%I%M%p')).lower()}.csv"
-            )
-            return filepath
+            if not conf._multitarget_csv:
+                conf._multitarget_csv = os.path.join(
+                    filepath,
+                    f"results-{str(time.strftime('%m%d%Y_%I%M%p')).lower()}.csv",
+                )
+            return conf._multitarget_csv
         filepath = os.path.join(filepath, target)
         if flush_session:
             logger.info("flushing session file")
@@ -147,33 +150,57 @@ class SessionFactory:
         return _temp
 
     def dump_to_csv(
-        self, results, field_names=None, filepath="", database="", table=""
+        self,
+        results,
+        field_names=None,
+        filepath="",
+        database="",
+        table="",
+        is_multitarget=False,
     ):
         ok = False
-        filepath = os.path.dirname(filepath)
-        dump = os.path.join(filepath, "dump")
-        dbfilepath = os.path.join(dump, database)
-        try:
-            os.makedirs(dbfilepath)
-        except:
-            pass
-        if os.path.exists(dbfilepath):
-            filepath = os.path.join(dbfilepath, f"{table}.csv")
-            fmode = "w"
-            is_file_exists = False
-            try:
-                with open(filepath, encoding="utf-8") as fe:
+        if is_multitarget:
+            if os.path.exists(os.path.dirname(filepath)):
+                fmode = "w"
+                is_file_exists = False
+                try:
+                    with open(filepath, encoding="utf-8") as fe:
+                        pass
+                    fmode = "a"
+                    is_file_exists = True
+                except Exception as e:
                     pass
-                fmode = "a"
-                is_file_exists = True
-            except Exception as e:
+                with open(filepath, fmode, encoding="utf-8") as fd:
+                    csv_writer = csv.writer(fd, delimiter=",")
+                    if field_names and not is_file_exists:
+                        csv_writer.writerow([i.strip() for i in field_names])
+                    csv_writer.writerows(results)
+                    ok = True
+        if not is_multitarget:
+            filepath = os.path.dirname(filepath)
+            dump = os.path.join(filepath, "dump")
+            dbfilepath = os.path.join(dump, database)
+            try:
+                os.makedirs(dbfilepath)
+            except:
                 pass
-            with open(filepath, fmode, encoding="utf-8") as fd:
-                csv_writer = csv.writer(fd, delimiter=",")
-                if field_names and not is_file_exists:
-                    csv_writer.writerow([i.strip() for i in field_names])
-                csv_writer.writerows(results)
-                ok = True
+            if os.path.exists(dbfilepath):
+                filepath = os.path.join(dbfilepath, f"{table}.csv")
+                fmode = "w"
+                is_file_exists = False
+                try:
+                    with open(filepath, encoding="utf-8") as fe:
+                        pass
+                    fmode = "a"
+                    is_file_exists = True
+                except Exception as e:
+                    pass
+                with open(filepath, fmode, encoding="utf-8") as fd:
+                    csv_writer = csv.writer(fd, delimiter=",")
+                    if field_names and not is_file_exists:
+                        csv_writer.writerow([i.strip() for i in field_names])
+                    csv_writer.writerows(results)
+                    ok = True
         return ok
 
     def generate(self, session_filepath=""):
