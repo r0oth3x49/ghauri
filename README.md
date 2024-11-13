@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/badge/release-v1.3.8-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.3.8)
+[![GitHub release](https://img.shields.io/badge/release-v1.3.9-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.3.9)
 [![GitHub stars](https://img.shields.io/github/stars/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/network)
 [![GitHub issues](https://img.shields.io/github/issues/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/issues)
@@ -73,6 +73,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - added switch for ignore problematic HTTP codes. (e.g 401): `--ignore-code`
  - added switch for retreiving entries count for table.: `--count`
  - added switch for Scanning multiple targets given in a textual fil. `-m` (experimental)
+ - added auto detection and exploitation of base64 deserializable GET parameters. (experimental)
 
 ## **Advanced Usage**
 

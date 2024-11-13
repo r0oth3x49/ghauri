@@ -1257,6 +1257,63 @@ def parse_http_response(resp):
     )
 
 
+def is_deserializable(parameter, injection_type=""):
+    pkey = parameter.key
+    pvalue = parameter.value
+    try:
+        b64totext = base64.b64decode(pvalue + "====").decode()
+        conf._deserialized_data = json.loads(b64totext)
+        message = "it appears that provided value for %sparameter '%s' " % (
+            "%s " % injection_type if injection_type != pkey else "",
+            pkey,
+        )
+        message += "is JSON deserializable. Do you want to inject inside? [y/N] "
+        if not conf._b64serialized_choice:
+            choice = logger.read_input(message, user_input="y", batch=conf.batch)
+            conf._b64serialized_choice = True
+        conf._isb64serialized = True
+    except Exception as e:
+        logger.debug(f"error while checking if value is deserializeble {e}")
+    return conf._isb64serialized
+
+
+def deserializable_attack_request(
+    text,
+    payload,
+    param="",
+    injection_type="",
+    time_based=False,
+    encode=False,
+    is_multipart=False,
+):
+    prepared_payload = ""
+    pkey = param.key
+    pvalue = param.value
+    try:
+        conf._deserialized_data.update(
+            {
+                conf._deserialized_data_param: f"{conf._deserialized_data_param_value}{payload}"
+            }
+        )
+        value = base64.b64encode(json.dumps(conf._deserialized_data).encode()).decode()
+        REGEX_GET_POST_COOKIE_INJECTION = r"(?is)(?:((?:\?| |&)?%s)(=)(%s))" % (
+            f"{'' if injection_type == 'GET' else '?'}{pkey}",
+            pvalue,
+        )
+        _ = re.search(REGEX_GET_POST_COOKIE_INJECTION, text)
+        if _ and "*" in _.group(3).strip():
+            prepared_payload = re.sub(
+                REGEX_GET_POST_COOKIE_INJECTION, "\\1%s" % (value), text
+            )
+        else:
+            prepared_payload = re.sub(
+                REGEX_GET_POST_COOKIE_INJECTION, "\\1\\2%s" % (value), text
+            )
+        return prepared_payload
+    except Exception as e:
+        logger.error(f"error while preparing deserialized attack request: {e}")
+
+
 def prepare_attack_request(
     text,
     payload,
@@ -1266,6 +1323,17 @@ def prepare_attack_request(
     encode=False,
     is_multipart=False,
 ):
+    if conf._isb64serialized:
+        prepared_payload = deserializable_attack_request(
+            text,
+            payload,
+            param=param,
+            injection_type=injection_type,
+            time_based=time_based,
+            encode=encode,
+            is_multipart=is_multipart,
+        )
+        return prepared_payload
     prepared_payload = ""
     key = param.key
     value = param.value

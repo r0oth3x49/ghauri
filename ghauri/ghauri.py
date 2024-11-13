@@ -40,6 +40,7 @@ from ghauri.common.lib import (
     quote,
     urllib3,
     logging,
+    base64,
     collections,
     PAYLOAD_STATEMENT,
 )
@@ -55,6 +56,7 @@ from ghauri.common.utils import (
     fetch_db_specific_payload,
     check_injection_points_for_level,
     dbms_full_name,
+    is_deserializable,
 )
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -546,42 +548,144 @@ def perform_injection(
                 #         msg = f"ignoring {injection_type} parameter '{param_name}'"
                 #     logger.info(msg)
                 #     continue
-                conf.params_count -= 1
-                if not is_connection_tested:
-                    retval_check = basic_check(
-                        url=url,
-                        data=data,
-                        headers=full_headers,
-                        proxy=proxy,
-                        timeout=timeout,
-                        batch=batch,
-                        parameter=parameter,
-                        injection_type=injection_type,
-                        is_multipart=is_multipart,
-                        techniques=techniques.upper(),
-                        is_json=is_json,
-                    )
-                    base = retval_check.base
-                    conf.base = base
-                    conf.text_only = is_dynamic = (
-                        retval_check.is_dynamic if not text_only else text_only
-                    )
-                    possible_dbms = retval_check.possible_dbms
-                    is_connection_tested = retval_check.is_connection_tested
-                    is_parameter_tested = retval_check.is_parameter_tested
-                    is_resumed = retval_check.is_resumed
-                if not is_resumed or not is_parameter_tested:
-                    if custom_injection_in:
-                        custom_point = custom_injection_in[-1]
-                        if "HEADER" in custom_point:
-                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name} #1*'"
-                        elif "COOKIE" in custom_point:
-                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name} #1*'"
-                        elif param_name == "#1*" and "GET" in custom_point:
-                            msg = f"testing for SQL injection on (custom) URI parameter '#1*'"
-                        elif "GET" in custom_point and param_name != "#1*":
-                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name}'"
-                        elif "POST" in custom_point:
+                is_serialized = is_deserializable(
+                    parameter, injection_type=injection_type
+                )
+                if is_serialized:
+                    for bkey, bvalue in conf._deserialized_data.items():
+                        conf.params_count -= 1
+                        conf._deserialized_data_param = bkey
+                        conf._deserialized_data_param_value = bvalue
+                        if not is_connection_tested:
+                            retval_check = basic_check(
+                                url=url,
+                                data=data,
+                                headers=full_headers,
+                                proxy=proxy,
+                                timeout=timeout,
+                                batch=batch,
+                                parameter=parameter,
+                                injection_type=injection_type,
+                                is_multipart=is_multipart,
+                                techniques=techniques.upper(),
+                                is_json=is_json,
+                            )
+                            base = retval_check.base
+                            conf.base = base
+                            conf.text_only = is_dynamic = (
+                                retval_check.is_dynamic if not text_only else text_only
+                            )
+                            possible_dbms = retval_check.possible_dbms
+                            is_connection_tested = retval_check.is_connection_tested
+                            is_parameter_tested = retval_check.is_parameter_tested
+                            is_resumed = retval_check.is_resumed
+                        if not is_resumed or not is_parameter_tested:
+                            msg = f"testing for SQL injection on {injection_type} parameter '{param_name} ({conf._deserialized_data_param})'"
+                            logger.info(msg)
+                        if possible_dbms:
+                            if not dbms:
+                                choice = logger.read_input(
+                                    f"it looks like the back-end DBMS is '{possible_dbms}'. Do you want to skip test payloads specific for other DBMSes? [Y/n] ",
+                                    batch=batch,
+                                    user_input="Y",
+                                )
+                                if choice == "y":
+                                    dbms = possible_dbms
+                            if not conf.test_filter:
+                                if conf.prioritize and not conf._is_asked_for_priority:
+                                    conf._is_asked_for_priority = True
+                                    choice_priority = logger.read_input(
+                                        f"it is suggested to set '--technique=E{techniques.upper()}'. Do you want Ghauri set it for you ? [Y/n] ",
+                                        batch=batch,
+                                        user_input="Y",
+                                    )
+                                    if choice_priority == "y":
+                                        techniques = f"E{techniques.upper()}"
+                            if dbms and possible_dbms == dbms:
+                                if not is_remaining_tests_asked:
+                                    choice = logger.read_input(
+                                        f"for the remaining tests, do you want to include all tests for '{possible_dbms}'? [Y/n] ",
+                                        batch=batch,
+                                        user_input="Y",
+                                    )
+                                    is_remaining_tests_asked = True
+                                    if choice == "n":
+                                        pass
+                        retval = check_injections(
+                            base,
+                            parameter,
+                            url=url,
+                            data=data,
+                            proxy=proxy,
+                            headers=full_headers,
+                            injection_type=injection_type,
+                            batch=batch,
+                            is_multipart=is_multipart,
+                            timeout=timeout,
+                            delay=delay,
+                            timesec=timesec,
+                            dbms=dbms,
+                            techniques=techniques.upper(),
+                            possible_dbms=possible_dbms,
+                            session_filepath=filepaths.session,
+                            is_json=is_json,
+                            retries=retries,
+                            prefix=prefix,
+                            suffix=suffix,
+                            code=code if code != 200 else None,
+                            string=string,
+                            not_string=not_string,
+                            text_only=conf.text_only,
+                        )
+                        # will handle this part later on if any issue found...
+                        if retval and retval.vulnerable:
+                            break
+                else:
+                    conf.params_count -= 1
+                    if not is_connection_tested:
+                        retval_check = basic_check(
+                            url=url,
+                            data=data,
+                            headers=full_headers,
+                            proxy=proxy,
+                            timeout=timeout,
+                            batch=batch,
+                            parameter=parameter,
+                            injection_type=injection_type,
+                            is_multipart=is_multipart,
+                            techniques=techniques.upper(),
+                            is_json=is_json,
+                        )
+                        base = retval_check.base
+                        conf.base = base
+                        conf.text_only = is_dynamic = (
+                            retval_check.is_dynamic if not text_only else text_only
+                        )
+                        possible_dbms = retval_check.possible_dbms
+                        is_connection_tested = retval_check.is_connection_tested
+                        is_parameter_tested = retval_check.is_parameter_tested
+                        is_resumed = retval_check.is_resumed
+                    if not is_resumed or not is_parameter_tested:
+                        if custom_injection_in:
+                            custom_point = custom_injection_in[-1]
+                            if "HEADER" in custom_point:
+                                msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name} #1*'"
+                            elif "COOKIE" in custom_point:
+                                msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name} #1*'"
+                            elif param_name == "#1*" and "GET" in custom_point:
+                                msg = f"testing for SQL injection on (custom) URI parameter '#1*'"
+                            elif "GET" in custom_point and param_name != "#1*":
+                                msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name}'"
+                            elif "POST" in custom_point:
+                                if is_multipart:
+                                    msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
+                                elif is_json:
+                                    msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
+                                elif is_xml:
+                                    msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
+                                else:
+                                    msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name}'"
+                        else:
                             if is_multipart:
                                 msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
                             elif is_json:
@@ -589,72 +693,63 @@ def perform_injection(
                             elif is_xml:
                                 msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
                             else:
-                                msg = f"testing for SQL injection on (custom) {injection_type} parameter '{param_name}'"
-                    else:
-                        if is_multipart:
-                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
-                        elif is_json:
-                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
-                        elif is_xml:
-                            msg = f"testing for SQL injection on (custom) {injection_type} parameter '{parameter.type}{param_name}'"
-                        else:
-                            msg = f"testing for SQL injection on {injection_type} parameter '{param_name}'"
-                    logger.info(msg)
-                if possible_dbms:
-                    if not dbms:
-                        choice = logger.read_input(
-                            f"it looks like the back-end DBMS is '{possible_dbms}'. Do you want to skip test payloads specific for other DBMSes? [Y/n] ",
-                            batch=batch,
-                            user_input="Y",
-                        )
-                        if choice == "y":
-                            dbms = possible_dbms
-                    if not conf.test_filter:
-                        if conf.prioritize and not conf._is_asked_for_priority:
-                            conf._is_asked_for_priority = True
-                            choice_priority = logger.read_input(
-                                f"it is suggested to set '--technique=E{techniques.upper()}'. Do you want Ghauri set it for you ? [Y/n] ",
-                                batch=batch,
-                                user_input="Y",
-                            )
-                            if choice_priority == "y":
-                                techniques = f"E{techniques.upper()}"
-                    if dbms and possible_dbms == dbms:
-                        if not is_remaining_tests_asked:
+                                msg = f"testing for SQL injection on {injection_type} parameter '{param_name}'"
+                        logger.info(msg)
+                    if possible_dbms:
+                        if not dbms:
                             choice = logger.read_input(
-                                f"for the remaining tests, do you want to include all tests for '{possible_dbms}'? [Y/n] ",
+                                f"it looks like the back-end DBMS is '{possible_dbms}'. Do you want to skip test payloads specific for other DBMSes? [Y/n] ",
                                 batch=batch,
                                 user_input="Y",
                             )
-                            is_remaining_tests_asked = True
-                            if choice == "n":
-                                pass
-                retval = check_injections(
-                    base,
-                    parameter,
-                    url=url,
-                    data=data,
-                    proxy=proxy,
-                    headers=full_headers,
-                    injection_type=injection_type,
-                    batch=batch,
-                    is_multipart=is_multipart,
-                    timeout=timeout,
-                    delay=delay,
-                    timesec=timesec,
-                    dbms=dbms,
-                    techniques=techniques.upper(),
-                    possible_dbms=possible_dbms,
-                    session_filepath=filepaths.session,
-                    is_json=is_json,
-                    retries=retries,
-                    prefix=prefix,
-                    suffix=suffix,
-                    code=code if code != 200 else None,
-                    string=string,
-                    not_string=not_string,
-                    text_only=conf.text_only,
-                )
+                            if choice == "y":
+                                dbms = possible_dbms
+                        if not conf.test_filter:
+                            if conf.prioritize and not conf._is_asked_for_priority:
+                                conf._is_asked_for_priority = True
+                                choice_priority = logger.read_input(
+                                    f"it is suggested to set '--technique=E{techniques.upper()}'. Do you want Ghauri set it for you ? [Y/n] ",
+                                    batch=batch,
+                                    user_input="Y",
+                                )
+                                if choice_priority == "y":
+                                    techniques = f"E{techniques.upper()}"
+                        if dbms and possible_dbms == dbms:
+                            if not is_remaining_tests_asked:
+                                choice = logger.read_input(
+                                    f"for the remaining tests, do you want to include all tests for '{possible_dbms}'? [Y/n] ",
+                                    batch=batch,
+                                    user_input="Y",
+                                )
+                                is_remaining_tests_asked = True
+                                if choice == "n":
+                                    pass
+                    retval = check_injections(
+                        base,
+                        parameter,
+                        url=url,
+                        data=data,
+                        proxy=proxy,
+                        headers=full_headers,
+                        injection_type=injection_type,
+                        batch=batch,
+                        is_multipart=is_multipart,
+                        timeout=timeout,
+                        delay=delay,
+                        timesec=timesec,
+                        dbms=dbms,
+                        techniques=techniques.upper(),
+                        possible_dbms=possible_dbms,
+                        session_filepath=filepaths.session,
+                        is_json=is_json,
+                        retries=retries,
+                        prefix=prefix,
+                        suffix=suffix,
+                        code=code if code != 200 else None,
+                        string=string,
+                        not_string=not_string,
+                        text_only=conf.text_only,
+                    )
                 if retval and retval.vulnerable:
                     backend = retval.backend
                     parameter = retval.parameter

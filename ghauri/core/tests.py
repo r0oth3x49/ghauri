@@ -168,7 +168,10 @@ def basic_check(
         logger.end("ending")
         exit(0)
     if not is_resumed:
-        param_name = f"{mc}{param_name}{nc}"
+        if conf._isb64serialized:
+            param_name = f"{mc}{param_name} ({conf._deserialized_data_param}){nc}"
+        else:
+            param_name = f"{mc}{param_name}{nc}"
         expressions = ["'\",..))", "',..))", '",..))', "'\"", "%27%22"]
         for expression in expressions:
             attack = inject_expression(
@@ -520,6 +523,8 @@ def check_booleanbased_sqli(
         blind_payloads.extend(dbms_specific_boolean_payloads)
         blind_payloads = clean_dups(blind_payloads)
     param_key = parameter.key
+    if conf._isb64serialized:
+        param_key = f"{param_key} ({conf._deserialized_data_param})"
     param_value = parameter.value
     is_injected = False
     injection_type = injection_type.upper()
@@ -1043,6 +1048,8 @@ def check_timebased_sqli(
     )
     param_key = parameter.key
     param_value = parameter.value
+    if conf._isb64serialized:
+        param_key = f"{param_key} ({conf._deserialized_data_param})"
     # in case of very slow internet users we will consider timesec value for testing and it should be >= 10 otherwise with good internet we are good to consider random sleep value
     sleep_time = timesec if timesec >= 10 else random.randint(5, 9)
     injection_type = injection_type.upper()
@@ -2230,6 +2237,8 @@ def check_injections(
             is_string=retval_session.is_string,
         )
     param_name += parameter.key
+    if conf._isb64serialized:
+        param_name = f"{param_name} ({conf._deserialized_data_param})"
     param_value = parameter.value
     if "E" in techniques and possible_dbms:
         esqli = check_errorbased_sqli(

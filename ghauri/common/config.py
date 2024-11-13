@@ -118,6 +118,11 @@ class GhauriConfigs:
         self._mt_mode = False
         self._multitarget_csv = None
         self._technique = None
+        self._isb64serialized = False
+        self._b64serialized_choice = False
+        self._deserialized_data = {}
+        self._deserialized_data_param = ""
+        self._deserialized_data_param_value = ""
 
     @property
     def ignore_code(self):
