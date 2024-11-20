@@ -1261,17 +1261,18 @@ def is_deserializable(parameter, injection_type=""):
     pkey = parameter.key
     pvalue = parameter.value
     try:
-        b64totext = base64.b64decode(pvalue + "====").decode()
-        conf._deserialized_data = json.loads(b64totext)
-        message = "it appears that provided value for %sparameter '%s' " % (
-            "%s " % injection_type if injection_type != pkey else "",
-            pkey,
-        )
-        message += "is JSON deserializable. Do you want to inject inside? [y/N] "
-        if not conf._b64serialized_choice:
-            choice = logger.read_input(message, user_input="y", batch=conf.batch)
-            conf._b64serialized_choice = True
-        conf._isb64serialized = True
+        if base64.b64encode(base64.b64decode(pvalue)).decode() == pvalue:
+            b64totext = base64.b64decode(pvalue + "====").decode()
+            conf._deserialized_data = json.loads(b64totext)
+            message = "it appears that provided value for %sparameter '%s' " % (
+                "%s " % injection_type if injection_type != pkey else "",
+                pkey,
+            )
+            message += "is JSON deserializable. Do you want to inject inside? [y/N] "
+            if not conf._b64serialized_choice:
+                choice = logger.read_input(message, user_input="y", batch=conf.batch)
+                conf._b64serialized_choice = True
+            conf._isb64serialized = True
     except Exception as e:
         logger.debug(f"error while checking if value is deserializeble {e}")
     return conf._isb64serialized
@@ -1726,6 +1727,10 @@ def extract_json_data(data):
                 conf._json_post_data.append(
                     {"key": key, "value": "{}".format(value), "type": "JSON "}
                 )
+    else:
+        if isinstance(data, list):
+            for entry in data:
+                extract_json_data(entry)
     # logger.debug(conf._json_post_data)
     return conf._json_post_data
 
