@@ -123,6 +123,10 @@ class GhauriConfigs:
         self._deserialized_data = {}
         self._deserialized_data_param = ""
         self._deserialized_data_param_value = ""
+        self._random_ua_string = None
+        self._random_ua = False
+        self._is_mobile_ua = False
+        self._random_agent_dict = {}
 
     @property
     def ignore_code(self):

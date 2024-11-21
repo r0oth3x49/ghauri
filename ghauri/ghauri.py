@@ -57,6 +57,7 @@ from ghauri.common.utils import (
     check_injection_points_for_level,
     dbms_full_name,
     is_deserializable,
+    get_user_agent,
 )
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -133,6 +134,8 @@ def perform_multitarget_injection(args):
                 update=args.update,
                 ignore_code=args.ignore_code,
                 bulkfile=True,
+                random_agent=args.random_agent,
+                mobile=args.mobile,
             )
             if resp.is_injected:
                 exp_choice = logger.read_input(
@@ -293,6 +296,8 @@ def perform_injection(
     update=False,
     ignore_code="",
     bulkfile=False,
+    random_agent=False,
+    mobile=False,
 ):
     verbose_levels = {
         1: logging.INFO,
@@ -311,6 +316,8 @@ def perform_injection(
     conf.fresh_queries = fresh_queries
     conf._ignore_code = ignore_code
     conf.batch = batch
+    conf._random_ua = random_agent
+    conf._is_mobile_ua = mobile
     if not bulkfile:
         logger.start("starting")
     if not force_ssl:
@@ -367,6 +374,7 @@ def perform_injection(
         raw = "\n".join(
             [re.sub(r"[^\x00-\x7F]+", " ", i.strip()) for i in open(requestfile) if i]
         )
+    get_user_agent(random=conf._random_ua)
     if raw:
         req = HTTPRequest(raw)
         url = req.url

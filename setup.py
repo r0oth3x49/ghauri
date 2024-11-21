@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ghauri",
-    version="1.4",
+    version="1.4.1",
     description="An advanced SQL injection detection & exploitation tool.",
     classifiers=["Programming Language :: Python3"],
     author="Nasir Khan",
@@ -20,6 +20,7 @@ setup(
         "colorama",
         "requests",
         "chardet",
+        "ua_generator",
     ],
     entry_points={"console_scripts": ["ghauri=ghauri.scripts.ghauri:main"]},
     keywords=[

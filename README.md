@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/badge/release-v1.4-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.4)
+[![GitHub release](https://img.shields.io/badge/release-v1.4.1-brightgreen?style=flat-square)](https://github.com/r0oth3x49/ghauri/releases/tag/1.4.1)
 [![GitHub stars](https://img.shields.io/github/stars/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/network)
 [![GitHub issues](https://img.shields.io/github/issues/r0oth3x49/ghauri?style=flat-square)](https://github.com/r0oth3x49/ghauri/issues)
@@ -74,6 +74,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - added switch for retreiving entries count for table.: `--count`
  - added switch for Scanning multiple targets given in a textual fil. `-m` (experimental)
  - added auto detection and exploitation of base64 deserializable GET parameters. (experimental)
+ - added support for random HTTP user agent: `--random-agent, --mobile`
 
 ## **Advanced Usage**
 
@@ -107,6 +108,8 @@ Request:
 
   -A , --user-agent   HTTP User-Agent header value
   -H , --header       Extra header (e.g. "X-Forwarded-For: 127.0.0.1")
+  --mobile            Imitate smartphone through HTTP User-Agent header
+  --random-agent      Use randomly selected HTTP User-Agent header value
   --host              HTTP Host header value
   --data              Data string to be sent through POST (e.g. "id=1")
   --cookie            HTTP Cookie header value (e.g. "PHPSESSID=a8d127e..")

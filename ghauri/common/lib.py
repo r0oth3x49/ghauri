@@ -50,6 +50,7 @@ import requests
 import binascii
 import itertools
 import collections
+import ua_generator
 from os.path import expanduser
 from io import BytesIO, StringIO
 from difflib import unified_diff

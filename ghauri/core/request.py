@@ -102,6 +102,8 @@ class HTTPRequestHandler:
         raw = req.raw
         endpoint = req.endpoint
         custom_headers = req.headers
+        if conf._random_agent_dict:
+            custom_headers.update(conf._random_agent_dict)
         if conf.is_json:
             custom_headers.update({"Content-Type": "application/json"})
         request_url = req.request.get("url")

@@ -48,6 +48,7 @@ from ghauri.common.lib import (
     SequenceMatcher,
     addinfourl,
     DBMS_DICT,
+    ua_generator,
     HTTPRedirectHandler,
     BaseHTTPRequestHandler,
     INJECTABLE_HEADERS_DEFAULT,
@@ -2058,9 +2059,41 @@ def search_possible_dbms_errors(html):
     return _temp
 
 
-def get_random_user_agent():
-    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
-    return ua
+def get_user_agent(random=False):
+    # latest one  at: 21-Nov-2024
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    headers = {}
+    if random:
+        try:
+            if conf._random_ua:
+                if conf._is_mobile_ua:
+                    obj = ua_generator.generate(
+                        browser=("chrome", "firefox", "safari"),
+                        platform=("ios", "android"),
+                        device="mobile",
+                    )
+                else:
+                    obj = ua_generator.generate(
+                        browser=("chrome", "firefox", "safari"),
+                        platform=("windows", "linux", "macos"),
+                        device="desktop",
+                    )
+                ua = obj.text
+                headers = obj.headers.get()
+            else:
+                ua = ua
+        except:
+            ua = ua
+        if not conf._random_ua_string:
+            headers.pop("user-agent")
+            conf._random_ua_string = ua
+            conf._random_agent_dict = headers
+            logger.info(
+                f"fetched random HTTP User-Agent header value '{conf._random_ua_string}'"
+            )
+    else:
+        conf._random_ua_string = ua
+    return conf._random_ua_string
 
 
 def prepare_request(url, data, custom_headers, use_requests=False):
@@ -2076,10 +2109,9 @@ def prepare_request(url, data, custom_headers, use_requests=False):
     if not path:
         path = "/"
     if not custom_headers:
-        ua = get_random_user_agent()
-        custom_headers = f"User-agent: {ua}"
+        custom_headers = f"User-agent: {conf._random_ua_string}"
         if custom_headers and "user-agent" not in custom_headers.lower():
-            custom_headers += f"\nUser-agent: {ua}"
+            custom_headers += f"\nUser-agent: {conf._random_ua_string}"
         if custom_headers and "host" not in custom_headers.lower():
             custom_headers += f"\nHost: {parsed.netloc}"
         if custom_headers and "cache-control" not in custom_headers.lower():

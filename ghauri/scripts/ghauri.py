@@ -131,6 +131,18 @@ def main():
         metavar="",
     )
     request.add_argument(
+        "--mobile",
+        dest="mobile",
+        action="store_true",
+        help="Imitate smartphone through HTTP User-Agent header",
+    )
+    request.add_argument(
+        "--random-agent",
+        dest="random_agent",
+        action="store_true",
+        help="Use randomly selected HTTP User-Agent header value",
+    )
+    request.add_argument(
         "--host",
         dest="host",
         type=str,
@@ -511,6 +523,8 @@ def main():
             update=args.update,
             ignore_code=args.ignore_code,
             bulkfile=bool(args.bulkfile),
+            random_agent=args.random_agent,
+            mobile=args.mobile,
         )
         if resp.is_injected:
             target = ghauri.Ghauri(
