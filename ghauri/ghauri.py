@@ -62,7 +62,6 @@ from ghauri.common.utils import (
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
 def perform_multitarget_injection(args):
     logger.start("starting")
     verbose_levels = {
@@ -254,7 +253,6 @@ def perform_multitarget_injection(args):
                         )
                     logger.success("")
     logger.end("ending")
-
 
 def perform_injection(
     url="",
