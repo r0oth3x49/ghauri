@@ -359,7 +359,9 @@ def confirm_booleanbased_sqli(
         condition_response_1 = entry.get("false", {}).get("response")
         string = payload_detected.string
         expression = string.replace("[RANDNUM]=[RANDNUM]", condition_true)
+        expression = expression.replace("[ORIGVALUE]", param_value.replace("*", ""))
         expression01 = string.replace("[RANDNUM]=[RANDNUM]", condition_false)
+        expression01 = expression01.replace("[ORIGVALUE]", param_value.replace("*", ""))
         decoded_expression = urldecode(expression)
         decoded_expression01 = urldecode(expression01)
         logger.payload(f"{decoded_expression}")

