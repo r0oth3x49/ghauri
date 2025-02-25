@@ -28,9 +28,7 @@ from ghauri.common.config import conf
 from ghauri.core.request import request
 from ghauri.logger.colored_logger import logger
 from ghauri.common.lib import re, time, collections, quote, unquote, URLError
-from ghauri.common.utils import (
-    prepare_attack_request,
-)
+from ghauri.common.utils import prepare_attack_request, urldecode
 
 
 def inject_expression(
