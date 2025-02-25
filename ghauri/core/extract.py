@@ -208,7 +208,7 @@ class GhauriExtractor:
             if operator and _type != operator:
                 start += 1
                 continue
-            logger.payload(f"{expression}")
+            # logger.payload(f"{expression}")
             # if http_firewall_code_counter > 2:
             #     message = f"{error_msg} - {http_firewall_code_counter} time(s)"
             #     logger.warning(f"HTTP error code detected during run:")
@@ -508,7 +508,7 @@ class GhauriExtractor:
                     "[SLEEPTIME]", f"{timesec}"
                 )
                 sleep_time = conf.timesec
-                logger.payload(f"{expression}")
+                # logger.payload(f"{expression}")
                 try:
                     attack = inject_expression(
                         url=url,
@@ -701,7 +701,7 @@ class GhauriExtractor:
                 expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                     "[SLEEPTIME]", f"{sleep_time}"
                 )
-                logger.payload(f"{expression}")
+                # logger.payload(f"{expression}")
                 try:
                     attack = inject_expression(
                         url=url,
@@ -916,7 +916,7 @@ class GhauriExtractor:
             expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                 "[SLEEPTIME]", f"{sleep_time}"
             )
-            logger.payload(f"{expression}")
+            # logger.payload(f"{expression}")
             try:
                 attack = inject_expression(
                     url=url,
@@ -1128,7 +1128,7 @@ class GhauriExtractor:
             expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                 "[SLEEPTIME]", f"{sleep_time}"
             )
-            logger.payload(f"{expression}")
+            # logger.payload(f"{expression}")
             try:
                 attack = inject_expression(
                     url=url,
@@ -1294,7 +1294,7 @@ class GhauriExtractor:
             expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                 "[SLEEPTIME]", f"{sleep_time}"
             )
-            logger.payload(f"{expression}")
+            # logger.payload(f"{expression}")
             try:
                 attack = inject_expression(
                     url=url,
@@ -1419,7 +1419,7 @@ class GhauriExtractor:
                     expression = vector.replace("[INFERENCE]", f"{condition}").replace(
                         "[SLEEPTIME]", f"{sleep_time}"
                     )
-                    logger.payload(f"{expression}")
+                    # logger.payload(f"{expression}")
                     try:
                         attack = inject_expression(
                             url=url,
@@ -1778,7 +1778,7 @@ class GhauriExtractor:
                 expression = vector.replace("[INFERENCE]", f"{entry}")
                 if backend == "Microsoft SQL Server":
                     expression = expression.replace("+", "%2b")
-                logger.payload(f"{expression}")
+                # logger.payload(f"{expression}")
                 try:
                     attack = inject_expression(
                         url=url,

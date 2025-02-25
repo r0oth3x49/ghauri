@@ -90,10 +90,7 @@ class FingerPrintDBMS:
 
     def check_boolean_expression(self, expression, expected=True):
         expression = self.vector.replace("[INFERENCE]", expression)
-        param_key = self.parameter.key
-        param_value = self.parameter.value
-        expression = expression.replace("[ORIGVALUE]", param_value.replace("*", ""))
-        logger.payload(f"{urldecode(expression)}")
+        # logger.payload(f"{urldecode(expression)}")
         try:
             attack = inject_expression(
                 url=self.url,

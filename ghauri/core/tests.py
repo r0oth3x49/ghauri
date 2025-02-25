@@ -359,12 +359,10 @@ def confirm_booleanbased_sqli(
         condition_response_1 = entry.get("false", {}).get("response")
         string = payload_detected.string
         expression = string.replace("[RANDNUM]=[RANDNUM]", condition_true)
-        expression = expression.replace("[ORIGVALUE]", param_value.replace("*", ""))
         expression01 = string.replace("[RANDNUM]=[RANDNUM]", condition_false)
-        expression01 = expression01.replace("[ORIGVALUE]", param_value.replace("*", ""))
         decoded_expression = urldecode(expression)
         decoded_expression01 = urldecode(expression01)
-        logger.payload(f"{decoded_expression}")
+        # logger.payload(f"{decoded_expression}")
         try:
             attack = inject_expression(
                 url=url,
@@ -601,7 +599,7 @@ def check_booleanbased_sqli(
             expression01 = expression01.replace(
                 "[ORIGVALUE]", param_value.replace("*", "")
             )
-            logger.payload(f"{expression}")
+            # logger.payload(f"{expression}")
             try:
                 attack = inject_expression(
                     url=url,
@@ -883,7 +881,7 @@ def confirm_timebased_sqli(
                 "[SLEEPTIME]", f"{sleep_time}"
             )
             decoded_expression = urldecode(expression)
-            logger.payload(f"{decoded_expression}")
+            # logger.payload(f"{decoded_expression}")
             try:
                 attack = inject_expression(
                     url=url,
@@ -934,7 +932,7 @@ def confirm_timebased_sqli(
             string = payload_detected.string
             expression = string.replace("[SLEEPTIME]", "%s" % (sleep_time))
             decoded_expression = urldecode(expression)
-            logger.payload(f"{decoded_expression}")
+            # logger.payload(f"{decoded_expression}")
             try:
                 attack = inject_expression(
                     url=url,
@@ -1115,7 +1113,7 @@ def check_timebased_sqli(
             string = _payload.string
             expression = string.replace("[SLEEPTIME]", "%s" % (sleep_time))
             decoded_expression = urldecode(expression)
-            logger.payload(f"{decoded_expression}")
+            # logger.payload(f"{decoded_expression}")
             try:
                 attack = inject_expression(
                     url=url,
@@ -1380,7 +1378,7 @@ def check_errorbased_sqli(
                 time.sleep(delay)
             expression = _payload.string
             decoded_expression = urldecode(expression)
-            logger.payload(f"{decoded_expression}")
+            # logger.payload(f"{decoded_expression}")
             try:
                 attack = inject_expression(
                     url=url,
@@ -1468,7 +1466,7 @@ def check_errorbased_sqli(
                         pl = "CURRENT_USER" if backend == "MySQL" else None
                     if pl:
                         _expression = _pv.replace("[INFERENCE]", pl)
-                        logger.payload(f"{urldecode(_expression)}")
+                        # logger.payload(f"{urldecode(_expression)}")
                         try:
                             _attack = inject_expression(
                                 url=url,
@@ -1776,7 +1774,7 @@ def check_session(
                         expression01 = expression01.replace(
                             "[ORIGVALUE]", param_value.replace("*", "")
                         )
-                        logger.payload(expression)
+                        # logger.payload(expression)
                         try:
                             attack = inject_expression(
                                 url=url,
@@ -1872,7 +1870,7 @@ def check_session(
                                 string, backend=backend, to_str=to_str, to_char=to_char
                             ),
                         )
-                        logger.payload(expression)
+                        # logger.payload(expression)
                         try:
                             attack = inject_expression(
                                 url=url,
@@ -1919,7 +1917,7 @@ def check_session(
                         expression = vector.replace(
                             "[INFERENCE]", "03567=3567"
                         ).replace("[SLEEPTIME]", f"{sleep_time}")
-                        logger.payload(expression)
+                        # logger.payload(expression)
                         try:
                             attack = inject_expression(
                                 url=url,
@@ -1987,7 +1985,7 @@ def check_session(
                         expression = vector.replace(
                             "[INFERENCE]", "03567=3567"
                         ).replace("[SLEEPTIME]", f"{sleep_time}")
-                        logger.payload(expression)
+                        # logger.payload(expression)
                         try:
                             attack = inject_expression(
                                 url=url,

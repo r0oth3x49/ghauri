@@ -51,6 +51,10 @@ def inject_expression(
     attack_url = url
     attack_data = data
     attack_headers = headers
+    param_value = parameter.value
+    if expression:
+        expression = expression.replace("[ORIGVALUE]", param_value.replace("*", ""))
+        logger.payload(f"{urldecode(expression)}")
     if conf.timeout and conf.timeout > 30:
         timeout = conf.timeout
     if not connection_test:
