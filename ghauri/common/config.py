@@ -128,6 +128,35 @@ class GhauriConfigs:
         self._is_mobile_ua = False
         self._random_agent_dict = {}
 
+        # Obfuscation flags from a previous subtask (ensure they are present if that was completed)
+        # For this task, I'll assume they might not be, and add them if missing, or ensure they are correct.
+        # Based on current file content, they are not present, so I will add them.
+        self.use_space_to_comment_obfuscation = False
+        self.use_keyword_case_obfuscation = False
+        self.use_url_encoding_obfuscation = False
+
+        # QuantumWAFEvasion specific configurations
+        self.quantum_evasion_level = 1
+        self.quantum_morphological = True
+        self.quantum_semantic = True
+        self.quantum_syntactic = True
+        self.quantum_superposition = False
+        self.quantum_temporal = False
+        self.quantum_dimensional = False
+        self.quantum_neural = False
+        self.quantum_chaos = False
+        self.quantum_metamorphic = True
+        self.quantum_mutation_rate = 0.3   # Default from placeholder in quantum_waf_evasion.py
+        self.quantum_learning_rate = 0.1   # Default from placeholder in quantum_waf_evasion.py
+
+        # Header Obfuscation specific configurations
+        self.header_random_user_agent_extended = False
+        self.header_add_custom_headers = [] # List of strings, e.g., "HeaderName: HeaderValue"
+        self.header_manipulation_level = 0  # 0: None, 1: Basic, 2: Advanced
+
+        # Epsilon for QuantumWAFEvasion
+        self.quantum_epsilon = 0.1 # Default epsilon for epsilon-greedy strategy
+
     @property
     def ignore_code(self):
         codes = []

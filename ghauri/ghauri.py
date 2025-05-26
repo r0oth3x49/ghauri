@@ -4,6 +4,8 @@
 
 """
 
+# Removed malformed import from here
+
 Author  : Nasir Khan (r0ot h3x49)
 Github  : https://github.com/r0oth3x49
 License : MIT
@@ -59,8 +61,14 @@ from ghauri.common.utils import (
     is_deserializable,
     get_user_agent,
 )
+# Correctly import QuantumWAFEvasion and conf
+from ghauri.evasion import QuantumWAFEvasion, apply_quantum_evasion, learn_from_response
+from ghauri.common.config import conf
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Global instance of QuantumWAFEvasion engine - Initialize as None
+quantum_evasion_engine = None
 
 
 def perform_multitarget_injection(args):

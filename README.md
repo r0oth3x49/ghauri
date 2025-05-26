@@ -55,7 +55,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
    - Mulitipart Form data injections
    - JSON based injections
    - SOAP/XML based injections
- - support proxy option `--proxy`.
+ - Support proxy option `--proxy`.
  - supports parsing request from txt file: switch for that `-r file.txt`
  - supports limiting data extraction for dbs/tables/columns/dump: switch `--start 1 --stop 2`
  - added support for resuming of all phases.
@@ -75,6 +75,69 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - added switch for Scanning multiple targets given in a textual fil. `-m` (experimental)
  - added auto detection and exploitation of base64 deserializable GET parameters. (experimental)
  - added support for random HTTP user agent: `--random-agent, --mobile`
+ - Advanced WAF Evasion Engine:
+   - Includes the `QuantumWAFEvasion` engine applying various techniques (morphological, semantic, syntactic, metamorphic) by default.
+   - Adaptive learning capabilities to improve evasion over time.
+   - Sophisticated request header obfuscation techniques (randomized User-Agents, custom header injection, X-Forwarded-For, header name case randomization).
+   - Highly configurable via `ghauri/common/config.py` for fine-grained control.
+
+## Advanced WAF Evasion Capabilities
+
+Ghauri now incorporates a sophisticated suite of WAF (Web Application Firewall) evasion features, designed to enhance its ability to detect and exploit SQL injection vulnerabilities in heavily protected environments. These features are active by default and aim to dynamically alter payloads and request headers.
+
+### QuantumWAFEvasion Engine
+
+At the core of Ghauri's new evasion capabilities is the `QuantumWAFEvasion` engine. This engine is inspired by advanced computational concepts to apply a diverse range of transformations to SQL injection payloads.
+
+**Overview:**
+- **Active by Default:** The engine automatically processes payloads to attempt WAF bypass.
+- **Multi-faceted Techniques:** Employs a variety of strategies including:
+    - **Morphological Analysis:** Modifies payload structure, such as case variations, comment insertions, and whitespace changes.
+    - **Semantic Preservation:** Replaces operators, functions, or keywords with known equivalents (e.g., `AND` to `&&`, DBMS-specific function alternatives).
+    - **Syntactic Obfuscation:** Applies URL encoding, character encoding variations, and conceptual string splitting/concatenation.
+    - **Metamorphic Encoding:** Uses polymorphic transformations with multiple encoding layers, potentially including Base64 or HEX encoding for segments, tailored by DBMS context where applicable.
+    - **Dimensional Folding & Chaos Injection (Conceptual):** Includes experimental techniques for more complex structural changes and noise injection.
+- **DBMS-Aware Transformations:** Many techniques adapt based on the detected or specified backend DBMS (e.g., using MySQL-specific comments like `#` or SQL Server's `-- `).
+- **Adaptive Learning:** The engine features an adaptive learning mechanism. It attempts to learn from WAF responses (success/failure of payloads) to refine its evasion strategies over time using a Q-table based approach and an epsilon-greedy algorithm for exploration vs. exploitation.
+
+**Configuration (`ghauri/common/config.py`):**
+While the `QuantumWAFEvasion` engine is active by default, its behavior can be extensively fine-tuned by modifying default values directly in the `ghauri/common/config.py` file. This allows advanced users to tailor the evasion process.
+
+Key configuration variables include:
+- `conf.quantum_evasion_level` (default: `1`): Controls the general intensity/depth of some evasion techniques (e.g., number of metamorphic layers).
+- `conf.quantum_morphological` (default: `True`): Enables/disables morphological transformations.
+- `conf.quantum_semantic` (default: `True`): Enables/disables semantic transformations.
+- `conf.quantum_syntactic` (default: `True`): Enables/disables syntactic transformations.
+- `conf.quantum_superposition` (default: `False`): Enables/disables generation of multiple payload variants simultaneously for testing.
+- `conf.quantum_metamorphic` (default: `True`): Enables/disables metamorphic encoding layers.
+- `conf.quantum_mutation_rate` (default: `0.3`): Influences the probability of certain random transformations occurring.
+- `conf.quantum_learning_rate` (default: `0.1`): Controls the learning rate for the adaptive engine.
+- `conf.quantum_epsilon` (default: `0.1`): Sets the initial epsilon value for the epsilon-greedy exploration strategy in payload generation.
+- Other flags like `quantum_temporal`, `quantum_dimensional`, `quantum_neural`, `quantum_chaos` control specific experimental techniques (mostly `False` by default).
+
+To modify these, open `ghauri/common/config.py` and change the desired attribute within the `GhauriConfigs` class `__init__` method. For example:
+`self.quantum_evasion_level = 2`
+
+### Request Header Obfuscation
+
+In addition to payload transformations, Ghauri employs several techniques to obfuscate request headers, making requests appear more legitimate or varied.
+
+**Features:**
+- **Extended Randomized User-Agents:** Can pick from an extended list of diverse User-Agent strings, covering various browsers and devices.
+- **Custom Header Injection:** Allows users to specify custom headers to be added or to override default ones.
+- **Automatic `X-Forwarded-For` Randomization:** Can automatically add a randomized `X-Forwarded-For` header if not already present.
+- **Header Name Case Randomization:** Can manipulate the casing of header names (e.g., `user-agent` to `uSeR-aGeNt`).
+
+**Configuration (`ghauri/common/config.py`):**
+These features are also configured via `ghauri/common/config.py`:
+- `conf.header_random_user_agent_extended` (default: `False`): Set to `True` to use the extended list of User-Agents.
+- `conf.header_add_custom_headers` (default: `[]`): A list of strings, where each string is a full header line (e.g., `["X-Custom-Debug: True", "Another-Header: Value"]`).
+- `conf.header_manipulation_level` (default: `0`):
+    - `0`: No specific header manipulation beyond defaults.
+    - `1`: Enables features like automatic `X-Forwarded-For`.
+    - `2`: Enables level 1 features plus header name case randomization.
+
+Modify these in `ghauri/common/config.py` as needed.
 
 ## **Advanced Usage**
 

@@ -55,6 +55,7 @@ from ghauri.common.lib import (
     HTTP_STATUS_CODES_REASONS,
     AVOID_PARAMS,
 )
+import random # Import random for new User-Agent selection
 import base64
 from ghauri.common.config import conf
 from ghauri.common.payloads import PAYLOADS
@@ -2085,6 +2086,8 @@ def get_user_agent(random=False):
         except:
             ua = ua
         if not conf._random_ua_string:
+        # headers.pop("user-agent") # ua_generator might not return this key if browser is not common
+        if "user-agent" in headers: # Check if the key exists before popping
             headers.pop("user-agent")
             conf._random_ua_string = ua
             conf._random_agent_dict = headers
@@ -2095,6 +2098,40 @@ def get_user_agent(random=False):
         conf._random_ua_string = ua
     return conf._random_ua_string
 
+# Extended list of User-Agents for --header-random-user-agent-extended
+EXTENDED_USER_AGENTS = [
+    # Chrome Desktop
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
+    # Firefox Desktop
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/109.0",
+    "Mozilla/5.0 (X11; Linux i686; rv:108.0) Gecko/20100101 Firefox/108.0",
+    # Safari Desktop
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_2_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15",
+    # Edge Desktop
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.41",
+    # Chrome Mobile (Android)
+    "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Mobile Safari/537.36",
+    # Firefox Mobile (Android)
+    "Mozilla/5.0 (Android 13; Mobile; rv:109.0) Gecko/109.0 Firefox/109.0",
+    # Safari Mobile (iOS)
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPad; CPU OS 16_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Mobile/15E148 Safari/604.1",
+    # Other common bots or less common browsers
+    "Googlebot/2.1 (+http://www.google.com/bot.html)",
+    "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+    "Mozilla/5.0 (compatible; Yahoo! Slurp; http://help.yahoo.com/help/us/ysearch/slurp)",
+    "Opera/9.80 (Windows NT 6.0) Presto/2.12.388 Version/12.14",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; AS; rv:11.0) like Gecko", # IE11
+]
+
+def get_random_extended_user_agent():
+    """Selects a random User-Agent from the extended list."""
+    return random.choice(EXTENDED_USER_AGENTS)
 
 def prepare_request(url, data, custom_headers, use_requests=False):
     Response = collections.namedtuple(
@@ -2108,32 +2145,100 @@ def prepare_request(url, data, custom_headers, use_requests=False):
     path = parsed.path if not parsed.query else f"{parsed.path}?{parsed.query}"
     if not path:
         path = "/"
-    if not custom_headers:
-        custom_headers = f"User-agent: {conf._random_ua_string}"
-        if custom_headers and "user-agent" not in custom_headers.lower():
-            custom_headers += f"\nUser-agent: {conf._random_ua_string}"
-        if custom_headers and "host" not in custom_headers.lower():
-            custom_headers += f"\nHost: {parsed.netloc}"
-        if custom_headers and "cache-control" not in custom_headers.lower():
+    if not custom_headers: # If no custom headers were provided via options like --headers
+        # Start with a base User-Agent. This might be overridden by extended list or specific user input.
+        current_user_agent = conf._random_ua_string # This is set by get_user_agent() in ghauri.py
+        custom_headers = f"User-Agent: {current_user_agent}" 
+    
+    # User-Agent Obfuscation (Extended List)
+    # This takes precedence if enabled.
+    if conf.header_random_user_agent_extended:
+        new_ua = get_random_extended_user_agent()
+        # Remove existing User-Agent before adding/replacing, case-insensitively
+        temp_headers_list = [h for h in custom_headers.split('\n') if not h.lower().startswith('user-agent:')]
+        temp_headers_list.append(f"User-Agent: {new_ua}")
+        custom_headers = "\n".join(temp_headers_list)
+        conf._random_ua_string = new_ua # Update conf so other parts see the correct UA
+        logger.debug(f"Using extended random User-Agent: {new_ua}")
+
+    # Ensure default headers are present if not already set by user or extended UA logic
+    # Convert custom_headers string to a list for easier manipulation here
+    headers_list = [h.strip() for h in custom_headers.split('\n') if h.strip()]
+    current_header_names_lower = [h.split(':', 1)[0].lower() for h in headers_list]
+
+    if "host" not in current_header_names_lower:
+        headers_list.append(f"Host: {parsed.netloc}")
+    if "user-agent" not in current_header_names_lower and conf._random_ua_string: # Ensure UA is there if not overridden
+        headers_list.append(f"User-Agent: {conf._random_ua_string}")
+    if "cache-control" not in current_header_names_lower:
             custom_headers += "\nCache-Control: no-cache"
-        if custom_headers and "accept" not in custom_headers.lower():
-            custom_headers += "\nAccept: */*"
-        if custom_headers and "accept-encoding" not in custom_headers.lower():
-            custom_headers += "\nAccept-Encoding: none"
-        if custom_headers and "connection" not in custom_headers.lower():
-            custom_headers += "\nConnection: close"
-    custom_headers = "\n".join([i.strip() for i in custom_headers.split("\n") if i])
+        headers_list.append("Cache-Control: no-cache")
+    if "accept" not in current_header_names_lower:
+        headers_list.append("Accept: */*")
+    if "accept-encoding" not in current_header_names_lower:
+        headers_list.append("Accept-Encoding: gzip, deflate") # More common default
+    if "connection" not in current_header_names_lower:
+        headers_list.append("Connection: close")
+    
+    custom_headers_dict = {}
+    final_headers_list = []
+    # Rebuild custom_headers_dict, ensuring User-Agent from conf (potentially extended) is prioritized
+    # And remove duplicates, preferring last occurrence for simple string to dict conversion
+    processed_header_names_lower = []
+    for h_line in reversed(headers_list): # Process from bottom up to keep last specified easily
+        h_name, h_value = h_line.split(":", 1)
+        h_name_strip = h_name.strip()
+        h_value_strip = h_value.strip()
+        if h_name_strip.lower() not in processed_header_names_lower:
+            custom_headers_dict[h_name_strip] = h_value_strip
+            final_headers_list.insert(0, f"{h_name_strip}: {h_value_strip}") # Keep order for raw
+            processed_header_names_lower.append(h_name_strip.lower())
+    
+    # Adding/Overriding Custom Headers from conf.header_add_custom_headers
+    if conf.header_add_custom_headers:
+        for header_item_str in conf.header_add_custom_headers:
+            if ":" in header_item_str:
+                name, value = header_item_str.split(":", 1)
+                name = name.strip()
+                value = value.strip()
+                custom_headers_dict[name] = value # Override if exists, add if new
+                logger.debug(f"Added/Overridden custom header: {name}: {value}")
+
+    # Add X-Forwarded-For if manipulation level >= 1 and not already set
+    if conf.header_manipulation_level >= 1:
+        xff_present = any(k.lower() == "x-forwarded-for" for k in custom_headers_dict.keys())
+        if not xff_present:
+            random_ip = f"10.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(0,255)}"
+            custom_headers_dict["X-Forwarded-For"] = random_ip
+            logger.debug(f"Added random X-Forwarded-For header: {random_ip}")
+
+    # Advanced Header Manipulations (Level 2: Case Manipulation)
+    if conf.header_manipulation_level >= 2:
+        logger.debug("Applying advanced header manipulation (case randomization).")
+        temp_dict_for_case_manipulation = {}
+        for name, value in custom_headers_dict.items():
+            # Simple case manipulation: alternate upper/lower for each char
+            manipulated_name = "".join(c.upper() if i % 2 == 0 else c.lower() for i, c in enumerate(name))
+            if manipulated_name != name : # if name changed
+                 logger.debug(f"Manipulated header name case: '{name}' to '{manipulated_name}'")
+            temp_dict_for_case_manipulation[manipulated_name] = value
+        custom_headers_dict = temp_dict_for_case_manipulation
+    
+    # Reconstruct the final_headers_list from the manipulated custom_headers_dict for raw request string
+    final_headers_list = [f"{name}: {value}" for name, value in custom_headers_dict.items()]
+    custom_headers_str = "\n".join(final_headers_list)
+
     raw = f"{request_type} {path} HTTP/1.1\n"
-    raw += f"{custom_headers if custom_headers else ''}\n"
+    raw += f"{custom_headers_str}\n" # Removed 'if custom_headers_str else ""' as it should always have some headers
+    
     if data:
-        data = re.sub(r"[\n]+", "", data)
+        data = re.sub(r"[\n]+", "", data) # This might be an issue if data is e.g. JSON that needs newlines
         raw += f"\n{data}\n"
-    header = {}
-    headers = custom_headers.split("\n")
-    for i in headers:
-        sph = [i.strip() for i in i.split(":", 1)]
-        if sph and len(sph) == 2:
-            header.update({sph[0].strip(): sph[1].strip()})
+    
+    # The 'header' variable in the returned Response tuple should be the dictionary
+    # 'custom_headers' in the Response tuple was previously the string, now it's the dict.
+    # Let's stick to original return type: 'headers' is the dict.
+    header = custom_headers_dict
     if not use_requests:
         custom_headers = header
     else:
