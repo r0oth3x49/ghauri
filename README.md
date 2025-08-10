@@ -42,6 +42,7 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
    - Error Based
    - Time Based
    - Stacked Queries
+   - Union Based
  - Support SQL injection for following DBMS.
    - MySQL
    - Microsoft SQL Server
@@ -154,6 +155,7 @@ Techniques:
   techniques
 
   --technique TECH    SQL injection techniques to use (default "BEST")
+                       Available: B(oolean-based), T(ime-based), E(rror-based), S(tacked queries), U(nion-based)
   --time-sec TIMESEC  Seconds to delay the DBMS response (default 5)
 
 Enumeration:

