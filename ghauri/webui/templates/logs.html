@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="{{ 'zh-Hant' if lang == 'zh-hant' else 'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ strings['logs']['title'] }} · {{ job.job_id[:8] }}…</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #0f172a;
+        --surface: #111c2f;
+        --border: #1f2a3d;
+        --accent: #3b82f6;
+        --text: #e5e7eb;
+        font-family: 'Inter', 'Segoe UI', 'PingFang TC', sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        padding: 1.75rem 1.5rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 600;
+      }
+      .actions {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+      .actions a {
+        text-decoration: none;
+        background: rgba(59, 130, 246, 0.18);
+        color: var(--text);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        padding: 0.45rem 0.9rem;
+        border-radius: 0.7rem;
+        font-weight: 500;
+      }
+      .actions a:hover { background: rgba(59, 130, 246, 0.35); }
+      pre {
+        margin: 0 1.5rem 1.5rem;
+        flex: 1;
+        background: var(--surface);
+        border-radius: 0.9rem;
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+        overflow: auto;
+        font-family: 'Fira Code', 'Courier New', monospace;
+        white-space: pre-wrap;
+        line-height: 1.45;
+      }
+      .empty {
+        margin: 0 1.5rem 1.5rem;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface);
+        border-radius: 0.9rem;
+        border: 1px solid var(--border);
+        color: rgba(226, 232, 240, 0.75);
+        font-size: 0.95rem;
+      }
+      footer {
+        text-align: center;
+        padding: 1.2rem 1.5rem 1.8rem;
+        color: rgba(226, 232, 240, 0.7);
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>{{ strings['logs']['title'] }}</h1>
+      <div class="actions">
+        <a href="{{ url_for('job_detail', job_id=job.job_id, lang=lang) }}">⟵ {{ strings['job_detail']['back'] }}</a>
+        <a href="{{ url_for('job_logs', job_id=job.job_id, lang=language_meta['toggle_code']) }}">{{ language_meta['toggle_label'] }}</a>
+      </div>
+    </header>
+    {% if logs %}
+      <pre>{{ logs }}</pre>
+    {% else %}
+      <div class="empty">{{ strings['logs']['empty'] }}</div>
+    {% endif %}
+    <footer>{{ strings['footer_note'] }}</footer>
+  </body>
+</html>

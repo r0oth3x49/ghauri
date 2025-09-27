@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="{{ 'zh-Hant' if lang == 'zh-hant' else 'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ strings['job_detail']['title'] }} · {{ job.job_id[:8] }}…</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f4f6;
+        --surface: #ffffff;
+        --border: #e5e7eb;
+        --accent: #2563eb;
+        --accent-dark: #1d4ed8;
+        --text: #111827;
+        --muted: #6b7280;
+        --danger-bg: rgba(220, 38, 38, 0.12);
+        --danger-border: rgba(220, 38, 38, 0.24);
+        font-family: 'Inter', 'Segoe UI', 'PingFang TC', sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        background: linear-gradient(135deg, #0f172a 0%, #1f2937 50%, #1e293b 100%);
+        color: #e2e8f0;
+        padding: 2.5rem 1.5rem 2.8rem;
+      }
+      .nav {
+        max-width: 960px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+      }
+      .language-switch {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+      }
+      .language-switch span { color: #cbd5f5; }
+      .language-switch a {
+        background: rgba(37, 99, 235, 0.15);
+        color: #f8fafc;
+        padding: 0.35rem 0.8rem;
+        border-radius: 999px;
+        text-decoration: none;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+      }
+      .language-switch a:hover { background: rgba(37, 99, 235, 0.3); }
+      .hero {
+        max-width: 960px;
+        margin: 2rem auto 0;
+      }
+      .hero h1 { margin: 0 0 0.4rem; font-size: clamp(2rem, 4vw, 2.4rem); font-weight: 600; }
+      .hero p { margin: 0; color: #cbd5f5; font-size: 0.95rem; }
+      main {
+        max-width: 960px;
+        margin: -2rem auto 0;
+        padding: 0 1.5rem 3rem;
+        width: 100%;
+      }
+      .card {
+        background: var(--surface);
+        border-radius: 0.9rem;
+        padding: clamp(1.6rem, 2vw, 2rem);
+        box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        margin-bottom: 1.6rem;
+      }
+      .card h2 { margin-top: 0; font-size: 1.25rem; font-weight: 600; }
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .status-pending { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+      .status-running { background: rgba(14, 165, 233, 0.15); color: #0369a1; }
+      .status-completed { background: rgba(34, 197, 94, 0.15); color: #15803d; }
+      .status-failed { background: rgba(220, 38, 38, 0.15); color: #b91c1c; }
+      .meta-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        margin-top: 1.2rem;
+      }
+      .info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      .info span.label { font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+      .info span.value { font-size: 1.05rem; font-weight: 600; word-break: break-word; color: var(--text); }
+      .message { color: var(--muted); font-size: 0.95rem; margin: 0.4rem 0 0; }
+      .error-box {
+        border: 1px solid var(--danger-border);
+        background: var(--danger-bg);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        color: #991b1b;
+        margin-bottom: 1rem;
+      }
+      .log-wrapper {
+        font-family: 'Fira Code', 'Courier New', monospace;
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        max-height: 340px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      .log-wrapper::-webkit-scrollbar { width: 9px; }
+      .log-wrapper::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.45); border-radius: 999px; }
+      details {
+        margin-top: 1rem;
+        border: 1px dashed var(--border);
+        border-radius: 0.75rem;
+        padding: 0.9rem 1rem;
+        background: #f9fafb;
+      }
+      summary { cursor: pointer; font-weight: 600; }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1.2rem;
+      }
+      .actions a {
+        text-decoration: none;
+        background: var(--accent);
+        color: #fff;
+        padding: 0.6rem 1.2rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+      }
+      .actions a:hover { background: var(--accent-dark); }
+      .log-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.6rem;
+        flex-wrap: wrap;
+      }
+      .log-buttons {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+      .log-button {
+        border: 1px solid var(--border);
+        background: #f9fafb;
+        color: var(--text);
+        border-radius: 0.65rem;
+        padding: 0.45rem 1rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+      .log-button:hover { background: #eef2ff; }
+      .log-button.primary {
+        border-color: rgba(37, 99, 235, 0.35);
+        background: rgba(37, 99, 235, 0.12);
+        color: var(--accent-dark);
+      }
+      .log-button.primary:hover { background: rgba(37, 99, 235, 0.22); }
+      .log-download {
+        text-decoration: none;
+        border: 1px solid rgba(59, 130, 246, 0.4);
+        background: rgba(37, 99, 235, 0.15);
+        color: var(--accent-dark);
+        border-radius: 0.65rem;
+        padding: 0.45rem 1rem;
+        font-weight: 600;
+      }
+      .log-download:hover { background: rgba(37, 99, 235, 0.28); }
+      footer {
+        margin-top: auto;
+        padding: 1.5rem 1.5rem 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      @media (max-width: 640px) {
+        .nav { flex-direction: column; align-items: flex-start; }
+        .language-switch { align-self: flex-end; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="nav">
+        <div class="branding">
+          <h1 style="margin:0;font-size:1.4rem;font-weight:600;color:#f8fafc;">{{ strings['app_title'] }}</h1>
+        </div>
+        <div class="language-switch">
+          <span>{{ strings['language']['label'] }}:</span>
+          <a href="{{ url_for('job_detail', job_id=job.job_id, lang=language_meta['toggle_code']) }}" title="{{ strings['language']['toggle_hint'] }}">{{ language_meta['toggle_label'] }}</a>
+        </div>
+      </div>
+      <div class="hero">
+        <h1>{{ strings['job_detail']['title'] }}</h1>
+        <p>ID · {{ job.job_id }}</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="status-chip status-{{ job.status }}" id="statusChip">{{ status_labels.get(job.status, job.status) }}</div>
+        <p class="message" id="statusText">{{ status_labels.get(job.status, job.status) }}</p>
+        <div class="meta-grid">
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['started'] }}</span>
+            <span class="value" id="startedAt">{{ job.created_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</span>
+          </div>
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['updated'] }}</span>
+            <span class="value" id="updatedAt">{{ job.updated_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>{{ strings['job_detail']['summary_title'] }}</h2>
+        <div class="meta-grid">
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['target'] }}</span>
+            <span class="value" id="summaryTarget">{{ job.params.get('url') }}</span>
+          </div>
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['level'] }}</span>
+            <span class="value" id="summaryLevel">{{ job.params.get('level') }}</span>
+          </div>
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['techniques'] }}</span>
+            <span class="value" id="summaryTechniques">{{ job.params.get('techniques') }}</span>
+          </div>
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['threads'] }}</span>
+            <span class="value" id="summaryThreads">{{ job.params.get('threads') }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>{{ strings['job_detail']['response_title'] }}</h2>
+        <div id="errorBox" class="error-box" style="display:none;">
+          <strong id="errorTitle">{{ strings['job_detail'].get('error_title', 'Error') }}</strong>
+          <p id="errorMessage" style="margin:0.4rem 0 0;"></p>
+        </div>
+        <p class="message" id="responseMessage">{{ strings['job_detail']['response_unknown'] }}</p>
+        <div class="meta-grid" style="margin-top:1.2rem;">
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['parameter'] }}</span>
+            <span class="value" id="responseParameter">—</span>
+          </div>
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['dbms'] }}</span>
+            <span class="value" id="responseDb">—</span>
+          </div>
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['technique'] }}</span>
+            <span class="value" id="responseTech">—</span>
+          </div>
+        </div>
+        <details>
+          <summary>{{ strings['job_detail']['raw_json'] }}</summary>
+          <pre id="rawResponse" style="font-family:'Fira Code','Courier New',monospace;white-space:pre-wrap;">{{ job.response | tojson(indent=2) if job.response else '' }}</pre>
+        </details>
+        <div class="actions">
+          <a id="fullLogLink" href="{{ url_for('job_logs', job_id=job.job_id, lang=lang) }}" target="_blank" rel="noopener">{{ strings['job_detail']['logs_link'] }}</a>
+          <a href="{{ url_for('index', lang=lang) }}" style="background:#475569;">{{ strings['job_detail']['back'] }}</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>{{ strings['job_detail']['live_log_title'] }}</h2>
+        <div class="log-toolbar">
+          <div class="log-buttons">
+            <button type="button" class="log-button primary" id="logToggleButton" data-state="running">{{ strings['job_detail']['log_controls']['pause'] }}</button>
+            <button type="button" class="log-button" id="logRefreshButton">{{ strings['job_detail']['log_controls']['refresh'] }}</button>
+            <button type="button" class="log-button" id="logClearButton">{{ strings['job_detail']['log_controls']['clear'] }}</button>
+          </div>
+          <a class="log-download" id="logDownloadLink" href="{{ url_for('job_logs_download', job_id=job.job_id, lang=lang) }}" target="_blank" rel="noopener">{{ strings['job_detail']['log_controls']['download'] }}</a>
+        </div>
+        <p class="message" id="logStatus">{{ strings['job_detail']['log_status_idle'] }}</p>
+        <div class="log-wrapper" id="liveLog">{{ strings['logs']['empty'] }}</div>
+      </section>
+    </main>
+
+    <footer>{{ strings['footer_note'] }}</footer>
+
+    <script>
+      const statusLabels = {{ status_labels|tojson }};
+      const initialJob = {{ job.to_dict() | tojson }};
+      const jobApiUrl = "{{ url_for('api_job_detail', job_id=job.job_id) }}";
+      const logsApiUrl = "{{ url_for('api_job_logs', job_id=job.job_id) }}";
+      const jobTexts = {{ {
+        'waiting': strings['job_detail']['response_waiting'],
+        'success': strings['job_detail']['response_success'],
+        'failure': strings['job_detail']['response_failure'],
+        'unknown': strings['job_detail']['response_unknown'],
+        'errorTitle': strings['job_detail'].get('error_title', 'Error'),
+        'logsEmpty': strings['logs']['empty']
+      } | tojson }};
+      const logControls = {{ strings['job_detail']['log_controls'] | tojson }};
+      const logStatusTexts = {{ {
+        'idle': strings['job_detail']['log_status_idle'],
+        'paused': strings['job_detail']['log_status_paused'],
+        'updated': strings['job_detail']['log_status_updated'],
+        'cleared': strings['job_detail']['log_status_cleared'],
+        'error': strings['job_detail']['log_status_error']
+      } | tojson }};
+
+      const statusChip = document.getElementById('statusChip');
+      const statusText = document.getElementById('statusText');
+      const startedAt = document.getElementById('startedAt');
+      const updatedAt = document.getElementById('updatedAt');
+      const summaryTarget = document.getElementById('summaryTarget');
+      const summaryLevel = document.getElementById('summaryLevel');
+      const summaryTechniques = document.getElementById('summaryTechniques');
+      const summaryThreads = document.getElementById('summaryThreads');
+      const responseMessage = document.getElementById('responseMessage');
+      const responseParameter = document.getElementById('responseParameter');
+      const responseDb = document.getElementById('responseDb');
+      const responseTech = document.getElementById('responseTech');
+      const rawResponse = document.getElementById('rawResponse');
+      const liveLog = document.getElementById('liveLog');
+      const errorBox = document.getElementById('errorBox');
+      const errorTitle = document.getElementById('errorTitle');
+      const errorMessage = document.getElementById('errorMessage');
+      const fullLogLink = document.getElementById('fullLogLink');
+      const logToggleButton = document.getElementById('logToggleButton');
+      const logRefreshButton = document.getElementById('logRefreshButton');
+      const logClearButton = document.getElementById('logClearButton');
+      const logDownloadLink = document.getElementById('logDownloadLink');
+      const logStatus = document.getElementById('logStatus');
+
+      let autoRefresh = true;
+      let logOffset = 0;
+      let logSize = 0;
+      let fetchingLogs = false;
+
+      function formatDate(iso) {
+        if (!iso) return '';
+        try {
+          const d = new Date(iso);
+          return d.toLocaleString();
+        } catch (err) {
+          return iso;
+        }
+      }
+
+      function setLogStatus(message) {
+        if (message) {
+          logStatus.textContent = message;
+        }
+      }
+
+      function updateStatus(status) {
+        statusChip.className = 'status-chip status-' + status;
+        statusChip.textContent = statusLabels[status] || status;
+        statusText.textContent = statusLabels[status] || status;
+      }
+
+      function updateSummary(job) {
+        summaryTarget.textContent = job.params && job.params.url ? job.params.url : '—';
+        summaryLevel.textContent = job.params && job.params.level ? job.params.level : '—';
+        summaryTechniques.textContent = job.params && job.params.techniques ? job.params.techniques : '—';
+        summaryThreads.textContent = job.params && job.params.threads ? job.params.threads : '—';
+        startedAt.textContent = formatDate(job.created_at);
+        updatedAt.textContent = formatDate(job.updated_at);
+        fullLogLink.href = "{{ url_for('job_logs', job_id='__JOB_ID__', lang=lang) }}".replace('__JOB_ID__', job.id);
+        logDownloadLink.href = "{{ url_for('job_logs_download', job_id='__JOB_ID__', lang=lang) }}".replace('__JOB_ID__', job.id);
+      }
+
+      function updateResponse(job) {
+        if (job.error) {
+          errorTitle.textContent = jobTexts.errorTitle;
+          errorMessage.textContent = job.error;
+          errorBox.style.display = 'block';
+        } else {
+          errorBox.style.display = 'none';
+          errorMessage.textContent = '';
+        }
+        if (job.status === 'pending' || job.status === 'running') {
+          responseMessage.textContent = jobTexts.waiting;
+        } else if (job.response) {
+          responseMessage.textContent = job.response.is_injected ? jobTexts.success : jobTexts.failure;
+        } else {
+          responseMessage.textContent = jobTexts.unknown;
+        }
+        const param = job.response && job.response.parameter ? job.response.parameter.key : null;
+        const backend = job.response ? job.response.backend : null;
+        const technique = job.response ? job.response.injection_type : null;
+        responseParameter.textContent = param || '—';
+        responseDb.textContent = backend || '—';
+        responseTech.textContent = technique || '—';
+        rawResponse.textContent = job.response ? JSON.stringify(job.response, null, 2) : '';
+      }
+
+      function appendLogChunk(chunk) {
+        if (!chunk) {
+          return;
+        }
+        const shouldReplace = liveLog.textContent === jobTexts.logsEmpty;
+        const stickToBottom = liveLog.scrollHeight - liveLog.scrollTop - liveLog.clientHeight < 40;
+        if (shouldReplace) {
+          liveLog.textContent = '';
+        }
+        liveLog.textContent += chunk;
+        const maxChars = 40000;
+        if (liveLog.textContent.length > maxChars) {
+          liveLog.textContent = liveLog.textContent.slice(-maxChars);
+        }
+        if (stickToBottom) {
+          liveLog.scrollTop = liveLog.scrollHeight;
+        }
+      }
+
+      function ensureLogPlaceholder() {
+        if (!liveLog.textContent) {
+          liveLog.textContent = jobTexts.logsEmpty;
+        }
+      }
+
+      async function fetchLogs(force = false) {
+        if (fetchingLogs) {
+          return;
+        }
+        fetchingLogs = true;
+        try {
+          const response = await fetch(`${logsApiUrl}?offset=${logOffset}`);
+          if (!response.ok) {
+            throw new Error('log fetch failed');
+          }
+          const data = await response.json();
+          if (typeof data.size === 'number') {
+            logSize = data.size;
+          }
+          if (data.reset) {
+            liveLog.textContent = '';
+          }
+          if (typeof data.offset === 'number') {
+            logOffset = data.offset;
+          }
+          if (data.chunk) {
+            appendLogChunk(data.chunk);
+            setLogStatus(logStatusTexts.updated);
+          } else if (force) {
+            setLogStatus(autoRefresh ? logStatusTexts.idle : logStatusTexts.paused);
+          }
+        } catch (err) {
+          setLogStatus(logStatusTexts.error);
+        } finally {
+          fetchingLogs = false;
+          ensureLogPlaceholder();
+        }
+      }
+
+      function applyJob(job) {
+        updateStatus(job.status);
+        updateSummary(job);
+        updateResponse(job);
+      }
+
+      function toggleAutoRefresh() {
+        autoRefresh = !autoRefresh;
+        if (autoRefresh) {
+          logToggleButton.textContent = logControls.pause;
+          logToggleButton.classList.add('primary');
+          logToggleButton.dataset.state = 'running';
+          setLogStatus(logStatusTexts.idle);
+          fetchLogs(true);
+        } else {
+          logToggleButton.textContent = logControls.resume;
+          logToggleButton.classList.remove('primary');
+          logToggleButton.dataset.state = 'paused';
+          setLogStatus(logStatusTexts.paused);
+        }
+      }
+
+      logToggleButton.addEventListener('click', () => {
+        toggleAutoRefresh();
+      });
+
+      logRefreshButton.addEventListener('click', () => {
+        fetchLogs(true);
+      });
+
+      logClearButton.addEventListener('click', () => {
+        liveLog.textContent = '';
+        logOffset = logSize;
+        setLogStatus(logStatusTexts.cleared);
+        ensureLogPlaceholder();
+      });
+
+      applyJob(initialJob);
+
+      async function pollJob() {
+        try {
+          const response = await fetch(jobApiUrl);
+          if (!response.ok) return;
+          const data = await response.json();
+          applyJob(data);
+        } catch (err) {
+          // ignore polling errors silently
+        }
+      }
+
+      function pollLogs() {
+        if (autoRefresh) {
+          fetchLogs();
+        }
+      }
+
+      setInterval(() => {
+        pollJob();
+        pollLogs();
+      }, 5000);
+
+      fetchLogs(true);
+    </script>
+  </body>
+</html>

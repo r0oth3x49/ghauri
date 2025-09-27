@@ -76,6 +76,12 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - added auto detection and exploitation of base64 deserializable GET parameters. (experimental)
  - added support for random HTTP user agent: `--random-agent, --mobile`
 
+## **Web UI (Experimental)**
+
+- Install dependencies as described above.
+- Launch the interface with `ghauri-web` or `python -m ghauri.webui.server`.
+- Open http://127.0.0.1:8000 and submit scans; results and logs appear per job.
+
 ## **Advanced Usage**
 
 <pre><code>

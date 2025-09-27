@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="{{ 'zh-Hant' if lang == 'zh-hant' else 'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ strings['app_title'] }}</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f4f6;
+        --surface: #ffffff;
+        --border: #e5e7eb;
+        --accent: #2563eb;
+        --accent-dark: #1d4ed8;
+        --text: #111827;
+        --muted: #6b7280;
+        --success: #15803d;
+        --pending: #f59e0b;
+        --running: #0ea5e9;
+        --failed: #dc2626;
+        font-family: 'Inter', 'Segoe UI', 'PingFang TC', sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #334155 100%);
+        color: #e2e8f0;
+        padding: 2.5rem 1.5rem 3rem;
+      }
+      .nav {
+        max-width: 960px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      .language-switch {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+      }
+      .language-switch span { color: #cbd5f5; }
+      .language-switch a {
+        background: rgba(37, 99, 235, 0.15);
+        color: #f8fafc;
+        padding: 0.35rem 0.8rem;
+        border-radius: 999px;
+        text-decoration: none;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+      }
+      .language-switch a:hover { background: rgba(37, 99, 235, 0.3); }
+      .hero {
+        max-width: 960px;
+        margin: 2rem auto 0;
+      }
+      .hero h1 { margin: 0 0 0.5rem; font-size: clamp(2rem, 4vw, 2.6rem); font-weight: 600; }
+      .hero p { margin: 0; color: #cbd5f5; font-size: 1rem; }
+      main {
+        max-width: 960px;
+        margin: -2.2rem auto 0;
+        padding: 0 1.5rem 3rem;
+        width: 100%;
+      }
+      .card {
+        background: var(--surface);
+        border-radius: 0.9rem;
+        padding: clamp(1.6rem, 2vw, 2rem);
+        box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        margin-bottom: 1.75rem;
+      }
+      .card h2 { margin-top: 0; font-size: 1.3rem; font-weight: 600; }
+      form { display: flex; flex-direction: column; gap: 1.2rem; }
+      label span.label-title {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+        color: var(--text);
+      }
+      input[type="text"],
+      input[type="url"],
+      input[type="number"],
+      textarea {
+        width: 100%;
+        padding: 0.75rem 0.9rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border);
+        font-size: 1rem;
+        background: #f9fafb;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      }
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
+      }
+      textarea { min-height: 120px; resize: vertical; }
+      button[type="submit"] {
+        align-self: flex-start;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 0.75rem;
+        padding: 0.8rem 1.8rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.1s ease, box-shadow 0.2s ease, background 0.2s ease;
+        box-shadow: 0 12px 20px rgba(37, 99, 235, 0.25);
+      }
+      button[type="submit"]:hover {
+        transform: translateY(-1px);
+        background: var(--accent-dark);
+        box-shadow: 0 16px 24px rgba(37, 99, 235, 0.3);
+      }
+      .note {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin: -0.2rem 0 0;
+      }
+      details {
+        border: 1px dashed var(--border);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        background: #f9fafb;
+      }
+      details[open] { background: #f1f5f9; }
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        list-style: none;
+      }
+      summary::-webkit-details-marker { display: none; }
+      .job-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 1rem;
+      }
+      .job-item {
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 1rem 1.4rem;
+        background: #f9fafb;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+      .job-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .job-title {
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--text);
+        word-break: break-word;
+      }
+      .status-chip {
+        border-radius: 999px;
+        padding: 0.3rem 0.75rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .status-pending { background: rgba(245, 158, 11, 0.15); color: var(--pending); }
+      .status-running { background: rgba(14, 165, 233, 0.15); color: #0369a1; }
+      .status-completed { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+      .status-failed { background: rgba(220, 38, 38, 0.15); color: var(--failed); }
+      .job-meta { color: var(--muted); font-size: 0.85rem; }
+      .job-link {
+        align-self: flex-start;
+        text-decoration: none;
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      .job-link:hover { text-decoration: underline; }
+      .empty-state { text-align: center; color: var(--muted); padding: 1rem 0; }
+      footer {
+        margin-top: auto;
+        padding: 1.5rem 1.5rem 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      @media (max-width: 640px) {
+        .nav { flex-direction: column; align-items: flex-start; }
+        .language-switch { align-self: flex-end; }
+        .job-header { flex-direction: column; align-items: flex-start; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="nav">
+        <div class="branding">
+          <h1 style="margin:0;font-size:1.4rem;font-weight:600;color:#f8fafc;">{{ strings['app_title'] }}</h1>
+        </div>
+        <div class="language-switch">
+          <span>{{ strings['language']['label'] }}:</span>
+          <a href="{{ url_for('index', lang=language_meta['toggle_code']) }}" title="{{ strings['language']['toggle_hint'] }}">{{ language_meta['toggle_label'] }}</a>
+        </div>
+      </div>
+      <div class="hero">
+        <h1>{{ strings['app_title'] }}</h1>
+        <p>{{ strings['tagline'] }}</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>{{ strings['form']['title'] }}</h2>
+        <p class="note">{{ strings['form']['subtitle'] }}</p>
+        <p class="note">{{ strings['form']['reminder'] }}</p>
+        <form method="post" action="{{ url_for('start_scan', lang=lang) }}">
+          <input type="hidden" name="lang" value="{{ lang }}">
+          <label>
+            <span class="label-title">{{ strings['form']['url_label'] }}</span>
+            <input type="url" name="url" required placeholder="{{ strings['form']['url_placeholder'] }}">
+          </label>
+          <button type="submit">{{ strings['form']['start_button'] }}</button>
+          <details id="advancedPanel">
+            <summary data-label-open="{{ strings['form']['toggle_show'] }}" data-label-close="{{ strings['form']['toggle_hide'] }}">{{ strings['form']['toggle_show'] }}</summary>
+            <p class="note">{{ strings['form']['advanced_hint'] }}</p>
+            <label>
+              <span class="label-title">{{ strings['form']['data_label'] }}</span>
+              <textarea name="data"></textarea>
+            </label>
+            <label>
+              <span class="label-title">{{ strings['form']['headers_label'] }}</span>
+              <textarea name="headers"></textarea>
+            </label>
+            <label>
+              <span class="label-title">{{ strings['form']['cookies_label'] }}</span>
+              <input type="text" name="cookies">
+            </label>
+            <label>
+              <span class="label-title">{{ strings['form']['proxy_label'] }}</span>
+              <input type="text" name="proxy">
+            </label>
+            <label>
+              <span class="label-title">{{ strings['form']['techniques_label'] }}</span>
+              <input type="text" name="techniques" value="BT">
+            </label>
+            <label>
+              <span class="label-title">{{ strings['form']['level_label'] }}</span>
+              <input type="number" name="level" min="1" max="3" value="1">
+            </label>
+            <label>
+              <span class="label-title">{{ strings['form']['threads_label'] }}</span>
+              <input type="number" name="threads" min="1" value="1">
+            </label>
+            <label>
+              <span class="label-title">{{ strings['form']['timeout_label'] }}</span>
+              <input type="number" name="timeout" min="1" value="30">
+            </label>
+            <label>
+              <span class="label-title">{{ strings['form']['timesec_label'] }}</span>
+              <input type="number" name="timesec" min="1" value="5">
+            </label>
+            <input type="hidden" name="verbosity" value="1">
+            <input type="hidden" name="delay" value="0">
+          </details>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>{{ strings['jobs']['title'] }}</h2>
+        <div id="jobsContainer">
+          {% if jobs %}
+            <ul class="job-list">
+              {% for job in jobs %}
+                <li class="job-item" data-job-id="{{ job.job_id }}" data-status="{{ job.status }}">
+                  <div class="job-header">
+                    <span class="job-title">{{ job.params.get('url') }}</span>
+                    <span class="status-chip status-{{ job.status }}">{{ status_labels.get(job.status, job.status) }}</span>
+                  </div>
+                  <div class="job-meta">{{ strings['jobs']['created'] }} · {{ job.created_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</div>
+                  <a class="job-link" href="{{ url_for('job_detail', job_id=job.job_id, lang=lang) }}">{{ strings['jobs'].get('view', strings['job_detail']['title']) }}</a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="empty-state">{{ strings['jobs']['empty'] }}</p>
+          {% endif %}
+        </div>
+      </section>
+    </main>
+
+    <footer>{{ strings['footer_note'] }}</footer>
+
+    <script>
+      const statusLabels = {{ status_labels|tojson }};
+      const jobsApiUrl = "{{ url_for('api_jobs') }}";
+      const jobDetailTemplate = "{{ url_for('job_detail', job_id='__JOB_ID__', lang=lang) }}";
+      const jobsTexts = {{ {
+        'empty': strings['jobs']['empty'],
+        'created': strings['jobs']['created'],
+        'view': strings['jobs'].get('view', strings['job_detail']['title'])
+      } | tojson }};
+
+      const jobsContainer = document.getElementById('jobsContainer');
+      const advancedPanel = document.getElementById('advancedPanel');
+      if (advancedPanel) {
+        const summary = advancedPanel.querySelector('summary');
+        advancedPanel.addEventListener('toggle', () => {
+          if (advancedPanel.open) {
+            summary.textContent = summary.dataset.labelClose;
+          } else {
+            summary.textContent = summary.dataset.labelOpen;
+          }
+        });
+      }
+
+      function formatDate(iso) {
+        if (!iso) return '';
+        try {
+          const date = new Date(iso);
+          return date.toLocaleString();
+        } catch (err) {
+          return iso;
+        }
+      }
+
+      function createJobElement(job) {
+        const item = document.createElement('li');
+        item.className = 'job-item';
+        item.dataset.jobId = job.id;
+        item.dataset.status = job.status;
+
+        const header = document.createElement('div');
+        header.className = 'job-header';
+
+        const title = document.createElement('span');
+        title.className = 'job-title';
+        title.textContent = job.params && job.params.url ? job.params.url : job.id;
+
+        const statusChip = document.createElement('span');
+        statusChip.className = 'status-chip status-' + job.status;
+        statusChip.textContent = statusLabels[job.status] || job.status;
+
+        header.appendChild(title);
+        header.appendChild(statusChip);
+
+        const meta = document.createElement('div');
+        meta.className = 'job-meta';
+        meta.textContent = jobsTexts.created + ' · ' + formatDate(job.created_at);
+
+        const link = document.createElement('a');
+        link.className = 'job-link';
+        link.href = jobDetailTemplate.replace('__JOB_ID__', job.id);
+        link.textContent = jobsTexts.view;
+
+        item.appendChild(header);
+        item.appendChild(meta);
+        item.appendChild(link);
+        return item;
+      }
+
+      function renderJobs(list) {
+        jobsContainer.innerHTML = '';
+        if (!list.length) {
+          const empty = document.createElement('p');
+          empty.className = 'empty-state';
+          empty.textContent = jobsTexts.empty;
+          jobsContainer.appendChild(empty);
+          return;
+        }
+        const ul = document.createElement('ul');
+        ul.className = 'job-list';
+        list.forEach(job => ul.appendChild(createJobElement(job)));
+        jobsContainer.appendChild(ul);
+      }
+
+      async function refreshJobs() {
+        try {
+          const response = await fetch(jobsApiUrl);
+          if (!response.ok) return;
+          const data = await response.json();
+          data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          renderJobs(data);
+        } catch (err) {
+          // ignore refresh errors silently
+        }
+      }
+
+      refreshJobs();
+      setInterval(refreshJobs, 6000);
+    </script>
+  </body>
+</html>
