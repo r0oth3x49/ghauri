@@ -11,7 +11,7 @@ setup(
     author="Nasir Khan",
     author_email="r0oth3x49@gmail.com",
     packages=find_packages(),
-    package_data={"": []},
+    package_data={"ghauri": ["webui/templates/*.html"]},
     include_package_data=True,
     zip_safe=False,
     test_suite="ghauri",
@@ -21,8 +21,14 @@ setup(
         "requests",
         "chardet",
         "ua_generator",
+        "Flask",
     ],
-    entry_points={"console_scripts": ["ghauri=ghauri.scripts.ghauri:main"]},
+    entry_points={
+        "console_scripts": [
+            "ghauri=ghauri.scripts.ghauri:main",
+            "ghauri-web=ghauri.webui.server:main",
+        ]
+    },
     keywords=[
         "mysql",
         "mssql",

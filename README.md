@@ -104,6 +104,7 @@ Browse to `http://127.0.0.1:8000`, submit a target, and monitor jobs in real tim
 ### Highlights
 
 - Live log streaming with pause/resume, manual refresh, clear, and download controls
+- On-the-fly DBMS probe summary to see which back-ends are being tested
 - Bilingual interface (English / 繁體中文) with automatic session persistence
 - One-click re-entry to job logs, raw JSON results, and instant status updates
 - In-memory buffering ensures logs appear even before on-disk files are flushed

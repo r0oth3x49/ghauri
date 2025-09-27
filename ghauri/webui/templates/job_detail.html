@@ -256,6 +256,18 @@
             <span class="label">{{ strings['job_detail']['threads'] }}</span>
             <span class="value" id="summaryThreads">{{ job.params.get('threads') }}</span>
           </div>
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['dbms_summary'] }}</span>
+            <span class="value" id="summaryDbms">—</span>
+          </div>
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['last_technique'] }}</span>
+            <span class="value" id="summaryTechnique">—</span>
+          </div>
+          <div class="info">
+            <span class="label">{{ strings['job_detail']['warning_count'] }}</span>
+            <span class="value" id="summaryWarnings">0</span>
+          </div>
         </div>
       </section>
 
@@ -310,6 +322,7 @@
     <script>
       const statusLabels = {{ status_labels|tojson }};
       const initialJob = {{ job.to_dict() | tojson }};
+      initialJob.log_summary = {{ summary | tojson }};
       const jobApiUrl = "{{ url_for('api_job_detail', job_id=job.job_id) }}";
       const logsApiUrl = "{{ url_for('api_job_logs', job_id=job.job_id) }}";
       const jobTexts = {{ {
@@ -337,6 +350,9 @@
       const summaryLevel = document.getElementById('summaryLevel');
       const summaryTechniques = document.getElementById('summaryTechniques');
       const summaryThreads = document.getElementById('summaryThreads');
+      const summaryDbms = document.getElementById('summaryDbms');
+      const summaryTechnique = document.getElementById('summaryTechnique');
+      const summaryWarnings = document.getElementById('summaryWarnings');
       const responseMessage = document.getElementById('responseMessage');
       const responseParameter = document.getElementById('responseParameter');
       const responseDb = document.getElementById('responseDb');
@@ -389,6 +405,16 @@
         updatedAt.textContent = formatDate(job.updated_at);
         fullLogLink.href = "{{ url_for('job_logs', job_id='__JOB_ID__', lang=lang) }}".replace('__JOB_ID__', job.id);
         logDownloadLink.href = "{{ url_for('job_logs_download', job_id='__JOB_ID__', lang=lang) }}".replace('__JOB_ID__', job.id);
+        if (job.log_summary) {
+          const dbList = job.log_summary.dbms && job.log_summary.dbms.length ? job.log_summary.dbms.join(', ') : '—';
+          summaryDbms.textContent = dbList;
+          summaryTechnique.textContent = job.log_summary.last_test || '—';
+          summaryWarnings.textContent = job.log_summary.warnings ?? 0;
+        } else {
+          summaryDbms.textContent = '—';
+          summaryTechnique.textContent = '—';
+          summaryWarnings.textContent = 0;
+        }
       }
 
       function updateResponse(job) {

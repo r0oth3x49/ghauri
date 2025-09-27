@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
+import re
 
 from flask import (
     Flask,
@@ -106,6 +107,9 @@ LANG_PACKS: Dict[str, Dict[str, Any]] = {
                 "dbms": "Database",
                 "technique": "Technique",
                 "logs_link": "Open full log",
+                "dbms_summary": "DBMS probes",
+                "last_technique": "Last technique",
+                "warning_count": "Warnings",
                 "log_controls": {
                     "auto_label": "Auto refresh",
                     "pause": "Pause",
@@ -198,6 +202,9 @@ LANG_PACKS: Dict[str, Dict[str, Any]] = {
                 "dbms": "資料庫",
                 "technique": "技巧",
                 "logs_link": "開啟完整紀錄",
+                "dbms_summary": "嘗試中的資料庫",
+                "last_technique": "最新測試技巧",
+                "warning_count": "警告數",
                 "log_controls": {
                     "auto_label": "自動更新",
                     "pause": "暫停",
@@ -256,6 +263,15 @@ class Job:
 
 JOBS: Dict[str, Job] = {}
 JOB_LOG_BUFFERS: Dict[str, str] = {}
+DBMS_PATTERNS = {
+    "MySQL": re.compile(r"MySQL", re.IGNORECASE),
+    "PostgreSQL": re.compile(r"PostgreSQL", re.IGNORECASE),
+    "Oracle": re.compile(r"Oracle", re.IGNORECASE),
+    "Microsoft SQL Server": re.compile(r"Microsoft SQL Server|Sybase", re.IGNORECASE),
+    "SQLite": re.compile(r"SQLite", re.IGNORECASE),
+    "DB2": re.compile(r"DB2", re.IGNORECASE),
+}
+TECHNIQUE_PATTERN = re.compile(r"testing '([^']+)'", re.IGNORECASE)
 
 
 def _parse_int(value: Optional[str], default: Optional[int] = None) -> Optional[int]:
@@ -435,6 +451,35 @@ def _predict_log_path(url: str) -> Optional[str]:
     return os.path.join(base_dir, "log")
 
 
+def _get_combined_log(job: Job, limit: int = 20000) -> str:
+    parts = []
+    if job.log_path and os.path.exists(job.log_path):
+        parts.append(_tail_log(job.log_path, max_chars=limit))
+    buffer = JOB_LOG_BUFFERS.get(job.job_id, "")
+    if buffer:
+        parts.append(buffer[-limit:])
+    return "\n".join([p for p in parts if p]).strip()
+
+
+def _summarize_log(job: Job) -> Dict[str, Any]:
+    text = _get_combined_log(job)
+    if not text:
+        return {"dbms": [], "last_test": None, "warnings": 0}
+    found_dbms = []
+    for label, pattern in DBMS_PATTERNS.items():
+        if pattern.search(text):
+            found_dbms.append(label)
+    last_test = None
+    for match in TECHNIQUE_PATTERN.finditer(text):
+        last_test = match.group(1)
+    warning_count = text.lower().count("[warning]")
+    return {
+        "dbms": found_dbms,
+        "last_test": last_test,
+        "warnings": warning_count,
+    }
+
+
 def _run_scan(job_id: str, kwargs: Dict[str, Any]) -> None:
     with JOBS_LOCK:
         job = JOBS.get(job_id)
@@ -549,6 +594,7 @@ def create_app() -> Flask:
             job = JOBS.get(job_id)
         if not job:
             abort(404)
+        summary = _summarize_log(job)
         response = make_response(
             render_template(
                 "job_detail.html",
@@ -557,6 +603,7 @@ def create_app() -> Flask:
                 lang=lang,
                 language_meta=lang_payload,
                 status_labels=strings["status"],
+                summary=summary,
             )
         )
         response.set_cookie("ghauri_lang", lang, max_age=30 * 24 * 60 * 60)
@@ -599,7 +646,9 @@ def create_app() -> Flask:
             job = JOBS.get(job_id)
         if not job:
             abort(404)
-        return jsonify(job.to_dict())
+        payload = job.to_dict()
+        payload["log_summary"] = _summarize_log(job)
+        return jsonify(payload)
 
     @app.route("/api/jobs/<job_id>/logs")
     def api_job_logs(job_id: str):
