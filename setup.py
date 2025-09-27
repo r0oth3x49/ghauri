@@ -21,12 +21,8 @@ setup(
         "requests",
         "chardet",
         "ua_generator",
-        "Flask",
     ],
-    entry_points={"console_scripts": [
-        "ghauri=ghauri.scripts.ghauri:main",
-        "ghauri-web=ghauri.webui.server:main",
-    ]},
+    entry_points={"console_scripts": ["ghauri=ghauri.scripts.ghauri:main"]},
     keywords=[
         "mysql",
         "mssql",

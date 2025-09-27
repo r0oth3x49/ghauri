@@ -3,4 +3,3 @@ colorama
 requests
 chardet
 ua_generator
-flask
