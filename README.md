@@ -73,8 +73,40 @@ You can download the latest version of Ghauri by cloning the GitHub repository.
  - added switch for ignore problematic HTTP codes. (e.g 401): `--ignore-code`
  - added switch for retreiving entries count for table.: `--count`
  - added switch for Scanning multiple targets given in a textual fil. `-m` (experimental)
- - added auto detection and exploitation of base64 deserializable GET parameters. (experimental)
- - added support for random HTTP user agent: `--random-agent, --mobile`
+- added auto detection and exploitation of base64 deserializable GET parameters. (experimental)
+- added support for random HTTP user agent: `--random-agent, --mobile`
+
+## **Web UI (Experimental)**
+
+Spin up a browser console on top of the CLI engine.
+
+### Install options
+
+- **Editable / virtualenv**
+  ```bash
+  python3 -m venv ~/.venvs/ghauri
+  source ~/.venvs/ghauri/bin/activate
+  pip install -e /path/to/ghauri
+  ```
+- **pipx (isolated but globally available)**
+  ```bash
+  pipx install -e /path/to/ghauri
+  ``
+- After pulling new changes run `pip install -e .` (or `pipx reinstall ghauri`) to refresh the entry points.
+
+### Launch
+
+```bash
+ghauri-web                # or: python3 -m ghauri.webui.server
+``` 
+Browse to `http://127.0.0.1:8000`, submit a target, and monitor jobs in real time.
+
+### Highlights
+
+- Live log streaming with pause/resume, manual refresh, clear, and download controls
+- Bilingual interface (English / 繁體中文) with automatic session persistence
+- One-click re-entry to job logs, raw JSON results, and instant status updates
+- In-memory buffering ensures logs appear even before on-disk files are flushed
 
 ## **Advanced Usage**
 
