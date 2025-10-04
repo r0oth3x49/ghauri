@@ -970,12 +970,12 @@ class GhauriAdvance:
                                 dump_type=f"{start}_{database}_{table}_{column_name}_dump",
                             )
                             if retval.ok:
-                                if retval.result not in __temp:
-                                    if retval.resumed:
-                                        logger.info("resumed: %s" % (retval.result))
-                                    else:
-                                        logger.info("retrieved: %s" % (retval.result))
-                                    __temp.append(retval.result)
+                                # if retval.result not in __temp:
+                                if retval.resumed:
+                                    logger.info("resumed: %s" % (retval.result))
+                                else:
+                                    logger.info("retrieved: %s" % (retval.result))
+                                __temp.append(retval.result)
                             if not retval.ok and retval.error == "user_ended":
                                 is_user_ended = True
                                 break
@@ -993,6 +993,10 @@ class GhauriAdvance:
                     if __temp:
                         if len(__temp) == len(__columns):
                             _results.append(__temp)
+                        else:
+                            logger.debug(
+                                f"error in mapping rows to colums: Rows fetched {len(__temp)}) != Total columns ({len(__columns)})"
+                            )
                     if is_interrupted:
                         break
                     start += 1

