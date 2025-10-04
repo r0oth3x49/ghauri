@@ -351,7 +351,7 @@ def main():
         "--technique",
         dest="tech",
         type=str,
-        help='SQL injection techniques to use (default "BEST")',
+        help='SQL injection techniques to use (default "BEST"). Available: B(oolean-based), T(ime-based), E(rror-based), S(tacked queries), U(nion-based)',
         default="BEST",
     )
     techniques.add_argument(

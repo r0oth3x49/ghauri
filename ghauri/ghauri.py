@@ -267,7 +267,7 @@ def perform_injection(
     user_agent="",
     level=1,
     verbosity=1,
-    techniques="BT",
+    techniques="BTU",
     requestfile="",
     flush_session=False,
     proxy=None,
